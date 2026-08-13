@@ -14,6 +14,7 @@ import java.util.Locale
 object AlarmScheduler {
 
     const val EXTRA_ALARM_ID = "extra_alarm_id"
+    const val ACTION_DISMISS_ALARM = "com.hafij.islamicalarm.ACTION_DISMISS_ALARM"
 
     fun scheduleAlarm(context: Context, alarm: AlarmItem): Long {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -73,7 +74,9 @@ object AlarmScheduler {
 
     fun cancelAlarm(context: Context, alarmId: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, AlarmReceiver::class.java)
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra(EXTRA_ALARM_ID, alarmId)
+        }
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -82,6 +85,16 @@ object AlarmScheduler {
             flags
         )
         alarmManager.cancel(pendingIntent)
+        pendingIntent.cancel()
+
+        try {
+            val dismissIntent = Intent(ACTION_DISMISS_ALARM).apply {
+                putExtra(EXTRA_ALARM_ID, alarmId)
+            }
+            context.sendBroadcast(dismissIntent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun rescheduleAllAlarms(context: Context) {

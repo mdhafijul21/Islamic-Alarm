@@ -21,6 +21,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.hafij.islamicalarm.data.AlarmStore
 import com.hafij.islamicalarm.databinding.ActivityLockScreenBinding
 import java.util.Locale
 
@@ -33,12 +34,24 @@ class LockScreenActivity : AppCompatActivity() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var textToSpeech: TextToSpeech? = null
     private var ringtone: Ringtone? = null
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private val callStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == CallReceiver.ACTION_CALL_STATE_CHANGED) {
                 val state = intent.getStringExtra(CallReceiver.EXTRA_CALL_STATE)
                 handleCallState(state)
+            }
+        }
+    }
+
+    private val dismissReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val dismissedId = intent?.getStringExtra(AlarmScheduler.EXTRA_ALARM_ID)
+            val currentAlarmId = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
+                .getString("active_alarm_id", null)
+            if (dismissedId == null || dismissedId == currentAlarmId) {
+                releaseLockAndFinish()
             }
         }
     }
@@ -62,9 +75,62 @@ class LockScreenActivity : AppCompatActivity() {
             }
         })
 
-        // 4. Retrieve Lock Duration and Label
-        val durationMinutes = intent.getIntExtra("LOCK_DURATION_MINUTES", 15)
-        val label = intent.getStringExtra("LABEL") ?: ""
+        // 4. Initialize or Resume Timer and Verify Alarm Validity
+        initOrResumeLockTimer(intent)
+
+        // 5. Acquire WakeLock
+        acquireWakeLock()
+
+        // 6. Register Phone Call State & Dismiss Receivers
+        val callFilter = IntentFilter(CallReceiver.ACTION_CALL_STATE_CHANGED)
+        ContextCompat.registerReceiver(
+            this,
+            callStateReceiver,
+            callFilter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
+        val dismissFilter = IntentFilter(AlarmScheduler.ACTION_DISMISS_ALARM)
+        ContextCompat.registerReceiver(
+            this,
+            dismissReceiver,
+            dismissFilter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        initOrResumeLockTimer(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        initOrResumeLockTimer(intent)
+    }
+
+    private fun initOrResumeLockTimer(intent: Intent) {
+        val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
+        val savedAlarmId = prefs.getString("active_alarm_id", null)
+        val intentAlarmId = intent.getStringExtra("ALARM_ID")
+        val currentAlarmId = intentAlarmId ?: savedAlarmId ?: ""
+
+        val alarmStore = AlarmStore(this)
+        if (currentAlarmId.isNotBlank()) {
+            val alarm = alarmStore.getAlarm(currentAlarmId)
+            // If alarm was deleted or toggled off, finish lock activity immediately
+            if (alarm == null || !alarm.isEnabled) {
+                releaseLockAndFinish()
+                return
+            }
+        }
+
+        val now = System.currentTimeMillis()
+        var endTime = prefs.getLong("active_end_time", 0L)
+        val label = intent.getStringExtra("LABEL")
+            ?: prefs.getString("active_label", null)
+            ?: ""
 
         if (label.isNotBlank()) {
             binding.tvLockAlarmLabel.text = label
@@ -73,40 +139,44 @@ class LockScreenActivity : AppCompatActivity() {
             binding.tvLockAlarmLabel.visibility = View.GONE
         }
 
-        remainingTimeMillis = durationMinutes * 60 * 1000L
+        if (endTime > now && savedAlarmId == currentAlarmId) {
+            // Continuation of active timer
+            remainingTimeMillis = endTime - now
+        } else {
+            // New lock screen session
+            val durationMinutes = intent.getIntExtra("LOCK_DURATION_MINUTES", 15)
+            remainingTimeMillis = durationMinutes * 60 * 1000L
+            endTime = now + remainingTimeMillis
 
-        // 5. Start Screen Pinning / Lock Task
-        enableScreenPinning()
+            prefs.edit()
+                .putString("active_alarm_id", currentAlarmId)
+                .putLong("active_end_time", endTime)
+                .putString("active_label", label)
+                .apply()
 
-        // 6. Start Live Countdown Timer
+            // Play audio/TTS only on fresh start
+            if (ringtone == null) {
+                playAlarmSound()
+            }
+            if (textToSpeech == null) {
+                initTextToSpeech(label)
+            }
+        }
+
+        if (remainingTimeMillis <= 0) {
+            releaseLockAndFinish()
+            return
+        }
+
         startCountdown(remainingTimeMillis)
-
-        // 7. Acquire WakeLock to keep screen awake during alarm lock
-        acquireWakeLock()
-
-        // 8. Register Phone Call State Receiver
-        val filter = IntentFilter(CallReceiver.ACTION_CALL_STATE_CHANGED)
-        ContextCompat.registerReceiver(
-            this,
-            callStateReceiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
-
-        // 9. Play Loud Alarm Ringtone and Bengali Voice Announcement
-        playAlarmSound()
-        initTextToSpeech(label)
     }
 
     private fun playAlarmSound() {
         try {
             var alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            if (alarmUri == null) {
-                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            }
-            if (alarmUri == null) {
-                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            }
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+
             ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 ringtone?.isLooping = true
@@ -127,7 +197,7 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun initTextToSpeech(label: String) {
-        textToSpeech = TextToSpeech(this) { status ->
+        textToSpeech = TextToSpeech(applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 val bnLocale = Locale("bn", "BD")
                 val result = textToSpeech?.setLanguage(bnLocale)
@@ -141,10 +211,23 @@ class LockScreenActivity : AppCompatActivity() {
                     "নামাজের সময় হয়েছে, নামাজে যান।"
                 }
 
-                // Announce voice message 3 times clearly
-                for (i in 1..3) {
-                    textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_ADD, null, "IslamicAlarmTTS_$i")
-                }
+                textToSpeech?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {}
+                    override fun onDone(utteranceId: String?) {
+                        if (remainingTimeMillis > 0 && !isFinishing) {
+                            handler.postDelayed({
+                                try {
+                                    textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_FLUSH, null, "IslamicAlarmTTS_Loop")
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }, 1500)
+                        }
+                    }
+                    override fun onError(utteranceId: String?) {}
+                })
+
+                textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_FLUSH, null, "IslamicAlarmTTS_Loop")
             }
         }
     }
@@ -175,7 +258,7 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun enableScreenPinning() {
-        // startLockTask() omitted to prevent OS "App is pinned" dialog from popping up
+        // startLockTask() omitted to prevent OS "App is pinned" dialog
     }
 
     private fun disableScreenPinning() {
@@ -209,13 +292,11 @@ class LockScreenActivity : AppCompatActivity() {
         when (state) {
             TelephonyManager.EXTRA_STATE_RINGING, TelephonyManager.EXTRA_STATE_OFFHOOK -> {
                 isCallInProgress = true
-                disableScreenPinning()
             }
             TelephonyManager.EXTRA_STATE_IDLE -> {
                 if (isCallInProgress) {
                     isCallInProgress = false
                     if (remainingTimeMillis > 0) {
-                        enableScreenPinning()
                         hideSystemUI()
                     }
                 }
@@ -231,7 +312,7 @@ class LockScreenActivity : AppCompatActivity() {
                     PowerManager.ON_AFTER_RELEASE,
             "IslamicAlarm:LockScreenWakeLock"
         ).apply {
-            acquire(30 * 60 * 1000L) // Safe limit
+            acquire(30 * 60 * 1000L)
         }
     }
 
@@ -244,6 +325,9 @@ class LockScreenActivity : AppCompatActivity() {
 
     private fun releaseLockAndFinish() {
         remainingTimeMillis = 0L
+        val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+
         stopAlarmSound()
         disableScreenPinning()
         releaseWakeLock()
@@ -252,13 +336,6 @@ class LockScreenActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (remainingTimeMillis > 0 && !isCallInProgress && !isFinishing) {
-            relaunchLockScreen()
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
         if (remainingTimeMillis > 0 && !isCallInProgress && !isFinishing) {
             relaunchLockScreen()
         }
@@ -299,6 +376,11 @@ class LockScreenActivity : AppCompatActivity() {
         textToSpeech?.shutdown()
         try {
             unregisterReceiver(callStateReceiver)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        try {
+            unregisterReceiver(dismissReceiver)
         } catch (e: Exception) {
             e.printStackTrace()
         }

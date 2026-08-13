@@ -16,7 +16,14 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val alarmId = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_ID) ?: return
         val alarmStore = AlarmStore(context)
-        val alarm = alarmStore.getAlarm(alarmId) ?: return
+        val alarm = alarmStore.getAlarm(alarmId)
+
+        if (alarm == null || !alarm.isEnabled) {
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(alarmId.hashCode())
+            return
+        }
 
         if (alarm.isEnabled) {
             // Wake CPU immediately

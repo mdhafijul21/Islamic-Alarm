@@ -34,12 +34,6 @@ class QuranActivity : AppCompatActivity() {
     private lateinit var surahAdapter: SurahAdapter
     private lateinit var paraAdapter: ParaAdapter
 
-    private var mediaPlayer: MediaPlayer? = null
-    private var currentPlayingSurah: Surah? = null
-    private var isAudioPlaying = false
-    private var quranTts: TextToSpeech? = null
-    private var isTtsMode = false
-
     private var currentPageNumber = 1
     private val handler = Handler(Looper.getMainLooper())
     private val audioProgressRunnable = object : Runnable {
@@ -51,6 +45,42 @@ class QuranActivity : AppCompatActivity() {
                     handler.postDelayed(this, 500)
                 }
             }
+        }
+    }
+
+    companion object {
+        private var mediaPlayer: MediaPlayer? = null
+        private var currentPlayingSurah: Surah? = null
+        private var isAudioPlaying = false
+        private var quranTts: TextToSpeech? = null
+        private var isTtsMode = false
+
+        fun stopAudioGlobal() {
+            if (isTtsMode) {
+                try {
+                    quranTts?.stop()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                isTtsMode = false
+            }
+            mediaPlayer?.let { mp ->
+                try {
+                    mp.setOnPreparedListener(null)
+                    mp.setOnCompletionListener(null)
+                    mp.setOnErrorListener(null)
+                    if (mp.isPlaying) {
+                        mp.stop()
+                    }
+                    mp.reset()
+                    mp.release()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            mediaPlayer = null
+            currentPlayingSurah = null
+            isAudioPlaying = false
         }
     }
 
@@ -247,6 +277,30 @@ class QuranActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        updatePlayerUiState()
+    }
+
+    private fun updatePlayerUiState() {
+        val surah = currentPlayingSurah
+        if (surah != null && (isAudioPlaying || mediaPlayer != null || isTtsMode)) {
+            binding.cardAudioPlayer.visibility = View.VISIBLE
+            binding.tvAudioSurahTitle.text = "সুরা ${surah.nameBangla} (${surah.nameArabic})"
+            if (isAudioPlaying) {
+                binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_pause)
+                surahAdapter.setCurrentlyPlayingId(surah.id)
+                handler.post(audioProgressRunnable)
+            } else {
+                binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_play)
+                surahAdapter.setCurrentlyPlayingId(null)
+            }
+        } else {
+            binding.cardAudioPlayer.visibility = View.GONE
+            surahAdapter.setCurrentlyPlayingId(null)
+        }
+    }
+
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         currentFocus?.let {
@@ -256,18 +310,29 @@ class QuranActivity : AppCompatActivity() {
 
     private fun setupAudioPlayerBar() {
         binding.btnAudioToggle.setOnClickListener {
-            mediaPlayer?.let { mp ->
-                if (mp.isPlaying) {
-                    mp.pause()
+            if (isTtsMode) {
+                if (quranTts?.isSpeaking == true) {
+                    quranTts?.stop()
                     isAudioPlaying = false
                     binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_play)
                     surahAdapter.setCurrentlyPlayingId(null)
                 } else {
-                    mp.start()
-                    isAudioPlaying = true
-                    binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_pause)
-                    surahAdapter.setCurrentlyPlayingId(currentPlayingSurah?.id)
-                    handler.post(audioProgressRunnable)
+                    currentPlayingSurah?.let { playTtsSurah(it) }
+                }
+            } else {
+                mediaPlayer?.let { mp ->
+                    if (mp.isPlaying) {
+                        mp.pause()
+                        isAudioPlaying = false
+                        binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_play)
+                        surahAdapter.setCurrentlyPlayingId(null)
+                    } else {
+                        mp.start()
+                        isAudioPlaying = true
+                        binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_pause)
+                        surahAdapter.setCurrentlyPlayingId(currentPlayingSurah?.id)
+                        handler.post(audioProgressRunnable)
+                    }
                 }
             }
         }
@@ -278,11 +343,13 @@ class QuranActivity : AppCompatActivity() {
     }
 
     private fun initTts() {
-        quranTts = TextToSpeech(this) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                var result = quranTts?.setLanguage(Locale("ar"))
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    quranTts?.setLanguage(Locale("ar", "SA"))
+        if (quranTts == null) {
+            quranTts = TextToSpeech(applicationContext) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    var result = quranTts?.setLanguage(Locale("ar"))
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        quranTts?.setLanguage(Locale("ar", "SA"))
+                    }
                 }
             }
         }
@@ -355,6 +422,21 @@ class QuranActivity : AppCompatActivity() {
         surahAdapter.setCurrentlyPlayingId(surah.id)
 
         val textToSpeak = "سورة ${surah.nameArabic}. بسم الله الرحمن الرحيم"
+        quranTts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) {
+                if (isTtsMode && isAudioPlaying && currentPlayingSurah?.id == surah.id) {
+                    handler.postDelayed({
+                        try {
+                            quranTts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, "quran_tts_${surah.id}")
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }, 1000)
+                }
+            }
+            override fun onError(utteranceId: String?) {}
+        })
         quranTts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, "quran_tts_${surah.id}")
     }
 
@@ -369,6 +451,7 @@ class QuranActivity : AppCompatActivity() {
                         .build()
                 )
                 setDataSource(file.absolutePath)
+                isLooping = true
                 setOnPreparedListener { mp ->
                     try {
                         binding.pbAudioProgress.isIndeterminate = false
@@ -381,10 +464,6 @@ class QuranActivity : AppCompatActivity() {
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                }
-                setOnCompletionListener {
-                    stopAudio()
-                    Toast.makeText(this@QuranActivity, "সুরা পাঠ সম্পন্ন হয়েছে", Toast.LENGTH_SHORT).show()
                 }
                 setOnErrorListener { _, _, _ ->
                     Toast.makeText(this@QuranActivity, "অফলাইন অডিও চালাতে সমস্যা হয়েছে", Toast.LENGTH_SHORT).show()
@@ -413,6 +492,7 @@ class QuranActivity : AppCompatActivity() {
                         .build()
                 )
                 setDataSource(urlToPlay)
+                isLooping = true
                 setOnPreparedListener { mp ->
                     try {
                         if (isTtsMode) {
@@ -430,10 +510,6 @@ class QuranActivity : AppCompatActivity() {
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                }
-                setOnCompletionListener {
-                    stopAudio()
-                    Toast.makeText(this@QuranActivity, "সুরা পাঠ সম্পন্ন হয়েছে", Toast.LENGTH_SHORT).show()
                 }
                 setOnErrorListener { _, _, _ ->
                     if (!useFallback) {
@@ -457,32 +533,8 @@ class QuranActivity : AppCompatActivity() {
     }
 
     private fun stopAudio() {
+        stopAudioGlobal()
         handler.removeCallbacks(audioProgressRunnable)
-        if (isTtsMode) {
-            try {
-                quranTts?.stop()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            isTtsMode = false
-        }
-        mediaPlayer?.let { mp ->
-            try {
-                mp.setOnPreparedListener(null)
-                mp.setOnCompletionListener(null)
-                mp.setOnErrorListener(null)
-                if (mp.isPlaying) {
-                    mp.stop()
-                }
-                mp.reset()
-                mp.release()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        mediaPlayer = null
-        currentPlayingSurah = null
-        isAudioPlaying = false
         binding.cardAudioPlayer.visibility = View.GONE
         surahAdapter.setCurrentlyPlayingId(null)
     }
@@ -503,11 +555,6 @@ class QuranActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopAudio()
-        try {
-            quranTts?.shutdown()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        handler.removeCallbacks(audioProgressRunnable)
     }
 }
