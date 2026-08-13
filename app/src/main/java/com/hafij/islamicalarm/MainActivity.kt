@@ -58,6 +58,14 @@ class MainActivity : AppCompatActivity() {
             showAddOrEditAlarmDialog(null)
         }
 
+        binding.btnOpenQuran.setOnClickListener {
+            openQuranActivity()
+        }
+
+        binding.cardOpenQuran.setOnClickListener {
+            openQuranActivity()
+        }
+
         loadAlarms()
 
         // Sequentially check and request all necessary permissions
@@ -335,6 +343,25 @@ class MainActivity : AppCompatActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             phoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
+        }
+    }
+
+    private fun openQuranActivity() {
+        val intent = Intent(this, com.hafij.islamicalarm.quran.QuranActivity::class.java)
+        startActivity(intent)
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return if (item.itemId == R.id.action_quran) {
+            openQuranActivity()
+            true
+        } else {
+            super.onOptionsItemSelected(item)
         }
     }
 }

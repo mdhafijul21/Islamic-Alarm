@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -44,6 +45,13 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:theme="@style/Theme.IslamicAlarm.LockScreen" />
+
+        <!-- Quran Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.quran.QuranActivity"
+            android:exported="false"
+            android:label="আল-কুরআন"
+            android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- Alarm Receiver -->
         <receiver
