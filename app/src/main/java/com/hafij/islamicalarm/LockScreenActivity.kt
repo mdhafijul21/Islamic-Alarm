@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.PowerManager
+import android.speech.tts.TextToSpeech
 import android.telephony.TelephonyManager
 import android.view.View
 import android.view.WindowManager
@@ -28,6 +29,7 @@ class LockScreenActivity : AppCompatActivity() {
     private var remainingTimeMillis: Long = 0L
     private var isCallInProgress: Boolean = false
     private var wakeLock: PowerManager.WakeLock? = null
+    private var textToSpeech: TextToSpeech? = null
 
     private val callStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -87,6 +89,32 @@ class LockScreenActivity : AppCompatActivity() {
             filter,
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
+
+        // 9. Speak Bengali Voice Announcement
+        initTextToSpeech(label)
+    }
+
+    private fun initTextToSpeech(label: String) {
+        textToSpeech = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val bnLocale = Locale("bn", "BD")
+                val result = textToSpeech?.setLanguage(bnLocale)
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    textToSpeech?.language = Locale("bn")
+                }
+
+                val speechMsg = if (label.isNotBlank()) {
+                    "$label এর নামাজের সময় হয়েছে, নামাজে যান।"
+                } else {
+                    "নামাজের সময় হয়েছে, নামাজে যান।"
+                }
+
+                // Announce voice message 3 times clearly
+                for (i in 1..3) {
+                    textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_ADD, null, "IslamicAlarmTTS_$i")
+                }
+            }
+        }
     }
 
     private fun setupLockScreenFlags() {
@@ -200,6 +228,8 @@ class LockScreenActivity : AppCompatActivity() {
         super.onDestroy()
         countDownTimer?.cancel()
         releaseWakeLock()
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
         try {
             unregisterReceiver(callStateReceiver)
         } catch (e: Exception) {
