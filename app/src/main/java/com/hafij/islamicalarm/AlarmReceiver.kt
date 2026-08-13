@@ -26,8 +26,13 @@ class AlarmReceiver : BroadcastReceiver() {
             }
             context.startActivity(lockIntent)
 
-            // 2. Reschedule alarm for the next day
-            AlarmScheduler.scheduleAlarm(context, alarm)
+            // 2. Reschedule or disable based on repeat mode
+            if (alarm.isRepeatDaily) {
+                AlarmScheduler.scheduleAlarm(context, alarm)
+            } else {
+                val updated = alarm.copy(isEnabled = false)
+                alarmStore.updateAlarm(updated)
+            }
         }
     }
 }

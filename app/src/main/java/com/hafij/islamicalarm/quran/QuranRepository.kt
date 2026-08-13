@@ -159,7 +159,7 @@ object QuranRepository {
         Para(30, "عَمَّ يَتَسَاءَلُونَ", "আম্মা ইয়াতাসাআলূন", "তারা কিসের বিষয়ে প্রশ্ন করছে", 582)
     )
 
-    // Mapping Para 1..30 to start pages in 15-line Hafezi Quran
+    // Mapping Para 1..30 to start pages in Hafezi Quran
     val paraStartPages = mapOf(
         1 to 1, 2 to 22, 3 to 42, 4 to 62, 5 to 82,
         6 to 102, 7 to 122, 8 to 142, 9 to 162, 10 to 182,
@@ -217,7 +217,7 @@ object QuranRepository {
                     fullTextBuilder.append(text).append(" ﴿").append(toArabicNumber(numInSurah)).append("﴾ ")
                 }
 
-                // Chunk into 15 lines for 15-line Emdadia Quran layout
+                // Chunk text into page lines
                 val combinedText = fullTextBuilder.toString().trim()
                 val words = combinedText.split(" ")
                 val lines = mutableListOf<String>()
@@ -244,8 +244,8 @@ object QuranRepository {
             e.printStackTrace()
         }
 
-        // Fallback generator if offline / network fail
-        val sampleLines = List(15) { lineIdx ->
+        // Offline fallback lines if network request fails
+        val fallbackLines = List(15) { lineIdx ->
             "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴿${toArabicNumber(lineIdx + 1)}﴾ - [صفحة $pageNumber - سورة ${surah.nameArabic}]"
         }
 
@@ -253,7 +253,7 @@ object QuranRepository {
             pageNumber = pageNumber,
             juzNumber = juz,
             surahName = "সুরা ${surah.nameBangla} (${surah.nameArabic})",
-            lines = sampleLines
+            lines = fallbackLines
         )
     }
 

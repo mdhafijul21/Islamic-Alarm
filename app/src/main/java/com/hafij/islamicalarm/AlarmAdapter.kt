@@ -51,6 +51,8 @@ class AlarmAdapter(
             val lockText = "🔒 ${alarm.lockDurationMinutes} ${binding.root.context.getString(R.string.minutes_suffix)}"
             binding.tvLockDuration.text = lockText
 
+            binding.tvRepeatMode.text = alarm.getRepeatModeText()
+
             // Temporarily clear listener to prevent triggering during bind
             binding.switchEnabled.setOnCheckedChangeListener(null)
             binding.switchEnabled.isChecked = alarm.isEnabled

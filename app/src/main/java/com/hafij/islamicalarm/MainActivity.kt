@@ -58,12 +58,15 @@ class MainActivity : AppCompatActivity() {
             showAddOrEditAlarmDialog(null)
         }
 
-        binding.btnOpenQuran.setOnClickListener {
-            openQuranActivity()
-        }
-
-        binding.cardOpenQuran.setOnClickListener {
-            openQuranActivity()
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_quran -> {
+                    openQuranActivity()
+                    true
+                }
+                R.id.nav_alarms -> true
+                else -> false
+            }
         }
 
         loadAlarms()
@@ -111,6 +114,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        binding.bottomNavigation.selectedItemId = R.id.nav_alarms
+    }
+
     private fun showAddOrEditAlarmDialog(existingAlarm: AlarmItem?) {
         val dialogBinding = DialogAddAlarmBinding.inflate(LayoutInflater.from(this))
 
@@ -120,6 +128,11 @@ class MainActivity : AppCompatActivity() {
             dialogBinding.timePicker.minute = existingAlarm.minute
             dialogBinding.etLockDuration.setText(existingAlarm.lockDurationMinutes.toString())
             dialogBinding.etAlarmLabel.setText(existingAlarm.label)
+            if (existingAlarm.isRepeatDaily) {
+                dialogBinding.rbDaily.isChecked = true
+            } else {
+                dialogBinding.rbOnce.isChecked = true
+            }
         } else {
             dialogBinding.tvDialogTitle.setText(R.string.add_alarm)
             val now = Calendar.getInstance()
@@ -127,6 +140,7 @@ class MainActivity : AppCompatActivity() {
             dialogBinding.timePicker.minute = now.get(Calendar.MINUTE)
             dialogBinding.etLockDuration.setText("15")
             dialogBinding.etAlarmLabel.setText("")
+            dialogBinding.rbDaily.isChecked = true
         }
 
         val dialog = MaterialAlertDialogBuilder(this)
@@ -148,18 +162,21 @@ class MainActivity : AppCompatActivity() {
             if (lockDuration > 60) lockDuration = 60
 
             val label = dialogBinding.etAlarmLabel.text.toString().trim()
+            val isRepeatDaily = dialogBinding.rbDaily.isChecked
 
             val alarmToSave = existingAlarm?.copy(
                 hour = selectedHour,
                 minute = selectedMinute,
                 lockDurationMinutes = lockDuration,
                 label = label,
+                isRepeatDaily = isRepeatDaily,
                 isEnabled = true
             ) ?: AlarmItem(
                 hour = selectedHour,
                 minute = selectedMinute,
                 lockDurationMinutes = lockDuration,
                 label = label,
+                isRepeatDaily = isRepeatDaily,
                 isEnabled = true
             )
 

@@ -10,6 +10,7 @@ data class AlarmItem(
     val minute: Int,
     val lockDurationMinutes: Int = 15,
     val label: String = "",
+    val isRepeatDaily: Boolean = true,
     val isEnabled: Boolean = true
 ) {
     fun getFormattedTime(): String {
@@ -21,6 +22,10 @@ data class AlarmItem(
         return sdf.format(calendar.time)
     }
 
+    fun getRepeatModeText(): String {
+        return if (isRepeatDaily) "প্রতিদিন" else "একবার"
+    }
+
     fun toJson(): JSONObject {
         return JSONObject().apply {
             put("id", id)
@@ -28,6 +33,7 @@ data class AlarmItem(
             put("minute", minute)
             put("lockDurationMinutes", lockDurationMinutes)
             put("label", label)
+            put("isRepeatDaily", isRepeatDaily)
             put("isEnabled", isEnabled)
         }
     }
@@ -40,6 +46,7 @@ data class AlarmItem(
                 minute = json.getInt("minute"),
                 lockDurationMinutes = json.optInt("lockDurationMinutes", 15),
                 label = json.optString("label", ""),
+                isRepeatDaily = json.optBoolean("isRepeatDaily", true),
                 isEnabled = json.optBoolean("isEnabled", true)
             )
         }

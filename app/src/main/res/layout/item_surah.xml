@@ -153,7 +153,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="@color/secondary"
-                android:text="পড়ুন (১৫-লাইন)"
+                android:text="পড়ুন"
                 android:textColor="@color/primary"
                 app:icon="@android:drawable/ic_menu_view"
                 app:iconTint="@color/primary" />

@@ -63,6 +63,44 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Repeat Mode Option -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="এলার্ম এর ধরন (পুনরাবৃত্তি):"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/rgRepeatMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rbOnce"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="একবার"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+            <RadioButton
+                android:id="@+id/rbDaily"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:checked="true"
+                android:text="প্রতিদিন"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+        </RadioGroup>
+
         <!-- Action Buttons -->
         <LinearLayout
             android:layout_width="match_parent"

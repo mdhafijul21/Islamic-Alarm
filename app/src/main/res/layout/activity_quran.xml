@@ -21,8 +21,6 @@
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@android:drawable/ic_menu_revert"
             app:navigationIconTint="@color/text_primary"
-            app:subtitle="১৫-লাইন এমদাদিয়া হাফেজি কোরআন"
-            app:subtitleTextColor="@color/secondary"
             app:title="আল-কুরআন"
             app:titleTextColor="@color/text_primary" />
 
@@ -50,7 +48,7 @@
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="১৫-লাইন পাঠ" />
+                android:text="কোরআন পাঠ" />
 
         </com.google.android.material.tabs.TabLayout>
 
