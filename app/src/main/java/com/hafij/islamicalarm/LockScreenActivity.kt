@@ -5,6 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -30,6 +32,7 @@ class LockScreenActivity : AppCompatActivity() {
     private var isCallInProgress: Boolean = false
     private var wakeLock: PowerManager.WakeLock? = null
     private var textToSpeech: TextToSpeech? = null
+    private var ringtone: Ringtone? = null
 
     private val callStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -90,8 +93,37 @@ class LockScreenActivity : AppCompatActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        // 9. Speak Bengali Voice Announcement
+        // 9. Play Loud Alarm Ringtone and Bengali Voice Announcement
+        playAlarmSound()
         initTextToSpeech(label)
+    }
+
+    private fun playAlarmSound() {
+        try {
+            var alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            if (alarmUri == null) {
+                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            }
+            if (alarmUri == null) {
+                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            }
+            ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ringtone?.isLooping = true
+            }
+            ringtone?.play()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun stopAlarmSound() {
+        try {
+            ringtone?.stop()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        ringtone = null
     }
 
     private fun initTextToSpeech(label: String) {
@@ -219,13 +251,56 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun releaseLockAndFinish() {
+        remainingTimeMillis = 0L
+        stopAlarmSound()
         disableScreenPinning()
         releaseWakeLock()
         finish()
     }
 
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (remainingTimeMillis > 0 && !isCallInProgress && !isFinishing) {
+            relaunchLockScreen()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (remainingTimeMillis > 0 && !isCallInProgress && !isFinishing) {
+            relaunchLockScreen()
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus && remainingTimeMillis > 0 && !isCallInProgress && !isFinishing) {
+            hideSystemUI()
+            try {
+                @Suppress("DEPRECATION")
+                sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun relaunchLockScreen() {
+        try {
+            val intent = Intent(this, LockScreenActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        stopAlarmSound()
         countDownTimer?.cancel()
         releaseWakeLock()
         textToSpeech?.stop()

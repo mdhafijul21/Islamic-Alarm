@@ -19,7 +19,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivityQuranBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 class QuranActivity : AppCompatActivity() {
 
@@ -266,6 +271,14 @@ class QuranActivity : AppCompatActivity() {
         }
     }
 
+    private fun getAudioFile(surahId: Int): File {
+        val dir = File(filesDir, "quran_audio")
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        return File(dir, "surah_$surahId.mp3")
+    }
+
     private fun togglePlayAudio(surah: Surah) {
         if (currentPlayingSurah?.id == surah.id && mediaPlayer != null) {
             try {
@@ -292,12 +305,75 @@ class QuranActivity : AppCompatActivity() {
 
         currentPlayingSurah = surah
         binding.cardAudioPlayer.visibility = View.VISIBLE
-        binding.tvAudioSurahTitle.text = "চলছে: সুরা ${surah.nameBangla} (${surah.nameArabic})"
-        binding.pbAudioProgress.progress = 0
+        binding.tvAudioSurahTitle.text = "সুরা ${surah.nameBangla} (${surah.nameArabic})"
 
-        Toast.makeText(this, "সুরা ${surah.nameBangla} অডিও লোড হচ্ছে...", Toast.LENGTH_SHORT).show()
+        val localFile = getAudioFile(surah.id)
+        if (localFile.exists() && localFile.length() > 1024) {
+            // Already downloaded offline! Play immediately without internet!
+            binding.tvAudioReciter.text = "ক্বারী মিশারী রশিদ (অফলাইনে প্রস্তুত ✅)"
+            binding.pbAudioProgress.isIndeterminate = false
+            startMediaPlayerWithFile(surah, localFile)
+        } else {
+            // Needs download for offline caching & playing
+            binding.tvAudioReciter.text = "অফলাইন সংরক্ষণের জন্য ডাউনলোড হচ্ছে..."
+            binding.pbAudioProgress.isIndeterminate = true
+            downloadAndPlayAudio(surah)
+        }
+    }
 
+    private fun downloadAndPlayAudio(surah: Surah) {
+        val localFile = getAudioFile(surah.id)
+        val tempFile = File(filesDir, "temp_surah_${surah.id}.mp3")
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            var downloadSuccess = false
+            val urls = listOf(surah.audioUrl, surah.fallbackAudioUrl)
+
+            for (urlStr in urls) {
+                try {
+                    val url = URL(urlStr)
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.connectTimeout = 10000
+                    connection.readTimeout = 20000
+                    connection.connect()
+
+                    if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                        connection.inputStream.use { input ->
+                            tempFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        if (tempFile.exists() && tempFile.length() > 1024) {
+                            if (localFile.exists()) localFile.delete()
+                            tempFile.renameTo(localFile)
+                            downloadSuccess = true
+                            break
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                if (currentPlayingSurah?.id == surah.id) {
+                    if (downloadSuccess && localFile.exists()) {
+                        binding.tvAudioReciter.text = "ক্বারী মিশারী রশিদ (অফলাইনে সংরক্ষিত ✅)"
+                        binding.pbAudioProgress.isIndeterminate = false
+                        startMediaPlayerWithFile(surah, localFile)
+                    } else {
+                        // Internet stream fallback if download failed
+                        binding.tvAudioReciter.text = "অনলাইন স্ট্রিম হচ্ছে..."
+                        startMediaPlayerWithUrl(surah, useFallback = false)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startMediaPlayerWithFile(surah: Surah, file: File) {
         try {
+            mediaPlayer?.release()
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -305,9 +381,11 @@ class QuranActivity : AppCompatActivity() {
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build()
                 )
-                setDataSource(surah.audioUrl)
+                setDataSource(file.absolutePath)
                 setOnPreparedListener { mp ->
                     try {
+                        binding.pbAudioProgress.isIndeterminate = false
+                        binding.pbAudioProgress.progress = 0
                         mp.start()
                         isAudioPlaying = true
                         binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_pause)
@@ -321,8 +399,8 @@ class QuranActivity : AppCompatActivity() {
                     stopAudio()
                     Toast.makeText(this@QuranActivity, "সুরা পাঠ সম্পন্ন হয়েছে", Toast.LENGTH_SHORT).show()
                 }
-                setOnErrorListener { _, what, extra ->
-                    Toast.makeText(this@QuranActivity, "অডিও চালাতে সমস্যা হয়েছে। ইন্টারনেট সংযোগ দেখুন।", Toast.LENGTH_SHORT).show()
+                setOnErrorListener { _, _, _ ->
+                    Toast.makeText(this@QuranActivity, "অফলাইন অডিও চালাতে সমস্যা হয়েছে", Toast.LENGTH_SHORT).show()
                     stopAudio()
                     true
                 }
@@ -330,8 +408,61 @@ class QuranActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "অডিও চালু করতে ত্রুটি ঘটেছে", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "অডিও চালুর সময় ত্রুটি ঘটেছে", Toast.LENGTH_SHORT).show()
             stopAudio()
+        }
+    }
+
+    private fun startMediaPlayerWithUrl(surah: Surah, useFallback: Boolean) {
+        val urlToPlay = if (useFallback) surah.fallbackAudioUrl else surah.audioUrl
+
+        try {
+            mediaPlayer?.release()
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+                )
+                setDataSource(urlToPlay)
+                setOnPreparedListener { mp ->
+                    try {
+                        binding.pbAudioProgress.isIndeterminate = false
+                        binding.pbAudioProgress.progress = 0
+                        binding.tvAudioReciter.text = "ক্বারী মিশারী রশিদ (অনলাইন)"
+                        mp.start()
+                        isAudioPlaying = true
+                        binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_pause)
+                        surahAdapter.setCurrentlyPlayingId(surah.id)
+                        handler.post(audioProgressRunnable)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                setOnCompletionListener {
+                    stopAudio()
+                    Toast.makeText(this@QuranActivity, "সুরা পাঠ সম্পন্ন হয়েছে", Toast.LENGTH_SHORT).show()
+                }
+                setOnErrorListener { _, _, _ ->
+                    if (!useFallback) {
+                        startMediaPlayerWithUrl(surah, useFallback = true)
+                    } else {
+                        Toast.makeText(this@QuranActivity, "অডিও চালাতে সমস্যা হয়েছে। ইন্টারনেট চেক করুন।", Toast.LENGTH_SHORT).show()
+                        stopAudio()
+                    }
+                    true
+                }
+                prepareAsync()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            if (!useFallback) {
+                startMediaPlayerWithUrl(surah, useFallback = true)
+            } else {
+                Toast.makeText(this, "অডিও চালু করতে ত্রুটি ঘটেছে", Toast.LENGTH_SHORT).show()
+                stopAudio()
+            }
         }
     }
 

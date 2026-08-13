@@ -12,7 +12,10 @@ data class Surah(
     val startPage: Int
 ) {
     val audioUrl: String
-        get() = "https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaaseee/${String.format(java.util.Locale.US, "%03d", id)}.mp3"
+        get() = "https://cdn.islamic.network/quran/audio-surah/128/ar.alafasy/${id}.mp3"
+
+    val fallbackAudioUrl: String
+        get() = "https://server8.mp3quran.net/afs/${String.format(java.util.Locale.US, "%03d", id)}.mp3"
 }
 
 data class Para(
