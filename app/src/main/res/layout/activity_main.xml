@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    tools:context="com.hafij.islamicalarm.MainActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/primary"
+        app:elevation="4dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="@string/app_name"
+            app:titleTextColor="@color/text_primary"
+            app:subtitle="নামাজের সময় মোবাইল লক এলার্ম"
+            app:subtitleTextColor="@color/secondary" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <!-- Empty State View -->
+        <LinearLayout
+            android:id="@+id/layoutEmptyState"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <ImageView
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_launcher_foreground"
+                app:tint="@color/secondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="@string/no_alarms"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+        <!-- Alarm List RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvAlarms"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:padding="16dp"
+            tools:listitem="@layout/item_alarm" />
+
+    </FrameLayout>
+
+    <!-- Floating Action Button to Add Alarm -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabAddAlarm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="24dp"
+        android:backgroundTint="@color/secondary"
+        android:contentDescription="@string/add_alarm"
+        android:text="@string/add_alarm"
+        android:textColor="@color/primary"
+        app:icon="@android:drawable/ic_input_add"
+        app:iconTint="@color/primary" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

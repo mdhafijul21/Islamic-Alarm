@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">Islamic Alarm</string>
+    <string name="now_prayer_time">এখন নামাজের সময়</string>
+    <string name="arabic_ayah">إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَّوَقُوتًا</string>
+    <string name="ayah_translation">নিশ্চয়ই নির্দিষ্ট সময়ে সালাত আদায় করা মুমিনদের জন্য আবশ্যকীয় কর্তব্য।</string>
+    <string name="add_alarm">নতুন এলার্ম যোগ করুন</string>
+    <string name="edit_alarm">এলার্ম সম্পাদনা</string>
+    <string name="select_time">সময় নির্ধারণ করুন</string>
+    <string name="lock_duration">লক ডিউরেশন (মিনিট)</string>
+    <string name="lock_duration_hint">যেমন: ১৫ (১-৬০ মিনিট)</string>
+    <string name="alarm_label">এলার্ম লেবেল (ঐচ্ছিক)</string>
+    <string name="alarm_label_hint">যেমন: ফজর, জিকির, তাহাজ্জুদ</string>
+    <string name="cancel">বাতিল</string>
+    <string name="save">সংরক্ষণ করুন</string>
+    <string name="delete">মুছুন</string>
+    <string name="delete_alarm_confirm">আপনি কি এই এলার্মটি মুছে ফেলতে চান?</string>
+    <string name="no_alarms">কোনো এলার্ম যোগ করা হয়নি।\nনিচের + বাটনে চাপ দিয়ে নতুন এলার্ম যোগ করুন।</string>
+    <string name="alarm_set_today">এলার্ম সেট করা হয়েছে: আজ %s এ বাজবে</string>
+    <string name="alarm_set_tomorrow">এলার্ম সেট করা হয়েছে: আগামীকাল %s এ বাজবে</string>
+    <string name="alarm_disabled">এলার্ম বন্ধ করা হয়েছে</string>
+    <string name="alarm_deleted">এলার্ম মুছে ফেলা হয়েছে</string>
+    <string name="permission_exact_alarm_title">এলার্ম পারমিশন প্রয়োজন</string>
+    <string name="permission_exact_alarm_msg">যথাযথ সময়ে লক স্ক্রিন এলার্ম চালুর জন্য Exact Alarm পারমিশন দেওয়া আবশ্যক।</string>
+    <string name="permission_battery_title">ব্যাটারি অপ্টিমাইজেশন নিষ্ক্রিয় করুন</string>
+    <string name="permission_battery_msg">ব্যাকগ্রাউন্ডে ঠিকসময়ে এলার্ম চালু রাখতে ব্যাটারি অপ্টিমাইজেশন নিষ্ক্রিয় করা প্রয়োজন।</string>
+    <string name="permission_autostart_title">অটোস্টার্ট পারমিশন প্রয়োজন</string>
+    <string name="permission_autostart_msg">আপনার ডিভাইসে (%s) সিকিউরিটি সেটিংসে \'Autostart\' এনাবল করুন যাতে এলার্ম সময়মতো কাজ করে।</string>
+    <string name="permission_phone_state_title">ফোন কল পারমিশন</string>
+    <string name="permission_phone_state_msg">এলার্ম চলাকালীন কল আসলে তা রিসিভ করার সুবিধার জন্য ফোন কল পারমিশন দিন।</string>
+    <string name="grant_permission">পারমিশন দিন</string>
+    <string name="open_settings">সেটিংস খুলুন</string>
+    <string name="skip">পরে করবো</string>
+    <string name="locked_title">নামাজের জন্য মোবাইল ব্যবহারের সময় নিয়ন্ত্রিত</string>
+    <string name="remaining_time">অবশিষ্ট সময়</string>
+    <string name="minutes_suffix">মিনিট</string>
+</resources>

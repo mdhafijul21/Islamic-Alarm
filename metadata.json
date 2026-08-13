@@ -1,0 +1,7 @@
+{
+  "name": "Islamic Alarm",
+  "description": "ইসলামিক এলার্ম অ্যাপ - নামাজের সময় মোবাইল ব্যবহার সীমিত রাখার জন্য ফুলস্ক্রিন লক এলার্ম",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

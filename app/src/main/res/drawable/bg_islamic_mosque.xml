@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="1080dp"
+    android:height="1920dp"
+    android:viewportWidth="1080"
+    android:viewportHeight="1920">
+
+    <!-- Gradient Background -->
+    <path
+        android:pathData="M0,0h1080v1920h-1080z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:angle="270"
+                android:endColor="#080A0E"
+                android:centerColor="#161B22"
+                android:startColor="#0F1115"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
+
+    <!-- Starry dots in sky -->
+    <path
+        android:fillColor="#80FFD700"
+        android:pathData="M150,200a10,10 0 1,0 20,0a10,10 0 1,0 -20,0
+                          M300,120a6,6 0 1,0 12,0a6,6 0 1,0 -12,0
+                          M800,250a8,8 0 1,0 16,0a8,8 0 1,0 -16,0
+                          M920,100a12,12 0 1,0 24,0a12,12 0 1,0 -24,0
+                          M500,180a7,7 0 1,0 14,0a7,7 0 1,0 -14,0
+                          M680,80a9,9 0 1,0 18,0a9,9 0 1,0 -18,0
+                          M200,450a8,8 0 1,0 16,0a8,8 0 1,0 -16,0
+                          M880,480a10,10 0 1,0 20,0a10,10 0 1,0 -20,0" />
+
+    <!-- Crescent Moon and Star -->
+    <!-- Crescent -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M540,280 C610,280 666,336 666,406 C666,476 610,532 540,532 C505,532 473,518 450,495 C485,495 513,467 513,406 C513,345 485,317 450,317 C473,294 505,280 540,280 Z" />
+    <!-- Crescent accent glow -->
+    <path
+        android:fillColor="#33FFD700"
+        android:pathData="M540,260 C621,260 686,325 686,406 C686,487 621,552 540,552 C495,552 455,532 427,500 C472,500 533,460 533,406 C533,352 472,312 427,312 C455,280 495,260 540,260 Z" />
+    <!-- Star next to moon -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M650,330 L658,350 L680,350 L662,363 L669,383 L650,370 L631,383 L638,363 L620,350 L642,350 Z" />
+
+    <!-- Mosque Silhouette at the bottom -->
+    <path
+        android:fillColor="#062225"
+        android:pathData="M0,1920 L0,1650 
+                          L80,1650 L80,1350 L90,1350 L90,1320 L100,1320 L100,1300 L110,1280 L115,1280 L115,1300 L125,1320 L135,1350 L145,1350 L145,1650
+                          L280,1650
+                          C280,1520 330,1420 420,1420
+                          C510,1420 560,1520 560,1650
+                          L700,1650
+                          C700,1540 740,1460 810,1460
+                          C880,1460 920,1540 920,1650
+                          L935,1650 L935,1350 L945,1350 L945,1320 L955,1320 L955,1300 L965,1280 L970,1280 L970,1300 L980,1320 L990,1350 L1000,1350 L1000,1650
+                          L1080,1650 L1080,1920 Z" />
+
+    <!-- Minaret Spire details (gold tips) -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M107,1260 L115,1240 L123,1260 Z
+                          M962,1260 L970,1240 L978,1260 Z" />
+
+    <!-- Dome Gold Finials -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M415,1400 L420,1380 L425,1400 Z
+                          M805,1440 L810,1420 L815,1440 Z" />
+
+</vector>

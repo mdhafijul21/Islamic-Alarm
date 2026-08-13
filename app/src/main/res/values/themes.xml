@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.IslamicAlarm" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_variant</item>
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="android:statusBarColor">@color/primary_variant</item>
+        <item name="android:windowBackground">@color/background</item>
+    </style>
+
+    <style name="Theme.IslamicAlarm.LockScreen" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#00000000</item>
+        <item name="android:navigationBarColor">#00000000</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>

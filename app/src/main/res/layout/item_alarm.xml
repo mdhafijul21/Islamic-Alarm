@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="@color/surface"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/card_border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- Alarm Time -->
+            <TextView
+                android:id="@+id/tvAlarmTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:textColor="@color/text_primary"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                tools:text="05:30 AM" />
+
+            <!-- Enable/Disable Switch -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchEnabled"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                app:useMaterialThemeColors="true" />
+
+        </RelativeLayout>
+
+        <!-- Details Row (Label + Lock Duration Badge) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Label -->
+            <TextView
+                android:id="@+id/tvAlarmLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_label_chip"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:textColor="@color/secondary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="ফজর" />
+
+            <!-- Lock Duration -->
+            <TextView
+                android:id="@+id/tvLockDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_duration_chip"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:textColor="@color/gold_accent"
+                android:textSize="13sp"
+                tools:text="🔒 ১৫ মিনিট লক" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="12dp"
+            android:background="@color/card_border" />
+
+        <!-- Edit & Delete Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEdit"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/edit_alarm"
+                android:textColor="@color/secondary"
+                app:icon="@android:drawable/ic_menu_edit"
+                app:iconTint="@color/secondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDelete"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/delete"
+                android:textColor="@color/error"
+                app:icon="@android:drawable/ic_menu_delete"
+                app:iconTint="@color/error" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
