@@ -340,9 +340,8 @@ class QuranActivity : AppCompatActivity() {
             binding.pbAudioProgress.isIndeterminate = false
             startMediaPlayerWithFile(surah, localFile)
         } else {
-            // Instant online stream / TTS offline fallback
-            binding.tvAudioReciter.text = "অডিও প্লে হচ্ছে..."
-            binding.pbAudioProgress.isIndeterminate = true
+            // Instant audio response (0ms delay) + online high-speed stream
+            playTtsSurah(surah)
             startMediaPlayerWithUrl(surah, useFallback = false)
         }
     }
@@ -416,6 +415,10 @@ class QuranActivity : AppCompatActivity() {
                 setDataSource(urlToPlay)
                 setOnPreparedListener { mp ->
                     try {
+                        if (isTtsMode) {
+                            try { quranTts?.stop() } catch (e: Exception) { e.printStackTrace() }
+                            isTtsMode = false
+                        }
                         binding.pbAudioProgress.isIndeterminate = false
                         binding.pbAudioProgress.progress = 0
                         binding.tvAudioReciter.text = "ক্বারী মিশারী রশিদ (অনলাইন)"

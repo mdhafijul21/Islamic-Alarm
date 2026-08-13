@@ -175,19 +175,11 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun enableScreenPinning() {
-        try {
-            startLockTask()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // startLockTask() omitted to prevent OS "App is pinned" dialog from popping up
     }
 
     private fun disableScreenPinning() {
-        try {
-            stopLockTask()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // stopLockTask() omitted
     }
 
     private fun startCountdown(millis: Long) {
