@@ -215,12 +215,39 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkAndRequestPermissions() {
         checkExactAlarmPermission {
-            checkBatteryOptimizationPermission {
-                checkOemAutostartPermission {
-                    checkPhoneStatePermission()
+            checkOverlayPermission {
+                checkBatteryOptimizationPermission {
+                    checkOemAutostartPermission {
+                        checkPhoneStatePermission()
+                    }
                 }
             }
         }
+    }
+
+    private fun checkOverlayPermission(onNext: () -> Unit) {
+        if (!Settings.canDrawOverlays(this)) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("অন্যান্য অ্যাপের উপরে দেখানোর পারমিশন")
+                .setMessage("এলার্ম সময় হলে লক স্ক্রিন সরাসরি অটোমেটিক ফুল স্ক্রিনে ওপেন হওয়ার জন্য এই পারমিশনটি অন করুন।")
+                .setPositiveButton("অন করুন") { _, _ ->
+                    try {
+                        val intent = Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:$packageName")
+                        )
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    onNext()
+                }
+                .setNegativeButton("পরে করব") { _, _ -> onNext() }
+                .setCancelable(false)
+                .show()
+            return
+        }
+        onNext()
     }
 
     private fun checkExactAlarmPermission(onNext: () -> Unit) {

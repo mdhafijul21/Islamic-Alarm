@@ -36,9 +36,17 @@ class AlarmReceiver : BroadcastReceiver() {
                 putExtra("LABEL", alarm.label)
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK or
                             Intent.FLAG_ACTIVITY_CLEAR_TOP or
                             Intent.FLAG_ACTIVITY_SINGLE_TOP
                 )
+            }
+
+            // 1. Directly trigger startActivity first to popup full screen on top of home screen/other apps
+            try {
+                context.startActivity(lockIntent)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
 
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

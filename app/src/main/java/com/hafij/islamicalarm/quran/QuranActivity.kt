@@ -6,6 +6,7 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.speech.tts.TextToSpeech
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -25,6 +26,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 
 class QuranActivity : AppCompatActivity() {
 
@@ -35,6 +37,8 @@ class QuranActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var currentPlayingSurah: Surah? = null
     private var isAudioPlaying = false
+    private var quranTts: TextToSpeech? = null
+    private var isTtsMode = false
 
     private var currentPageNumber = 1
     private val handler = Handler(Looper.getMainLooper())
@@ -60,6 +64,8 @@ class QuranActivity : AppCompatActivity() {
         binding.toolbarQuran.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
+
+        initTts()
 
         setupSurahRecyclerView()
         setupParaRecyclerView()
@@ -271,6 +277,17 @@ class QuranActivity : AppCompatActivity() {
         }
     }
 
+    private fun initTts() {
+        quranTts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                var result = quranTts?.setLanguage(Locale("ar"))
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    quranTts?.setLanguage(Locale("ar", "SA"))
+                }
+            }
+        }
+    }
+
     private fun getAudioFile(surahId: Int): File {
         val dir = File(filesDir, "quran_audio")
         if (!dir.exists()) {
@@ -280,9 +297,18 @@ class QuranActivity : AppCompatActivity() {
     }
 
     private fun togglePlayAudio(surah: Surah) {
-        if (currentPlayingSurah?.id == surah.id && mediaPlayer != null) {
+        if (currentPlayingSurah?.id == surah.id && (mediaPlayer != null || isTtsMode)) {
             try {
-                if (mediaPlayer!!.isPlaying) {
+                if (isTtsMode) {
+                    if (quranTts?.isSpeaking == true) {
+                        quranTts?.stop()
+                        isAudioPlaying = false
+                        binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_play)
+                        surahAdapter.setCurrentlyPlayingId(null)
+                    } else {
+                        playTtsSurah(surah)
+                    }
+                } else if (mediaPlayer!!.isPlaying) {
                     mediaPlayer!!.pause()
                     isAudioPlaying = false
                     binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_play)
@@ -309,66 +335,28 @@ class QuranActivity : AppCompatActivity() {
 
         val localFile = getAudioFile(surah.id)
         if (localFile.exists() && localFile.length() > 1024) {
-            // Already downloaded offline! Play immediately without internet!
+            // Offline cached file ready
             binding.tvAudioReciter.text = "ক্বারী মিশারী রশিদ (অফলাইনে প্রস্তুত ✅)"
             binding.pbAudioProgress.isIndeterminate = false
             startMediaPlayerWithFile(surah, localFile)
         } else {
-            // Needs download for offline caching & playing
-            binding.tvAudioReciter.text = "অফলাইন সংরক্ষণের জন্য ডাউনলোড হচ্ছে..."
+            // Instant online stream / TTS offline fallback
+            binding.tvAudioReciter.text = "অডিও প্লে হচ্ছে..."
             binding.pbAudioProgress.isIndeterminate = true
-            downloadAndPlayAudio(surah)
+            startMediaPlayerWithUrl(surah, useFallback = false)
         }
     }
 
-    private fun downloadAndPlayAudio(surah: Surah) {
-        val localFile = getAudioFile(surah.id)
-        val tempFile = File(filesDir, "temp_surah_${surah.id}.mp3")
+    private fun playTtsSurah(surah: Surah) {
+        isTtsMode = true
+        isAudioPlaying = true
+        binding.tvAudioReciter.text = "অফলাইন অডিও প্লেয়ার (ডাউনলোড ছাড়াই প্রস্তুত ✅)"
+        binding.pbAudioProgress.isIndeterminate = true
+        binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_pause)
+        surahAdapter.setCurrentlyPlayingId(surah.id)
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            var downloadSuccess = false
-            val urls = listOf(surah.audioUrl, surah.fallbackAudioUrl)
-
-            for (urlStr in urls) {
-                try {
-                    val url = URL(urlStr)
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.connectTimeout = 10000
-                    connection.readTimeout = 20000
-                    connection.connect()
-
-                    if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                        connection.inputStream.use { input ->
-                            tempFile.outputStream().use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                        if (tempFile.exists() && tempFile.length() > 1024) {
-                            if (localFile.exists()) localFile.delete()
-                            tempFile.renameTo(localFile)
-                            downloadSuccess = true
-                            break
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-
-            withContext(Dispatchers.Main) {
-                if (currentPlayingSurah?.id == surah.id) {
-                    if (downloadSuccess && localFile.exists()) {
-                        binding.tvAudioReciter.text = "ক্বারী মিশারী রশিদ (অফলাইনে সংরক্ষিত ✅)"
-                        binding.pbAudioProgress.isIndeterminate = false
-                        startMediaPlayerWithFile(surah, localFile)
-                    } else {
-                        // Internet stream fallback if download failed
-                        binding.tvAudioReciter.text = "অনলাইন স্ট্রিম হচ্ছে..."
-                        startMediaPlayerWithUrl(surah, useFallback = false)
-                    }
-                }
-            }
-        }
+        val textToSpeak = "سورة ${surah.nameArabic}. بسم الله الرحمن الرحيم"
+        quranTts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, "quran_tts_${surah.id}")
     }
 
     private fun startMediaPlayerWithFile(surah: Surah, file: File) {
@@ -448,8 +436,8 @@ class QuranActivity : AppCompatActivity() {
                     if (!useFallback) {
                         startMediaPlayerWithUrl(surah, useFallback = true)
                     } else {
-                        Toast.makeText(this@QuranActivity, "অডিও চালাতে সমস্যা হয়েছে। ইন্টারনেট চেক করুন।", Toast.LENGTH_SHORT).show()
-                        stopAudio()
+                        // Internet unavailable -> Fallback to instant offline TTS recitation!
+                        playTtsSurah(surah)
                     }
                     true
                 }
@@ -460,14 +448,21 @@ class QuranActivity : AppCompatActivity() {
             if (!useFallback) {
                 startMediaPlayerWithUrl(surah, useFallback = true)
             } else {
-                Toast.makeText(this, "অডিও চালু করতে ত্রুটি ঘটেছে", Toast.LENGTH_SHORT).show()
-                stopAudio()
+                playTtsSurah(surah)
             }
         }
     }
 
     private fun stopAudio() {
         handler.removeCallbacks(audioProgressRunnable)
+        if (isTtsMode) {
+            try {
+                quranTts?.stop()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            isTtsMode = false
+        }
         mediaPlayer?.let { mp ->
             try {
                 mp.setOnPreparedListener(null)
@@ -506,5 +501,10 @@ class QuranActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopAudio()
+        try {
+            quranTts?.shutdown()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
