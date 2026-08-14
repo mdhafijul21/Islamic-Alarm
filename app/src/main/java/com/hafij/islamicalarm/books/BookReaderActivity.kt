@@ -2,6 +2,7 @@ package com.hafij.islamicalarm.books
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
@@ -33,12 +34,20 @@ class BookReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
 
-        setupToolbar()
-        setupRecyclerView()
-        setupFontControls()
-        setupOnlineSearch()
+        try {
+            setupToolbar()
+            setupRecyclerView()
+            setupFontControls()
+            setupOnlineSearch()
 
-        tts = TextToSpeech(this, this)
+            tts = TextToSpeech(this, this)
+        } catch (e: Exception) {
+            // Prevents a full app crash/exit; shows the real error so we can pinpoint it.
+            Log.e("BookReaderActivity", "Failed to open book reader", e)
+            Toast.makeText(this, "কিতাব খুলতে সমস্যা হয়েছে: ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
     }
 
     private fun setupToolbar() {

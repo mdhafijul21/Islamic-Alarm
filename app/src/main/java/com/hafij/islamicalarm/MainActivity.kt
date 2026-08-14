@@ -2,6 +2,7 @@ package com.hafij.islamicalarm
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -17,11 +18,17 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.location.Priority
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.hafij.islamicalarm.amal.AmalTrackerActivity
 import com.hafij.islamicalarm.data.AlarmItem
@@ -75,8 +82,10 @@ class MainActivity : AppCompatActivity() {
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
         if (fineGranted || coarseGranted) {
-            Toast.makeText(this, "📡 লোকেশন অনুমতি পাওয়া গেছে। GPS অনুযায়ী সময় সেট করা হচ্ছে...", Toast.LENGTH_SHORT).show()
-            autoDetectLocationAndSetPrayerTimes(showToast = true)
+            Toast.makeText(this, "📡 লোকেশন অনুমতি পাওয়া গেছে। GPS চালু করা হচ্ছে...", Toast.LENGTH_SHORT).show()
+            promptEnableLocationServices {
+                autoDetectLocationAndSetPrayerTimes(showToast = true)
+            }
         } else {
             Toast.makeText(
                 this,
@@ -84,6 +93,48 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    // Handles the result of the system "Turn on device location" dialog
+    private val locationSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) {
+        // Whether the user turned it ON or dismissed it, try fetching now.
+        // fetchCurrentLocation() already shows a clear error if location is still off.
+        autoDetectLocationAndSetPrayerTimes(showToast = true)
+    }
+
+    /**
+     * Shows Android's built-in "Turn on device location" one-tap system dialog
+     * if location services are currently off. This single confirmation tap is
+     * the only way Android allows an app to trigger enabling location -
+     * it cannot be toggled silently for security reasons.
+     */
+    private fun promptEnableLocationServices(onReady: () -> Unit) {
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000).build()
+        val settingsRequest = LocationSettingsRequest.Builder()
+            .addLocationRequest(locationRequest)
+            .build()
+
+        LocationServices.getSettingsClient(this)
+            .checkLocationSettings(settingsRequest)
+            .addOnSuccessListener {
+                // Location is already ON
+                onReady()
+            }
+            .addOnFailureListener { exception ->
+                if (exception is ResolvableApiException) {
+                    try {
+                        val intentSenderRequest =
+                            IntentSenderRequest.Builder(exception.resolution).build()
+                        locationSettingsLauncher.launch(intentSenderRequest)
+                    } catch (e: Exception) {
+                        onReady()
+                    }
+                } else {
+                    onReady()
+                }
+            }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -691,10 +742,12 @@ class MainActivity : AppCompatActivity() {
     private fun checkAndRequestPermissions() {
         checkLocationPermission {
             checkOverlayPermission {
-                checkExactAlarmPermission {
-                    checkBatteryOptimization {
-                        checkAutostartPermission {
-                            checkPhoneStatePermission()
+                checkFullScreenIntentPermission {
+                    checkExactAlarmPermission {
+                        checkBatteryOptimization {
+                            checkAutostartPermission {
+                                checkPhoneStatePermission()
+                            }
                         }
                     }
                 }
@@ -748,6 +801,40 @@ class MainActivity : AppCompatActivity() {
                 .setCancelable(false)
                 .show()
             return
+        }
+        onNext()
+    }
+
+    // Android 14+ requires a separate special permission for full-screen alarm
+    // notifications. Without it, the system silently downgrades the alarm's
+    // full-screen intent to a normal notification (no lock-screen takeover).
+    private fun checkFullScreenIntentPermission(onNext: () -> Unit) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            val notificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (!notificationManager.canUseFullScreenIntent()) {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("ফুলস্ক্রিন এলার্ম পারমিশন আবশ্যক")
+                    .setMessage("ফোন লক থাকা অবস্থায় নামাজের সময় ফুলস্ক্রিন এলার্ম স্ক্রিন দেখাতে 'Full screen notifications' পারমিশন চালু করুন। এই পারমিশন ছাড়া শুধু সাধারণ নোটিফিকেশন/সাউন্ড আসবে, ফুলস্ক্রিন লক স্ক্রিন আসবে না।")
+                    .setPositiveButton(R.string.grant_permission) { _, _ ->
+                        try {
+                            val intent = Intent(
+                                Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                                Uri.parse("package:$packageName")
+                            )
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        onNext()
+                    }
+                    .setNegativeButton(R.string.skip) { _, _ ->
+                        onNext()
+                    }
+                    .setCancelable(false)
+                    .show()
+                return
+            }
         }
         onNext()
     }
