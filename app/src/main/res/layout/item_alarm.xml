@@ -99,12 +99,22 @@
             android:layout_marginVertical="12dp"
             android:background="@color/card_border" />
 
-        <!-- Edit & Delete Buttons -->
+        <!-- Action Buttons: Test Lock, Edit & Delete -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="end"
             android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTestAlarm"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="লক টেস্ট"
+                android:textColor="@color/gold_accent"
+                app:icon="@android:drawable/ic_media_play"
+                app:iconTint="@color/gold_accent" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnEdit"

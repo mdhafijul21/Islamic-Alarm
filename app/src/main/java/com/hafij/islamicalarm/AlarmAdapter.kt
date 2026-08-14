@@ -10,7 +10,8 @@ import com.hafij.islamicalarm.databinding.ItemAlarmBinding
 class AlarmAdapter(
     private val onToggleAlarm: (AlarmItem, Boolean) -> Unit,
     private val onEditAlarm: (AlarmItem) -> Unit,
-    private val onDeleteAlarm: (AlarmItem) -> Unit
+    private val onDeleteAlarm: (AlarmItem) -> Unit,
+    private val onTestAlarm: (AlarmItem) -> Unit
 ) : RecyclerView.Adapter<AlarmAdapter.AlarmViewHolder>() {
 
     private var alarmsList = listOf<AlarmItem>()
@@ -59,6 +60,10 @@ class AlarmAdapter(
 
             binding.switchEnabled.setOnCheckedChangeListener { _, isChecked ->
                 onToggleAlarm(alarm, isChecked)
+            }
+
+            binding.btnTestAlarm.setOnClickListener {
+                onTestAlarm(alarm)
             }
 
             binding.btnEdit.setOnClickListener {

@@ -84,17 +84,9 @@ class LockScreenActivity : AppCompatActivity() {
             }
         })
 
-        // Emergency / Prayer Complete Unlock with 3s long press
-        binding.btnUnlockScreen.setOnClickListener {
-            android.widget.Toast.makeText(
-                this,
-                "নামাজ সম্পন্ন হলে বা জরুরি প্রয়োজনে ৩ সেকেন্ড চেপে ধরে রাখুন।",
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
-        }
-
-        binding.btnUnlockScreen.setOnLongClickListener {
-            android.widget.Toast.makeText(this, "নামাজ সম্পন্ন হয়েছে। লক স্ক্রিন সমাপ্ত করা হচ্ছে...", android.widget.Toast.LENGTH_SHORT).show()
+        // Hidden failsafe: Long press countdown timer for 3 seconds for emergency unlock
+        binding.tvCountdownTimer.setOnLongClickListener {
+            android.widget.Toast.makeText(this, "নামাজ লক স্ক্রিন সমাপ্ত করা হচ্ছে...", android.widget.Toast.LENGTH_SHORT).show()
             releaseLockAndFinish()
             true
         }
