@@ -56,7 +56,7 @@ object PrayerTimeCalculator {
     }
 
     /**
-     * Calculates prayer times using standard astronomical solar equations for Islamic prayer calculation (Karachi/Islamic Foundation Bangladesh 18° Fajr & Isha, Hanafi Asr ratio).
+     * Calculates prayer times using standard astronomical solar equations for Islamic prayer calculation anywhere in the world.
      */
     fun calculate(calendar: Calendar, district: District): PrayerSchedule {
         val year = calendar.get(Calendar.YEAR)
@@ -65,7 +65,7 @@ object PrayerTimeCalculator {
 
         val lat = district.lat
         val lng = district.lng
-        val timeZone = 6.0 // Bangladesh Standard Time GMT+6
+        val timeZone = district.timeZone
 
         // Julian Date
         val julianDate = getJulianDate(year, month, day) - lng / (15.0 * 24.0)
@@ -83,14 +83,15 @@ object PrayerTimeCalculator {
         // Solar Noon (Dhuhr)
         val noon = fixHour(12 + timeZone - lng / 15.0 - eqOfTime)
 
-        // Sun angles
-        val fajrAngle = 18.0 // Islamic Foundation Bangladesh / Karachi convention
-        val ishaAngle = 18.0
+        // Sun angles by calculation method
+        val method = district.method
+        val fajrAngle = method.fajrAngle
+        val ishaAngle = method.ishaAngle
 
         val fajrDiff = sunAngleTime(fajrAngle, lat, declination)
         val sunriseDiff = sunAngleTime(0.833, lat, declination) // Standard atmospheric refraction
         val sunsetDiff = sunAngleTime(0.833, lat, declination)
-        val ishaDiff = sunAngleTime(ishaAngle, lat, declination)
+        val ishaDiff = if (ishaAngle > 0) sunAngleTime(ishaAngle, lat, declination) else 0.0
 
         // Asr (Hanafi juristic: shadow length = 2 * object length + shadow at noon)
         val asrShadowFactor = 2.0
@@ -103,7 +104,11 @@ object PrayerTimeCalculator {
         val asrHour = noon + asrDiff
         val sunsetHour = noon + sunsetDiff
         val maghribHour = sunsetHour + (2.0 / 60.0) // 2 min safety margin
-        val ishaHour = noon + ishaDiff
+        val ishaHour = if (method.ishaMinutesAfterMaghrib > 0) {
+            maghribHour + (method.ishaMinutesAfterMaghrib.toDouble() / 60.0)
+        } else {
+            noon + ishaDiff
+        }
 
         // Calendar instances for exact comparisons
         val fajrCal = makeCalendar(calendar, fajrHour)

@@ -105,10 +105,17 @@ class QuranActivity : AppCompatActivity() {
         setupAudioPlayerBar()
         setupBookmarkCard()
 
-        // Load saved last read page initially
-        val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
-        val lastPage = prefs.getInt("last_read_page", 1)
-        loadPage(lastPage)
+        val startPageExtra = intent.getIntExtra("START_PAGE", 0)
+        if (startPageExtra > 0) {
+            currentPageNumber = startPageExtra
+            binding.tabLayout.getTabAt(2)?.select()
+            loadPage(currentPageNumber)
+        } else {
+            // Load saved last read page initially
+            val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
+            val lastPage = prefs.getInt("last_read_page", 1)
+            loadPage(lastPage)
+        }
     }
 
     private fun setupBookmarkCard() {

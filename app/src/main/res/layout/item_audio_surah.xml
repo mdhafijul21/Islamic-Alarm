@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="@color/surface"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <!-- Surah Number Badge -->
+        <FrameLayout
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_islamic_star_badge">
+
+            <TextView
+                android:id="@+id/tvAudioSurahNo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="১"
+                android:textColor="@color/secondary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <!-- Surah Info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvAudioSurahNameBn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="আল-ফাতিহা"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAudioSurahNameAr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="الفاتحة"
+                    android:textColor="@color/secondary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvAudioSurahMeta"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="৭ আয়াত • মক্কী • পারা ১"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvDownloadStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="অনলাইন"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Offline Download Button -->
+        <ImageButton
+            android:id="@+id/btnDownloadSurah"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Download Surah Offline"
+            android:src="@android:drawable/stat_sys_download"
+            app:tint="@color/text_secondary" />
+
+        <!-- Read in Mushaf Button -->
+        <ImageButton
+            android:id="@+id/btnReadSurahMushaf"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Read Surah in Quran"
+            android:src="@android:drawable/ic_menu_agenda"
+            app:tint="@color/text_secondary" />
+
+        <!-- Play/Pause Button -->
+        <ImageButton
+            android:id="@+id/btnPlayAudioSurah"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Play Surah Audio"
+            android:src="@android:drawable/ic_media_play"
+            app:tint="@color/secondary" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

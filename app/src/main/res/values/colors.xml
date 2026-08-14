@@ -16,5 +16,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="card_border">#2A2F3B</color>
     <color name="border">#2A2F3B</color>
+    <color name="divider">#2A2F3B</color>
+    <color name="surface_container">#1F242D</color>
     <color name="error">#EF4444</color>
 </resources>

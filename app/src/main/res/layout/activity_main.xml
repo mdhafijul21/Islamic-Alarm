@@ -59,12 +59,23 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:backgroundTint="@color/surface"
-                        android:text="📍 জেলা: ঢাকা"
+                        android:text="📍 ঢাকা"
                         android:textColor="@color/secondary"
                         android:textSize="13sp"
                         app:cornerRadius="12dp"
                         app:strokeColor="@color/border"
                         app:strokeWidth="1dp" />
+
+                    <!-- Quick GPS Auto-Detect Button -->
+                    <ImageButton
+                        android:id="@+id/btnQuickGpsLocation"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_duration_chip"
+                        android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
+                        android:src="@android:drawable/ic_menu_mylocation"
+                        app:tint="@color/secondary" />
 
                     <View
                         android:layout_width="0dp"
@@ -647,6 +658,182 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:text="আইয়ামে বীজ ও ইসলামিক দিনসমূহ"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
+                <!-- Grid Row 3: Islamic Library & Ramadan Tracker -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <!-- Islamic Library -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardFeatureBooks"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_marginBottom="14dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="2dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📚 কিতাব ও হাদিস লাইব্রেরি"
+                                android:textColor="@color/secondary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="সহিহ হাদিস, সিরাত ও কিতাব পাঠ (অফলাইন/অনলাইন)"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Ramadan & Fasting -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardFeatureRamadan"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_marginBottom="14dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="2dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌙 রমজান ও নফল রোজা"
+                                android:textColor="@color/secondary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="সাহরী ও ইফতার সময়সূচী এবং দোয়া"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
+                <!-- Grid Row 4: Audio Quran & Audio Azan -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <!-- Audio Quran 114 Surahs -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardFeatureAudioQuran"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_marginBottom="14dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="2dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🎧 অডিও কুরআন (১১৪ সুরা)"
+                                android:textColor="@color/secondary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="৫ জন বিশ্বখ্যাত ক্বারীর কণ্ঠে সকল সুরার তিলাওয়াত"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Audio Azan & Alarm Tone -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardFeatureAzan"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_marginBottom="14dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="2dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🕌 অডিও আজান ও দোয়া"
+                                android:textColor="@color/secondary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="মক্কা-মদিনার সুমধুর আজান ও এলার্ম টিউন সেট"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11sp" />
 

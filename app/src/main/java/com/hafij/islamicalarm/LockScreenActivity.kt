@@ -21,6 +21,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.hafij.islamicalarm.audio.AzanData
 import com.hafij.islamicalarm.data.AlarmStore
 import com.hafij.islamicalarm.databinding.ActivityLockScreenBinding
 import java.util.Locale
@@ -34,6 +35,7 @@ class LockScreenActivity : AppCompatActivity() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var textToSpeech: TextToSpeech? = null
     private var ringtone: Ringtone? = null
+    private var azanMediaPlayer: android.media.MediaPlayer? = null
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private val callStateReceiver = object : BroadcastReceiver() {
@@ -68,12 +70,34 @@ class LockScreenActivity : AppCompatActivity() {
         // 2. Hide Status Bar and Navigation Bar (Immersive Sticky Mode)
         hideSystemUI()
 
+        // Enable Screen Pinning / Lock Task mode if supported/available
+        try {
+            startLockTask()
+        } catch (e: Exception) {
+            // Non-kiosk or standard mode fallback
+        }
+
         // 3. Disable Back Button Completely
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Do nothing to prevent escaping the lock screen
+                // Completely disabled - do nothing
             }
         })
+
+        // Emergency / Prayer Complete Unlock with 3s long press
+        binding.btnUnlockScreen.setOnClickListener {
+            android.widget.Toast.makeText(
+                this,
+                "নামাজ সম্পন্ন হলে বা জরুরি প্রয়োজনে ৩ সেকেন্ড চেপে ধরে রাখুন।",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+
+        binding.btnUnlockScreen.setOnLongClickListener {
+            android.widget.Toast.makeText(this, "নামাজ সম্পন্ন হয়েছে। লক স্ক্রিন সমাপ্ত করা হচ্ছে...", android.widget.Toast.LENGTH_SHORT).show()
+            releaseLockAndFinish()
+            true
+        }
 
         // 4. Initialize or Resume Timer and Verify Alarm Validity
         initOrResumeLockTimer(intent)
@@ -172,8 +196,43 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun playAlarmSound() {
+        val prefs = getSharedPreferences("IslamicAlarmPrefs", Context.MODE_PRIVATE)
+        val isAzanEnabled = prefs.getBoolean(AzanData.PREF_AZAN_SOUND_ENABLED, true)
+        val selectedAzanId = prefs.getString(AzanData.PREF_SELECTED_AZAN_ID, "makkah_ali_mullah") ?: "makkah_ali_mullah"
+        val azanItem = AzanData.azanList.find { it.id == selectedAzanId } ?: AzanData.azanList.first()
+
+        if (isAzanEnabled && azanItem.audioUrl.isNotBlank()) {
+            try {
+                azanMediaPlayer = android.media.MediaPlayer().apply {
+                    setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                            .build()
+                    )
+                    setDataSource(azanItem.audioUrl)
+                    isLooping = true
+                    setOnPreparedListener { mp ->
+                        mp.start()
+                    }
+                    setOnErrorListener { _, _, _ ->
+                        playDefaultSystemRingtone()
+                        true
+                    }
+                    prepareAsync()
+                }
+                return
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        playDefaultSystemRingtone()
+    }
+
+    private fun playDefaultSystemRingtone() {
         try {
-            var alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
 
@@ -188,6 +247,17 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun stopAlarmSound() {
+        try {
+            azanMediaPlayer?.let { mp ->
+                if (mp.isPlaying) mp.stop()
+                mp.reset()
+                mp.release()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        azanMediaPlayer = null
+
         try {
             ringtone?.stop()
         } catch (e: Exception) {
@@ -380,6 +450,12 @@ class LockScreenActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
         prefs.edit().clear().apply()
 
+        try {
+            stopLockTask()
+        } catch (e: Exception) {
+            // Safe fallback
+        }
+
         com.hafij.islamicalarm.silent.AutoSilentManager.restoreRingerMode(this)
         stopAlarmSound()
         releaseWakeLock()
@@ -403,6 +479,11 @@ class LockScreenActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+            handler.postDelayed({
+                if (remainingTimeMillis > 0 && !isCallInProgress && !isFinishing) {
+                    relaunchLockScreen()
+                }
+            }, 200)
         }
     }
 

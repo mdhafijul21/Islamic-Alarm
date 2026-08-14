@@ -12,12 +12,15 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.PowerManager
 import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.hafij.islamicalarm.amal.AmalTrackerActivity
@@ -25,14 +28,20 @@ import com.hafij.islamicalarm.data.AlarmItem
 import com.hafij.islamicalarm.data.AlarmStore
 import com.hafij.islamicalarm.databinding.ActivityMainBinding
 import com.hafij.islamicalarm.databinding.DialogAddAlarmBinding
+import com.hafij.islamicalarm.databinding.DialogLocationPickerBinding
 import com.hafij.islamicalarm.names.AllahNamesActivity
+import com.hafij.islamicalarm.prayertimes.CalculationMethod
 import com.hafij.islamicalarm.prayertimes.District
-import com.hafij.islamicalarm.prayertimes.DistrictData
 import com.hafij.islamicalarm.prayertimes.HijriCalendarActivity
 import com.hafij.islamicalarm.prayertimes.HijriCalendarHelper
+import com.hafij.islamicalarm.prayertimes.LocationAdapter
+import com.hafij.islamicalarm.prayertimes.LocationData
+import com.hafij.islamicalarm.prayertimes.LocationHelper
+import com.hafij.islamicalarm.prayertimes.LocationType
 import com.hafij.islamicalarm.prayertimes.PrayerSchedule
 import com.hafij.islamicalarm.prayertimes.PrayerTimeCalculator
 import com.hafij.islamicalarm.tahajjud.TahajjudCalculatorActivity
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 
@@ -43,7 +52,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var alarmAdapter: AlarmAdapter
     private lateinit var prefs: SharedPreferences
 
-    private var selectedDistrict: District = DistrictData.getDefaultDistrict()
+    private var selectedDistrict: District = LocationData.getDefaultDistrict()
     private var currentSchedule: PrayerSchedule? = null
     private var countdownTimer: CountDownTimer? = null
 
@@ -59,6 +68,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+
+        if (fineGranted || coarseGranted) {
+            Toast.makeText(this, "📡 লোকেশন অনুমতি পাওয়া গেছে। GPS অনুযায়ী সময় সেট করা হচ্ছে...", Toast.LENGTH_SHORT).show()
+            autoDetectLocationAndSetPrayerTimes(showToast = true)
+        } else {
+            Toast.makeText(
+                this,
+                "লোকেশন পারমিশন ছাড়া ডিফল্ট (${selectedDistrict.nameBn}) সময়সূচী অনুযায়ী চলবে।",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -69,9 +96,8 @@ class MainActivity : AppCompatActivity() {
         alarmStore = AlarmStore(this)
         prefs = getSharedPreferences("islamic_alarm_app_prefs", Context.MODE_PRIVATE)
 
-        // Load saved district
-        val savedDistrictName = prefs.getString("selected_district_bn", "ঢাকা") ?: "ঢাকা"
-        selectedDistrict = DistrictData.findDistrict(savedDistrictName)
+        // Load saved location
+        selectedDistrict = loadSavedDistrict()
 
         setupRecyclerView()
         setupPrayerTimesHub()
@@ -93,7 +119,7 @@ class MainActivity : AppCompatActivity() {
 
         loadAlarms()
 
-        // Check & request runtime permissions
+        // Check & request runtime permissions on launch (Location, Overlay, Exact Alarm, Battery, Autostart, Phone)
         checkAndRequestPermissions()
     }
 
@@ -106,6 +132,101 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         countdownTimer?.cancel()
+    }
+
+    private fun loadSavedDistrict(): District {
+        val savedNameBn = prefs.getString("selected_district_bn", null)
+        if (savedNameBn != null) {
+            val lat = prefs.getFloat("selected_district_lat", 0f).toDouble()
+            val lng = prefs.getFloat("selected_district_lng", 0f).toDouble()
+            val tz = prefs.getFloat("selected_district_tz", 6f).toDouble()
+            val offset = prefs.getInt("selected_district_offset", 0)
+            val nameEn = prefs.getString("selected_district_en", "") ?: ""
+            val parentBn = prefs.getString("selected_district_parent", "") ?: ""
+            val typeStr = prefs.getString("selected_district_type", LocationType.DISTRICT.name)
+            val type = try {
+                LocationType.valueOf(typeStr ?: LocationType.DISTRICT.name)
+            } catch (e: Exception) {
+                LocationType.DISTRICT
+            }
+            val methodStr = prefs.getString("selected_district_method", CalculationMethod.KARACHI_BD.name)
+            val method = try {
+                CalculationMethod.valueOf(methodStr ?: CalculationMethod.KARACHI_BD.name)
+            } catch (e: Exception) {
+                CalculationMethod.KARACHI_BD
+            }
+
+            if (lat != 0.0 && lng != 0.0) {
+                return District(
+                    nameEn = nameEn,
+                    nameBn = savedNameBn,
+                    divisionBn = parentBn,
+                    lat = lat,
+                    lng = lng,
+                    offsetMinutes = offset,
+                    timeZone = tz,
+                    type = type,
+                    parentBn = parentBn,
+                    method = method
+                )
+            }
+            return LocationData.findDistrict(savedNameBn)
+        }
+        return LocationData.getDefaultDistrict()
+    }
+
+    private fun saveSelectedDistrict(district: District) {
+        selectedDistrict = district
+        prefs.edit()
+            .putString("selected_district_bn", district.nameBn)
+            .putString("selected_district_en", district.nameEn)
+            .putString("selected_district_parent", district.parentBn)
+            .putFloat("selected_district_lat", district.lat.toFloat())
+            .putFloat("selected_district_lng", district.lng.toFloat())
+            .putFloat("selected_district_tz", district.timeZone.toFloat())
+            .putInt("selected_district_offset", district.offsetMinutes)
+            .putString("selected_district_type", district.type.name)
+            .putString("selected_district_method", district.method.name)
+            .apply()
+    }
+
+    private fun autoDetectLocationAndSetPrayerTimes(showToast: Boolean = true) {
+        if (!LocationHelper.hasLocationPermission(this)) {
+            requestLocationPermissionDirect()
+            return
+        }
+
+        if (showToast) {
+            Toast.makeText(this, "📡 বর্তমান GPS লোকেশন সনাক্ত করা হচ্ছে...", Toast.LENGTH_SHORT).show()
+        }
+
+        LocationHelper.fetchCurrentLocation(
+            context = this,
+            onSuccess = { detectedDistrict ->
+                saveSelectedDistrict(detectedDistrict)
+                updatePrayerTimes()
+                if (showToast) {
+                    Toast.makeText(
+                        this,
+                        "✅ লোকেশন সফলভাবে সেট হয়েছে: ${detectedDistrict.displayName}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            },
+            onError = { errorMsg ->
+                if (showToast) {
+                    Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show()
+                }
+            }
+        )
+    }
+
+    private fun requestLocationPermissionDirect() {
+        val permissions = arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        locationPermissionLauncher.launch(permissions)
     }
 
     private fun setupBottomNavigation() {
@@ -145,7 +266,7 @@ class MainActivity : AppCompatActivity() {
         binding.layoutAlarmsContainer.visibility = View.GONE
         binding.fabAddAlarm.visibility = View.GONE
         binding.toolbar.title = "নামাজের সময়সূচী"
-        binding.toolbar.subtitle = "${selectedDistrict.nameBn} জেলা"
+        binding.toolbar.subtitle = selectedDistrict.displayName
         updatePrayerTimes()
     }
 
@@ -164,6 +285,11 @@ class MainActivity : AppCompatActivity() {
             showDistrictSelectionDialog()
         }
 
+        // Quick GPS Button
+        binding.btnQuickGpsLocation.setOnClickListener {
+            autoDetectLocationAndSetPrayerTimes(showToast = true)
+        }
+
         // Quick feature cards
         binding.cardFeatureAmal.setOnClickListener {
             startActivity(Intent(this, AmalTrackerActivity::class.java))
@@ -179,6 +305,22 @@ class MainActivity : AppCompatActivity() {
 
         binding.cardFeatureCalendar.setOnClickListener {
             startActivity(Intent(this, HijriCalendarActivity::class.java))
+        }
+
+        binding.cardFeatureBooks.setOnClickListener {
+            startActivity(Intent(this, com.hafij.islamicalarm.books.IslamicLibraryActivity::class.java))
+        }
+
+        binding.cardFeatureRamadan.setOnClickListener {
+            startActivity(Intent(this, com.hafij.islamicalarm.ramadan.RamadanActivity::class.java))
+        }
+
+        binding.cardFeatureAudioQuran.setOnClickListener {
+            openAudioQuranActivity()
+        }
+
+        binding.cardFeatureAzan.setOnClickListener {
+            openAzanAudioActivity()
         }
 
         // Waqt Alarm quick buttons
@@ -234,24 +376,103 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showDistrictSelectionDialog() {
-        val districtNames = DistrictData.districts.map { it.nameBn }.toTypedArray()
-        val currentIndex = DistrictData.districts.indexOfFirst { it.nameBn == selectedDistrict.nameBn }
+        val dialogBinding = DialogLocationPickerBinding.inflate(LayoutInflater.from(this))
 
-        MaterialAlertDialogBuilder(this)
-            .setTitle("জেলা নির্বাচন করুন")
-            .setSingleChoiceItems(districtNames, currentIndex) { dialog, which ->
-                selectedDistrict = DistrictData.districts[which]
-                prefs.edit().putString("selected_district_bn", selectedDistrict.nameBn).apply()
-                binding.btnSelectDistrict.text = "📍 জেলা: ${selectedDistrict.nameBn}"
-                if (binding.layoutPrayerTimesContainer.visibility == View.VISIBLE) {
-                    binding.toolbar.subtitle = "${selectedDistrict.nameBn} জেলা"
-                }
-                updatePrayerTimes()
-                dialog.dismiss()
-                Toast.makeText(this, "${selectedDistrict.nameBn} জেলার সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+        var currentFilteredList = LocationData.allLocations
+        val adapter = LocationAdapter(currentFilteredList) { chosenLocation ->
+            saveSelectedDistrict(chosenLocation)
+            updatePrayerTimes()
+            Toast.makeText(this, "${chosenLocation.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+
+        dialogBinding.rvLocationList.layoutManager = LinearLayoutManager(this)
+        dialogBinding.rvLocationList.adapter = adapter
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .setCancelable(true)
+            .create()
+
+        val itemClickListener: (District) -> Unit = { chosen ->
+            saveSelectedDistrict(chosen)
+            updatePrayerTimes()
+            dialog.dismiss()
+            Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+
+        val updatedAdapter = LocationAdapter(currentFilteredList, itemClickListener)
+        dialogBinding.rvLocationList.adapter = updatedAdapter
+
+        dialogBinding.btnCloseLocationDialog.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // Auto GPS Detect Button
+        dialogBinding.btnDetectGpsLocation.setOnClickListener {
+            dialog.dismiss()
+            autoDetectLocationAndSetPrayerTimes(showToast = true)
+        }
+
+        // Search Filter
+        fun filterLocations() {
+            val query = dialogBinding.etSearchLocation.text?.toString() ?: ""
+            val selectedChipId = dialogBinding.chipGroupLocationFilter.checkedChipId
+
+            var baseList = when (selectedChipId) {
+                R.id.chipDistricts -> LocationData.districts
+                R.id.chipThanas -> LocationData.thanas
+                R.id.chipDivisions -> LocationData.divisions
+                R.id.chipGlobal -> LocationData.globalCities
+                else -> LocationData.allLocations
             }
-            .setNegativeButton("বাতিল", null)
-            .show()
+
+            if (query.isNotBlank()) {
+                val q = query.trim().lowercase(Locale.ROOT)
+                baseList = baseList.filter {
+                    it.nameBn.lowercase(Locale.ROOT).contains(q) ||
+                    it.nameEn.lowercase(Locale.ROOT).contains(q) ||
+                    it.divisionBn.lowercase(Locale.ROOT).contains(q) ||
+                    it.parentBn.lowercase(Locale.ROOT).contains(q)
+                }
+            }
+
+            updatedAdapter.updateList(baseList)
+        }
+
+        dialogBinding.etSearchLocation.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterLocations()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        dialogBinding.chipGroupLocationFilter.setOnCheckedStateChangeListener { _, _ ->
+            filterLocations()
+        }
+
+        // Online Search
+        dialogBinding.btnSearchOnline.setOnClickListener {
+            val query = dialogBinding.etSearchLocation.text?.toString()?.trim() ?: ""
+            if (query.isBlank()) {
+                Toast.makeText(this, "অনুগ্রহ করে অনুসন্ধানের জন্য শহর বা দেশের নাম লিখুন", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            dialogBinding.pbLocationLoading.visibility = View.VISIBLE
+            lifecycleScope.launch {
+                val onlineResults = LocationHelper.searchOnline(this@MainActivity, query)
+                dialogBinding.pbLocationLoading.visibility = View.GONE
+                if (onlineResults.isNotEmpty()) {
+                    updatedAdapter.updateList(onlineResults)
+                    Toast.makeText(this@MainActivity, "${onlineResults.size}টি অনলাইন ফলাফল পাওয়া গেছে", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@MainActivity, "'$query' এর জন্য অনলাইন তথ্য পাওয়া যায়নি। অফলাইন তালিকা ব্যবহার করুন।", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        dialog.show()
     }
 
     private fun updatePrayerTimes() {
@@ -259,7 +480,11 @@ class MainActivity : AppCompatActivity() {
         val schedule = PrayerTimeCalculator.calculate(now, selectedDistrict)
         currentSchedule = schedule
 
-        binding.btnSelectDistrict.text = "📍 জেলা: ${selectedDistrict.nameBn}"
+        binding.btnSelectDistrict.text = "📍 ${selectedDistrict.nameBn}"
+
+        if (binding.layoutPrayerTimesContainer.visibility == View.VISIBLE) {
+            binding.toolbar.subtitle = selectedDistrict.displayName
+        }
 
         // Hijri Date
         val hijriDate = HijriCalendarHelper.getHijriDate(now)
@@ -403,18 +628,17 @@ class MainActivity : AppCompatActivity() {
             }
 
             val label = dialogBinding.etAlarmLabel.text.toString().trim()
-            val durationStr = dialogBinding.etLockDuration.text.toString().trim()
-            val lockDuration = durationStr.toIntOrNull() ?: 15
+            val lockDurationStr = dialogBinding.etLockDuration.text.toString().trim()
+            val lockDuration = lockDurationStr.toIntOrNull() ?: 15
+            val isRepeatDaily = dialogBinding.rbDaily.isChecked
 
-            if (lockDuration < 1 || lockDuration > 60) {
-                dialogBinding.etLockDuration.error = "১ থেকে ৬০ মিনিটের মধ্যে লিখুন"
+            if (lockDuration !in 1..60) {
+                dialogBinding.etLockDuration.error = "লক ডিউরেশন ১ থেকে ৬০ মিনিটের মধ্যে হতে হবে"
                 return@setOnClickListener
             }
 
-            val isRepeatDaily = dialogBinding.rbDaily.isChecked
-
             val alarm = if (isEditing) {
-                existingAlarm.copy(
+                existingAlarm!!.copy(
                     hour = selectedHour,
                     minute = selectedMinute,
                     label = label,
@@ -465,15 +689,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAndRequestPermissions() {
-        checkOverlayPermission {
-            checkExactAlarmPermission {
-                checkBatteryOptimization {
-                    checkAutostartPermission {
-                        checkPhoneStatePermission()
+        checkLocationPermission {
+            checkOverlayPermission {
+                checkExactAlarmPermission {
+                    checkBatteryOptimization {
+                        checkAutostartPermission {
+                            checkPhoneStatePermission()
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun checkLocationPermission(onNext: () -> Unit) {
+        if (!LocationHelper.hasLocationPermission(this)) {
+            val hasAskedLocation = prefs.getBoolean("has_asked_location", false)
+            if (!hasAskedLocation) {
+                prefs.edit().putBoolean("has_asked_location", true).apply()
+
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("📍 সঠিক নামাজের সময় পেতে লোকেশন অনুমতি দিন")
+                    .setMessage("আপনার বর্তমান জেলা, থানা বা শহরের সঠিক নামাজের সময়সূচী স্বয়ংক্রিয়ভাবে সেট করার জন্য লোকেশন পারমিশন প্রয়োজন।")
+                    .setPositiveButton("অনুমতি দিন") { _, _ ->
+                        requestLocationPermissionDirect()
+                        onNext()
+                    }
+                    .setNegativeButton("পরে দিব") { _, _ ->
+                        onNext()
+                    }
+                    .setCancelable(false)
+                    .show()
+                return
+            }
+        } else {
+            // Already has permission -> auto sync location silently on startup
+            autoDetectLocationAndSetPrayerTimes(showToast = false)
+        }
+        onNext()
     }
 
     private fun checkOverlayPermission(onNext: () -> Unit) {
@@ -658,6 +911,21 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    private fun openLibraryActivity() {
+        val intent = Intent(this, com.hafij.islamicalarm.books.IslamicLibraryActivity::class.java)
+        startActivity(intent)
+    }
+
+    private fun openAudioQuranActivity() {
+        val intent = Intent(this, com.hafij.islamicalarm.audio.AudioQuranActivity::class.java)
+        startActivity(intent)
+    }
+
+    private fun openAzanAudioActivity() {
+        val intent = Intent(this, com.hafij.islamicalarm.audio.AzanAudioActivity::class.java)
+        startActivity(intent)
+    }
+
     override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
         return true
@@ -665,6 +933,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_audio_quran -> {
+                openAudioQuranActivity()
+                true
+            }
+            R.id.action_azan -> {
+                openAzanAudioActivity()
+                true
+            }
+            R.id.action_books -> {
+                openLibraryActivity()
+                true
+            }
             R.id.action_quran -> {
                 openQuranActivity()
                 true

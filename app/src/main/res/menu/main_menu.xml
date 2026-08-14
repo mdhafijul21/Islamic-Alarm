@@ -3,9 +3,27 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_audio_quran"
+        android:icon="@android:drawable/ic_btn_speak_now"
+        android:title="অডিও কুরআন"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_azan"
+        android:icon="@android:drawable/ic_lock_idle_alarm"
+        android:title="অডিও আজান"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_books"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="কিতাব লাইব্রেরি"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_quran"
         android:icon="@android:drawable/ic_menu_compass"
-        android:title="কুরআন"
-        app:showAsAction="always" />
+        android:title="কুরআন পাঠ"
+        app:showAsAction="never" />
 
 </menu>

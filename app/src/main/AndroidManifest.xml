@@ -4,6 +4,9 @@
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
@@ -104,6 +107,34 @@
             android:name="com.hafij.islamicalarm.prayertimes.HijriCalendarActivity"
             android:exported="false"
             android:label="হিজরি ক্যালেন্ডার"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Islamic Library Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.books.IslamicLibraryActivity"
+            android:exported="false"
+            android:label="ইসলামিক কিতাব ও হাদিস লাইব্রেরি"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Book Reader Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.books.BookReaderActivity"
+            android:exported="false"
+            android:label="কিতাব পাঠ"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Audio Azan Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.audio.AzanAudioActivity"
+            android:exported="false"
+            android:label="অডিও আজান"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Full Audio Quran Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.audio.AudioQuranActivity"
+            android:exported="false"
+            android:label="অডিও কুরআন"
             android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- App Widget Provider -->

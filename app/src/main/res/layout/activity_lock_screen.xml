@@ -12,7 +12,29 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#A6020E10" />
+        android:background="#B8020E10" />
+
+    <!-- Top Lockdown Notice Banner -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_duration_chip"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
+            android:text="🔒 সালাত মোড সক্রিয় • ব্যাক বাটন ও হোম বাটন লক"
+            android:textColor="@color/primary_variant"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
 
     <!-- Main Content Container -->
     <LinearLayout
@@ -20,26 +42,26 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:orientation="vertical"
-        android:padding="28dp">
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="36dp">
 
-        <!-- Islamic Emblem / Moon Icon -->
+        <!-- Islamic Emblem / Star Badge -->
         <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
             android:contentDescription="@string/app_name"
-            android:src="@drawable/ic_launcher_foreground"
-            app:tint="@color/gold_accent" />
+            android:src="@drawable/ic_islamic_star_badge" />
 
         <!-- Main Heading: "এখন নামাজের সময়" -->
         <TextView
             android:id="@+id/tvLockTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="16dp"
             android:gravity="center"
             android:text="@string/now_prayer_time"
             android:textColor="@color/gold_accent"
-            android:textSize="32sp"
+            android:textSize="28sp"
             android:textStyle="bold" />
 
         <!-- Alarm Label (e.g., "ফজর" or "জিকির") -->
@@ -47,63 +69,63 @@
             android:id="@+id/tvLockAlarmLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_duration_chip"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_challenge_badge"
             android:paddingHorizontal="16dp"
             android:paddingVertical="6dp"
-            android:textColor="@color/primary_variant"
-            android:textSize="18sp"
+            android:textColor="@color/gold_accent"
+            android:textSize="17sp"
             android:textStyle="bold"
             android:visibility="gone"
-            tools:text="ফজর"
+            tools:text="ফজর সালাত"
             tools:visibility="visible" />
 
         <!-- Arabic Ayah -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="20dp"
             android:gravity="center"
             android:lineSpacingExtra="6dp"
             android:text="@string/arabic_ayah"
             android:textColor="@color/white"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
 
         <!-- Ayah Translation -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="8dp"
             android:gravity="center"
             android:text="@string/ayah_translation"
             android:textColor="#D0E8EA"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
 
         <!-- Divider Line -->
         <View
-            android:layout_width="160dp"
+            android:layout_width="140dp"
             android:layout_height="1dp"
-            android:layout_marginVertical="32dp"
+            android:layout_marginVertical="20dp"
             android:background="#40FFD700" />
 
         <!-- Remaining Time Title -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:letterSpacing="0.05"
             android:text="@string/remaining_time"
             android:textColor="#B0D8DC"
-            android:textSize="15sp"
-            android:letterSpacing="0.05" />
+            android:textSize="14sp" />
 
         <!-- Countdown Timer (mm:ss) -->
         <TextView
             android:id="@+id/tvCountdownTimer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:textColor="@color/white"
-            android:textSize="56sp"
+            android:textSize="50sp"
             android:textStyle="bold"
             tools:text="15:00" />
 
@@ -111,11 +133,25 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="16dp"
             android:gravity="center"
             android:text="@string/locked_title"
             android:textColor="#A0C8CC"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
+
+        <!-- Emergency Unlock / Prayer Complete Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUnlockScreen"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="নামাজ সম্পন্ন হলে চাপ দিয়ে ধরে রাখুন (৩ সেকেন্ড)"
+            android:textColor="@color/gold_accent"
+            android:textSize="12sp"
+            app:cornerRadius="12dp"
+            app:strokeColor="@color/gold_accent"
+            app:strokeWidth="1dp" />
 
     </LinearLayout>
 

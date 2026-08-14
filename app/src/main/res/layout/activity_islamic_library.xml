@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:orientation="vertical"
+    tools:context="com.hafij.islamicalarm.books.IslamicLibraryActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/primary">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbarLibrary"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:navigationIconTint="@color/secondary"
+            app:subtitle="সহিহ হাদিস, সিরাত, তাফসির ও ঘটনাবলী"
+            app:subtitleTextColor="@color/text_secondary"
+            app:title="ইসলামিক কিতাব ও হাদিস লাইব্রেরি"
+            app:titleTextColor="@color/text_primary" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Search Box Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        app:cardBackgroundColor="@color/surface"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Search Icon"
+                android:src="@android:drawable/ic_menu_search"
+                app:tint="@color/secondary" />
+
+            <EditText
+                android:id="@+id/etSearchBooks"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="যেকোনো কিতাব, হাদিস বা ঘটনা খুঁজুন..."
+                android:inputType="text"
+                android:paddingVertical="12dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary"
+                android:textSize="14sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOnlineSearchLibrary"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/surface_container"
+                android:paddingHorizontal="10dp"
+                android:text="🌐 অনলাইন"
+                android:textColor="@color/secondary"
+                android:textSize="12sp"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Categories Filter Chips -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="4dp"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupBookCategories"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleLine="true"
+            app:singleSelection="true" />
+
+    </HorizontalScrollView>
+
+    <!-- RecyclerView for Books -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvBooks"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingTop="6dp"
+        android:paddingBottom="24dp"
+        tools:listitem="@layout/item_islamic_book" />
+
+</LinearLayout>

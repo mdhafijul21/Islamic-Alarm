@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layoutReaderRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:orientation="vertical"
+    tools:context="com.hafij.islamicalarm.books.BookReaderActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/primary">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbarReader"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:navigationIconTint="@color/secondary"
+            app:subtitleTextColor="@color/text_secondary"
+            app:title="কিতাব পাঠ"
+            app:titleTextColor="@color/text_primary" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Reading Control Bar (Font size, Theme, Online full search) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:elevation="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="6dp">
+
+        <TextView
+            android:id="@+id/tvReaderTotalChapters"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            tools:text="মোট ৫টি অধ্যায়" />
+
+        <!-- Font Zoom Out -->
+        <ImageButton
+            android:id="@+id/btnFontSmaller"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Font Smaller"
+            android:src="@android:drawable/ic_menu_zoom"
+            app:tint="@color/secondary" />
+
+        <TextView
+            android:id="@+id/tvFontSizeIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="6dp"
+            android:text="A"
+            android:textColor="@color/secondary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!-- Font Zoom In -->
+        <ImageButton
+            android:id="@+id/btnFontLarger"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Font Larger"
+            android:src="@android:drawable/ic_input_add"
+            app:tint="@color/secondary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOnlineReadMore"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="🌐 পূর্ণ কিতাব"
+            android:textColor="@color/secondary"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <!-- Chapters RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvBookChapters"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingTop="8dp"
+        android:paddingBottom="32dp"
+        tools:listitem="@layout/item_book_chapter" />
+
+</LinearLayout>
