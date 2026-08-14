@@ -101,7 +101,7 @@ class ChapterAdapter(
             }
 
             // Share Action
-            binding.btnShareChapter = binding.btnShareChapter.apply {
+            binding.btnShareChapter.apply {
                 setOnClickListener {
                     val shareText = buildString {
                         append("📖 ").append(chapter.titleBn).append("\n\n")

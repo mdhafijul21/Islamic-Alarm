@@ -84,13 +84,6 @@ class LockScreenActivity : AppCompatActivity() {
             }
         })
 
-        // Hidden failsafe: Long press countdown timer for 3 seconds for emergency unlock
-        binding.tvCountdownTimer.setOnLongClickListener {
-            android.widget.Toast.makeText(this, "নামাজ লক স্ক্রিন সমাপ্ত করা হচ্ছে...", android.widget.Toast.LENGTH_SHORT).show()
-            releaseLockAndFinish()
-            true
-        }
-
         // 4. Initialize or Resume Timer and Verify Alarm Validity
         initOrResumeLockTimer(intent)
 
@@ -135,8 +128,10 @@ class LockScreenActivity : AppCompatActivity() {
         val alarmStore = AlarmStore(this)
         if (currentAlarmId.isNotBlank()) {
             val alarm = alarmStore.getAlarm(currentAlarmId)
-            // If alarm was deleted or toggled off, finish lock activity immediately
-            if (alarm == null || !alarm.isEnabled) {
+            // If alarm was deleted, finish lock activity immediately.
+            // isEnabled must NOT be checked here - it auto-flips to false the instant
+            // a one-time alarm fires, which would close the lock screen immediately.
+            if (alarm == null) {
                 releaseLockAndFinish()
                 return
             }
@@ -268,9 +263,9 @@ class LockScreenActivity : AppCompatActivity() {
                 }
 
                 val speechMsg = if (label.isNotBlank()) {
-                    "$label এর নামাজের সময় হয়েছে, নামাজে যান।"
+                    "$label এর নামাজের সময় হয়েছে, নামাজে যান।"
                 } else {
-                    "নামাজের সময় হয়েছে, নামাজে যান।"
+                    "নামাজের সময় হয়েছে, নামাজে যান।"
                 }
 
                 textToSpeech?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
