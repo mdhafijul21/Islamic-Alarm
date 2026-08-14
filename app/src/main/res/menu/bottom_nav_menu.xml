@@ -1,11 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/nav_prayer_times"
+        android:icon="@android:drawable/ic_menu_today"
+        android:title="নামাজের সময়" />
+    <item
         android:id="@+id/nav_alarms"
         android:icon="@android:drawable/ic_lock_idle_alarm"
         android:title="এলার্ম" />
     <item
         android:id="@+id/nav_quran"
         android:icon="@android:drawable/ic_menu_compass"
-        android:title="আল-কুরআন" />
+        android:title="কুরআন" />
+    <item
+        android:id="@+id/nav_tasbih"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:title="তাসবিহ" />
+    <item
+        android:id="@+id/nav_duas"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="আমল ও দোআ" />
 </menu>
+

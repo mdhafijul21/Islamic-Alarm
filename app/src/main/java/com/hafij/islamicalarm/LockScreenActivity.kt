@@ -81,7 +81,7 @@ class LockScreenActivity : AppCompatActivity() {
         // 5. Acquire WakeLock
         acquireWakeLock()
 
-        // 6. Register Phone Call State & Dismiss Receivers
+        // 7. Register Phone Call State & Dismiss Receivers
         val callFilter = IntentFilter(CallReceiver.ACTION_CALL_STATE_CHANGED)
         ContextCompat.registerReceiver(
             this,
@@ -257,12 +257,64 @@ class LockScreenActivity : AppCompatActivity() {
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 
-    private fun enableScreenPinning() {
-        // startLockTask() omitted to prevent OS "App is pinned" dialog
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (remainingTimeMillis > 0) {
+            when (event.keyCode) {
+                android.view.KeyEvent.KEYCODE_BACK,
+                android.view.KeyEvent.KEYCODE_HOME,
+                android.view.KeyEvent.KEYCODE_APP_SWITCH,
+                android.view.KeyEvent.KEYCODE_MENU,
+                android.view.KeyEvent.KEYCODE_SEARCH -> {
+                    // Consume key event completely
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
-    private fun disableScreenPinning() {
-        // stopLockTask() omitted
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (remainingTimeMillis > 0) {
+            when (keyCode) {
+                android.view.KeyEvent.KEYCODE_BACK,
+                android.view.KeyEvent.KEYCODE_HOME,
+                android.view.KeyEvent.KEYCODE_APP_SWITCH,
+                android.view.KeyEvent.KEYCODE_MENU,
+                android.view.KeyEvent.KEYCODE_SEARCH -> {
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (remainingTimeMillis > 0) {
+            when (keyCode) {
+                android.view.KeyEvent.KEYCODE_BACK,
+                android.view.KeyEvent.KEYCODE_HOME,
+                android.view.KeyEvent.KEYCODE_APP_SWITCH,
+                android.view.KeyEvent.KEYCODE_MENU,
+                android.view.KeyEvent.KEYCODE_SEARCH -> {
+                    return true
+                }
+            }
+        }
+        return super.onKeyUp(keyCode, event)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (remainingTimeMillis > 0 && !isCallInProgress && !isFinishing) {
+            relaunchLockScreen()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (remainingTimeMillis > 0 && !isCallInProgress && !isFinishing) {
+            relaunchLockScreen()
+        }
     }
 
     private fun startCountdown(millis: Long) {
@@ -328,8 +380,8 @@ class LockScreenActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
         prefs.edit().clear().apply()
 
+        com.hafij.islamicalarm.silent.AutoSilentManager.restoreRingerMode(this)
         stopAlarmSound()
-        disableScreenPinning()
         releaseWakeLock()
         finish()
     }
@@ -369,6 +421,7 @@ class LockScreenActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        com.hafij.islamicalarm.silent.AutoSilentManager.restoreRingerMode(this)
         stopAlarmSound()
         countDownTimer?.cancel()
         releaseWakeLock()

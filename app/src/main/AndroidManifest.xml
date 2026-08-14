@@ -13,9 +13,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
@@ -57,6 +56,68 @@
             android:exported="false"
             android:label="আল-কুরআন"
             android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Tasbih Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.tasbih.TasbihActivity"
+            android:exported="false"
+            android:label="ডিজিটাল তাসবিহ"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Masnoon Duas Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.duas.DuasActivity"
+            android:exported="false"
+            android:label="মাসনুন দোআ ও হাদিস"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Ramadan & Fasting Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.ramadan.RamadanActivity"
+            android:exported="false"
+            android:label="রমজান ও রোজা"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- 99 Names of Allah Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.names.AllahNamesActivity"
+            android:exported="false"
+            android:label="আসমাউল হুসনা"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Daily Salah & Amal Tracker Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.amal.AmalTrackerActivity"
+            android:exported="false"
+            android:label="দৈনিক আমল ট্র্যাকার"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Tahajjud Calculator Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.tahajjud.TahajjudCalculatorActivity"
+            android:exported="false"
+            android:label="তাহাজ্জুদ ক্যালকুলেটর"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Hijri Calendar Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.prayertimes.HijriCalendarActivity"
+            android:exported="false"
+            android:label="হিজরি ক্যালেন্ডার"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- App Widget Provider -->
+        <receiver
+            android:name="com.hafij.islamicalarm.widget.IslamicAlarmWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.hafij.islamicalarm.ACTION_REFRESH_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
 
         <!-- Alarm Receiver -->
         <receiver

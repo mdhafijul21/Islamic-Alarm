@@ -103,9 +103,36 @@ class QuranActivity : AppCompatActivity() {
         setupTabs()
         setupPageControls()
         setupAudioPlayerBar()
+        setupBookmarkCard()
 
-        // Load page 1 data initially
-        loadPage(1)
+        // Load saved last read page initially
+        val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
+        val lastPage = prefs.getInt("last_read_page", 1)
+        loadPage(lastPage)
+    }
+
+    private fun setupBookmarkCard() {
+        updateLastReadCard()
+        binding.btnContinueLastRead.setOnClickListener {
+            val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
+            val lastPage = prefs.getInt("last_read_page", 1)
+            binding.tabLayout.getTabAt(2)?.select()
+            loadPage(lastPage)
+        }
+        binding.cardLastRead.setOnClickListener {
+            val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
+            val lastPage = prefs.getInt("last_read_page", 1)
+            binding.tabLayout.getTabAt(2)?.select()
+            loadPage(lastPage)
+        }
+    }
+
+    private fun updateLastReadCard() {
+        val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
+        val lastPage = prefs.getInt("last_read_page", 1)
+        val surah = QuranRepository.getSurahForPage(lastPage)
+        val juz = QuranRepository.getJuzForPage(lastPage)
+        binding.tvLastReadTitle.text = "পৃষ্ঠা ${toBengaliNumber(lastPage)} (সুরা ${surah.nameBangla} • পারা ${toBengaliNumber(juz)})"
     }
 
     private fun setupSurahRecyclerView() {
@@ -243,6 +270,10 @@ class QuranActivity : AppCompatActivity() {
 
     private fun loadPage(pageNumber: Int) {
         currentPageNumber = pageNumber
+        val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
+        prefs.edit().putInt("last_read_page", pageNumber).apply()
+        updateLastReadCard()
+
         val juz = QuranRepository.getJuzForPage(pageNumber)
         val surah = QuranRepository.getSurahForPage(pageNumber)
         val para = QuranRepository.paraList.find { it.id == juz }

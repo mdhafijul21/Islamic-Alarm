@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/primary"
+        app:elevation="4dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbarAmal"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:title="দৈনিক আমল ট্র্যাকার"
+            app:titleTextColor="@color/text_primary"
+            app:subtitle="নামাজ ও প্রতিদিনের নেক আমলের হিসাব"
+            app:subtitleTextColor="@color/secondary" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Date Selector & Streak Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Date switcher header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageButton
+                            android:id="@+id/btnPrevDay"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="Previous day"
+                            android:src="@drawable/ic_arrow_back"
+                            app:tint="@color/secondary" />
+
+                        <TextView
+                            android:id="@+id/tvAmalDate"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            tools:text="আজ, ১৪ আগস্ট ২০২৬" />
+
+                        <ImageButton
+                            android:id="@+id/btnNextDay"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="Next day"
+                            android:src="@drawable/ic_arrow_forward"
+                            app:tint="@color/secondary" />
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="12dp"
+                        android:background="@color/border" />
+
+                    <!-- Progress Bar & Score -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvAmalScoreLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="আজকের আমল পূর্ণতাঃ ০%"
+                                android:textColor="@color/secondary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <ProgressBar
+                                android:id="@+id/progressBarAmal"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="8dp"
+                                android:layout_marginTop="6dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressTint="@color/secondary" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvStreakCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:background="@drawable/bg_challenge_badge"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="6dp"
+                            android:text="🔥 ০ দিন স্ট্রিক"
+                            android:textColor="@color/secondary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 5 Daily Prayers Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="🕌 পাঁচ ওয়াক্ত নামাজ"
+                android:textColor="@color/secondary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- Fajr -->
+            <include
+                android:id="@+id/itemFajr"
+                layout="@layout/item_amal_prayer" />
+
+            <!-- Dhuhr -->
+            <include
+                android:id="@+id/itemDhuhr"
+                layout="@layout/item_amal_prayer" />
+
+            <!-- Asr -->
+            <include
+                android:id="@+id/itemAsr"
+                layout="@layout/item_amal_prayer" />
+
+            <!-- Maghrib -->
+            <include
+                android:id="@+id/itemMaghrib"
+                layout="@layout/item_amal_prayer" />
+
+            <!-- Isha -->
+            <include
+                android:id="@+id/itemIsha"
+                layout="@layout/item_amal_prayer" />
+
+            <!-- Sunnah & Extra Deeds Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:text="✨ নফল ও বিশেষ সুন্নাত আমল"
+                android:textColor="@color/secondary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+
+                    <CheckBox
+                        android:id="@+id/cbTahajjud"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/secondary"
+                        android:text="তাহাজ্জুদ সালাত আদায়"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbIshraq"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/secondary"
+                        android:text="ইশরাক / চাশত সালাত আদায়"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbQuran"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/secondary"
+                        android:text="আল-কুরআন তিলাওয়াত ও অর্থ অনুধাবন"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbZikr"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/secondary"
+                        android:text="সকাল ও সন্ধ্যার মাসনুন জিকির"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbIstighfar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/secondary"
+                        android:text="১০০ বার ইস্তিগফার ও দরূদ পাঠ"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbMulk"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/secondary"
+                        android:text="সূরা মুলক পাঠ (কবরের আজাব থেকে সুরক্ষা)"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbCharity"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/secondary"
+                        android:text="সাদাকাহ / ভালো আচরণ ও দান"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

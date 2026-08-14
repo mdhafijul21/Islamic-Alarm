@@ -26,6 +26,9 @@ class AlarmReceiver : BroadcastReceiver() {
         }
 
         if (alarm.isEnabled) {
+            // Enable Auto Silent mode for prayer
+            com.hafij.islamicalarm.silent.AutoSilentManager.enableSilentMode(context)
+
             // Wake CPU immediately
             val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             val wakeLock = pm.newWakeLock(
