@@ -4,24 +4,47 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:translateX="0"
-        android:translateY="0">
-        <!-- Crescent Moon in Gold -->
+    <group>
+
+        <!-- Crescent Moon (upper-left) -->
         <path
-            android:fillColor="#FFD700"
-            android:pathData="M54,28 C68,28 79,39 79,53 C79,67 68,78 54,78 C47,78 41,75 36,70 C43,70 49,65 49,53 C49,41 43,36 36,36 C41,31 47,28 54,28 Z" />
-        <!-- Small Star -->
+            android:fillColor="#D4AF37"
+            android:pathData="M36,18 A14,14 0 1,0 36,46 A10.5,10.5 0 1,1 36,18 Z" />
+
+        <!-- Star (upper-right, beside the moon) -->
         <path
-            android:fillColor="#FFD700"
-            android:pathData="M70,36 L72,40 L76,40 L73,42 L74,46 L70,43 L66,46 L67,42 L64,40 L68,40 Z" />
-        <!-- Mosque Dome accent -->
-        <path
-            android:fillColor="#E8F4F5"
-            android:pathData="M42,66 C42,58 48,52 54,52 C60,52 66,58 66,66 L66,80 L42,80 Z" />
-        <!-- Minaret/Finial Tip -->
-        <path
-            android:fillColor="#FFD700"
-            android:pathData="M53,46 L54,42 L55,46 Z" />
+            android:fillColor="#D4AF37"
+            android:pathData="M70,19 L72,23 L76,24.5 L72,26 L70,30 L68,26 L64,24.5 L68,23 Z" />
+
+        <!-- Mosque silhouette -->
+        <!-- Ground line -->
+        <path android:fillColor="#B59328" android:pathData="M22,90 L86,90 L86,92 L22,92 Z" />
+
+        <!-- Left minaret shaft -->
+        <path android:fillColor="#B59328" android:pathData="M25,90 L25,68 L31,68 L31,90 Z" />
+        <!-- Left minaret dome cap -->
+        <path android:fillColor="#D4AF37" android:pathData="M28,68 m-3.6,0a3.6,3.2 0 1,0 7.2,0a3.6,3.2 0 1,0 -7.2,0" />
+        <!-- Left minaret finial -->
+        <path android:fillColor="#D4AF37" android:pathData="M27.4,64.5 L28.6,64.5 L28.6,59 L27.4,59 Z" />
+
+        <!-- Right minaret shaft -->
+        <path android:fillColor="#B59328" android:pathData="M77,90 L77,68 L83,68 L83,90 Z" />
+        <!-- Right minaret dome cap -->
+        <path android:fillColor="#D4AF37" android:pathData="M80,68 m-3.6,0a3.6,3.2 0 1,0 7.2,0a3.6,3.2 0 1,0 -7.2,0" />
+        <!-- Right minaret finial -->
+        <path android:fillColor="#D4AF37" android:pathData="M79.4,64.5 L80.6,64.5 L80.6,59 L79.4,59 Z" />
+
+        <!-- Central hall wall -->
+        <path android:fillColor="#B59328" android:pathData="M38,90 L38,80 L70,80 L70,90 Z" />
+
+        <!-- Main dome -->
+        <path android:fillColor="#D4AF37" android:pathData="M39,80 L39,74 A15,14 0 0,1 69,74 L69,80 Z" />
+
+        <!-- Dome neck + finial -->
+        <path android:fillColor="#D4AF37" android:pathData="M53.3,60 L54.7,60 L54.7,66 L53.3,66 Z" />
+        <path android:fillColor="#D4AF37" android:pathData="M54,58.5 m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0" />
+
+        <!-- Doorway arch (decorative detail) -->
+        <path android:fillColor="#0F1115" android:pathData="M49,90 L49,84 A5,5 0 0,1 59,84 L59,90 Z" />
     </group>
 </vector>

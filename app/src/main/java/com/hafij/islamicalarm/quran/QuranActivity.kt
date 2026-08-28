@@ -445,8 +445,9 @@ class QuranActivity : AppCompatActivity() {
             binding.pbAudioProgress.isIndeterminate = false
             startMediaPlayerWithFile(surah, localFile)
         } else {
-            // Instant audio response (0ms delay) + online high-speed stream
-            playTtsSurah(surah)
+            // Stream the real reciter's (male) voice directly - no more TTS placeholder
+            binding.tvAudioReciter.text = "লোড হচ্ছে... (অনলাইন)"
+            binding.pbAudioProgress.isIndeterminate = true
             startMediaPlayerWithUrl(surah, useFallback = false)
         }
     }
@@ -553,8 +554,8 @@ class QuranActivity : AppCompatActivity() {
                     if (!useFallback) {
                         startMediaPlayerWithUrl(surah, useFallback = true)
                     } else {
-                        // Internet unavailable -> Fallback to instant offline TTS recitation!
-                        playTtsSurah(surah)
+                        Toast.makeText(this@QuranActivity, "অনলাইন অডিও লোড করা যায়নি, ইন্টারনেট সংযোগ চেক করুন", Toast.LENGTH_LONG).show()
+                        stopAudio()
                     }
                     true
                 }
@@ -565,7 +566,8 @@ class QuranActivity : AppCompatActivity() {
             if (!useFallback) {
                 startMediaPlayerWithUrl(surah, useFallback = true)
             } else {
-                playTtsSurah(surah)
+                Toast.makeText(this@QuranActivity, "অনলাইন অডিও লোড করা যায়নি, ইন্টারনেট সংযোগ চেক করুন", Toast.LENGTH_LONG).show()
+                stopAudio()
             }
         }
     }

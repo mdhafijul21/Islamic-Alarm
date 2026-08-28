@@ -62,6 +62,11 @@ object LocationHelper {
             return
         }
 
+        if (!isLocationEnabled(context)) {
+            onError("লোকেশন সার্ভিস (GPS) বন্ধ আছে। অনুগ্রহ করে ফোনের সেটিংস থেকে লোকেশন চালু করুন।")
+            return
+        }
+
         val fusedClient: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
 
         try {
@@ -98,8 +103,14 @@ object LocationHelper {
                 .setWaitForAccurateLocation(false)
                 .build()
 
+            var alreadyHandled = false
+            val timeoutHandler = android.os.Handler(Looper.getMainLooper())
+
             val callback = object : LocationCallback() {
                 override fun onLocationResult(result: LocationResult) {
+                    if (alreadyHandled) return
+                    alreadyHandled = true
+                    timeoutHandler.removeCallbacksAndMessages(null)
                     fusedClient.removeLocationUpdates(this)
                     val loc = result.lastLocation
                     if (loc != null) {
@@ -110,9 +121,27 @@ object LocationHelper {
                 }
             }
 
+            // Safety timeout: some devices/providers never call back (GPS weak signal,
+            // Play Services issue, etc). Without this the app would hang indefinitely.
+            timeoutHandler.postDelayed({
+                if (!alreadyHandled) {
+                    alreadyHandled = true
+                    try {
+                        fusedClient.removeLocationUpdates(callback)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    fallbackToLocationManager(context, onSuccess, onError)
+                }
+            }, 10000L)
+
             fusedClient.requestLocationUpdates(locationRequest, callback, Looper.getMainLooper())
                 .addOnFailureListener {
-                    fallbackToLocationManager(context, onSuccess, onError)
+                    if (!alreadyHandled) {
+                        alreadyHandled = true
+                        timeoutHandler.removeCallbacksAndMessages(null)
+                        fallbackToLocationManager(context, onSuccess, onError)
+                    }
                 }
         } catch (e: SecurityException) {
             onError("লোকেশন পারমিশন প্রয়োজন")

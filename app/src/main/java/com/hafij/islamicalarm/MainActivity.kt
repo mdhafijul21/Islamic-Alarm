@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var selectedDistrict: District = LocationData.getDefaultDistrict()
     private var currentSchedule: PrayerSchedule? = null
     private var countdownTimer: CountDownTimer? = null
+    private var pendingPermissionChainNext: (() -> Unit)? = null
 
     private val phoneStatePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -84,6 +85,12 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+
+        // Continue the rest of the permission chain only now that the location
+        // system dialog has actually been answered (fixes multiple permission
+        // dialogs popping up on top of each other at once).
+        pendingPermissionChainNext?.invoke()
+        pendingPermissionChainNext = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -393,11 +400,46 @@ class MainActivity : AppCompatActivity() {
             .setCancelable(true)
             .create()
 
+        // Step-by-step (cascade) state, only used while the "বিভাগ" (Division) tab is active
+        var drillDivision: District? = null
+        var drillDistrict: District? = null
+
         val itemClickListener: (District) -> Unit = { chosen ->
-            saveSelectedDistrict(chosen)
-            updatePrayerTimes()
-            dialog.dismiss()
-            Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+            val selectedChipId = dialogBinding.chipGroupLocationFilter.checkedChipId
+            if (selectedChipId == R.id.chipDivisions) {
+                when {
+                    drillDistrict != null -> {
+                        // User tapped a Thana (or the pinned "this district" option) - finalize
+                        saveSelectedDistrict(chosen)
+                        updatePrayerTimes()
+                        dialog.dismiss()
+                        Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                    }
+                    drillDivision != null -> {
+                        // User tapped a District within the chosen Division
+                        val hasThanas = LocationData.thanas.any { it.parentBn == chosen.nameBn }
+                        if (hasThanas) {
+                            drillDistrict = chosen
+                            refreshLocationList()
+                        } else {
+                            saveSelectedDistrict(chosen)
+                            updatePrayerTimes()
+                            dialog.dismiss()
+                            Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    else -> {
+                        // User tapped a Division - drill down into its Districts
+                        drillDivision = chosen
+                        refreshLocationList()
+                    }
+                }
+            } else {
+                saveSelectedDistrict(chosen)
+                updatePrayerTimes()
+                dialog.dismiss()
+                Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+            }
         }
 
         val updatedAdapter = LocationAdapter(currentFilteredList, itemClickListener)
@@ -413,42 +455,91 @@ class MainActivity : AppCompatActivity() {
             autoDetectLocationAndSetPrayerTimes(showToast = true)
         }
 
-        // Search Filter
-        fun filterLocations() {
-            val query = dialogBinding.etSearchLocation.text?.toString() ?: ""
-            val selectedChipId = dialogBinding.chipGroupLocationFilter.checkedChipId
+        fun currentSearchQuery(): String =
+            dialogBinding.etSearchLocation.text?.toString()?.trim()?.lowercase(Locale.ROOT) ?: ""
 
-            var baseList = when (selectedChipId) {
+        fun applySearchQuery(list: List<District>): List<District> {
+            val q = currentSearchQuery()
+            if (q.isBlank()) return list
+            return list.filter {
+                it.nameBn.lowercase(Locale.ROOT).contains(q) ||
+                it.nameEn.lowercase(Locale.ROOT).contains(q) ||
+                it.divisionBn.lowercase(Locale.ROOT).contains(q) ||
+                it.parentBn.lowercase(Locale.ROOT).contains(q)
+            }
+        }
+
+        // Flat search filter (used by "সবগুলো" / জেলা / থানা / গ্লোবাল tabs)
+        fun filterLocations() {
+            val selectedChipId = dialogBinding.chipGroupLocationFilter.checkedChipId
+            val baseList = when (selectedChipId) {
                 R.id.chipDistricts -> LocationData.districts
                 R.id.chipThanas -> LocationData.thanas
                 R.id.chipDivisions -> LocationData.divisions
                 R.id.chipGlobal -> LocationData.globalCities
                 else -> LocationData.allLocations
             }
+            updatedAdapter.updateList(applySearchQuery(baseList))
+        }
 
-            if (query.isNotBlank()) {
-                val q = query.trim().lowercase(Locale.ROOT)
-                baseList = baseList.filter {
-                    it.nameBn.lowercase(Locale.ROOT).contains(q) ||
-                    it.nameEn.lowercase(Locale.ROOT).contains(q) ||
-                    it.divisionBn.lowercase(Locale.ROOT).contains(q) ||
-                    it.parentBn.lowercase(Locale.ROOT).contains(q)
+        // Renders either the step-by-step cascade (বিভাগ tab) or the flat search list (other tabs)
+        fun refreshLocationList() {
+            val selectedChipId = dialogBinding.chipGroupLocationFilter.checkedChipId
+            if (selectedChipId == R.id.chipDivisions) {
+                when {
+                    drillDistrict != null -> {
+                        val district = drillDistrict!!
+                        val thanaList = listOf(district) +
+                            LocationData.thanas.filter { it.parentBn == district.nameBn }
+                        dialogBinding.tvLocationBreadcrumb.visibility = View.VISIBLE
+                        dialogBinding.tvLocationBreadcrumb.text =
+                            "← ${district.nameBn} জেলার থানা/উপজেলা (ফিরে যেতে ট্যাপ করুন)"
+                        updatedAdapter.updateList(applySearchQuery(thanaList))
+                    }
+                    drillDivision != null -> {
+                        val division = drillDivision!!
+                        val districtList = LocationData.districts.filter { it.divisionBn == division.divisionBn }
+                        dialogBinding.tvLocationBreadcrumb.visibility = View.VISIBLE
+                        dialogBinding.tvLocationBreadcrumb.text =
+                            "← ${division.nameBn} বিভাগের জেলা (ফিরে যেতে ট্যাপ করুন)"
+                        updatedAdapter.updateList(applySearchQuery(districtList))
+                    }
+                    else -> {
+                        dialogBinding.tvLocationBreadcrumb.visibility = View.GONE
+                        updatedAdapter.updateList(applySearchQuery(LocationData.divisions))
+                    }
+                }
+            } else {
+                dialogBinding.tvLocationBreadcrumb.visibility = View.GONE
+                filterLocations()
+            }
+        }
+
+        dialogBinding.tvLocationBreadcrumb.setOnClickListener {
+            when {
+                drillDistrict != null -> {
+                    drillDistrict = null
+                    refreshLocationList()
+                }
+                drillDivision != null -> {
+                    drillDivision = null
+                    refreshLocationList()
                 }
             }
-
-            updatedAdapter.updateList(baseList)
         }
 
         dialogBinding.etSearchLocation.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                filterLocations()
+                refreshLocationList()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
 
         dialogBinding.chipGroupLocationFilter.setOnCheckedStateChangeListener { _, _ ->
-            filterLocations()
+            drillDivision = null
+            drillDistrict = null
+            refreshLocationList()
         }
 
         // Online Search
@@ -722,8 +813,8 @@ class MainActivity : AppCompatActivity() {
                     .setTitle("📍 সঠিক নামাজের সময় পেতে লোকেশন অনুমতি দিন")
                     .setMessage("আপনার বর্তমান জেলা, থানা বা শহরের সঠিক নামাজের সময়সূচী স্বয়ংক্রিয়ভাবে সেট করার জন্য লোকেশন পারমিশন প্রয়োজন।")
                     .setPositiveButton("অনুমতি দিন") { _, _ ->
+                        pendingPermissionChainNext = onNext
                         requestLocationPermissionDirect()
-                        onNext()
                     }
                     .setNegativeButton("পরে দিব") { _, _ ->
                         onNext()
