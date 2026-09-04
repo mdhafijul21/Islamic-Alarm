@@ -150,6 +150,20 @@
 
     </HorizontalScrollView>
 
+    <!-- Cascade breadcrumb: shown during step-by-step Division -> District -> Thana selection -->
+    <TextView
+        android:id="@+id/tvLocationBreadcrumb"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:background="?attr/selectableItemBackground"
+        android:padding="6dp"
+        android:text="← পিছনে যান"
+        android:textColor="@color/secondary"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <!-- Progress Indicator for GPS / Search -->
     <ProgressBar
         android:id="@+id/pbLocationLoading"
