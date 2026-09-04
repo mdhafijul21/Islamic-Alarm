@@ -386,14 +386,8 @@ class MainActivity : AppCompatActivity() {
         val dialogBinding = DialogLocationPickerBinding.inflate(LayoutInflater.from(this))
 
         var currentFilteredList = LocationData.allLocations
-        val adapter = LocationAdapter(currentFilteredList) { chosenLocation ->
-            saveSelectedDistrict(chosenLocation)
-            updatePrayerTimes()
-            Toast.makeText(this, "${chosenLocation.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
-        }
 
         dialogBinding.rvLocationList.layoutManager = LinearLayoutManager(this)
-        dialogBinding.rvLocationList.adapter = adapter
 
         val dialog = MaterialAlertDialogBuilder(this)
             .setView(dialogBinding.root)
@@ -404,56 +398,7 @@ class MainActivity : AppCompatActivity() {
         var drillDivision: District? = null
         var drillDistrict: District? = null
 
-        val itemClickListener: (District) -> Unit = { chosen ->
-            val selectedChipId = dialogBinding.chipGroupLocationFilter.checkedChipId
-            if (selectedChipId == R.id.chipDivisions) {
-                when {
-                    drillDistrict != null -> {
-                        // User tapped a Thana (or the pinned "this district" option) - finalize
-                        saveSelectedDistrict(chosen)
-                        updatePrayerTimes()
-                        dialog.dismiss()
-                        Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
-                    }
-                    drillDivision != null -> {
-                        // User tapped a District within the chosen Division
-                        val hasThanas = LocationData.thanas.any { it.parentBn == chosen.nameBn }
-                        if (hasThanas) {
-                            drillDistrict = chosen
-                            refreshLocationList()
-                        } else {
-                            saveSelectedDistrict(chosen)
-                            updatePrayerTimes()
-                            dialog.dismiss()
-                            Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    else -> {
-                        // User tapped a Division - drill down into its Districts
-                        drillDivision = chosen
-                        refreshLocationList()
-                    }
-                }
-            } else {
-                saveSelectedDistrict(chosen)
-                updatePrayerTimes()
-                dialog.dismiss()
-                Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        val updatedAdapter = LocationAdapter(currentFilteredList, itemClickListener)
-        dialogBinding.rvLocationList.adapter = updatedAdapter
-
-        dialogBinding.btnCloseLocationDialog.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        // Auto GPS Detect Button
-        dialogBinding.btnDetectGpsLocation.setOnClickListener {
-            dialog.dismiss()
-            autoDetectLocationAndSetPrayerTimes(showToast = true)
-        }
+        lateinit var updatedAdapter: LocationAdapter
 
         fun currentSearchQuery(): String =
             dialogBinding.etSearchLocation.text?.toString()?.trim()?.lowercase(Locale.ROOT) ?: ""
@@ -515,6 +460,57 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val itemClickListener: (District) -> Unit = { chosen ->
+            val selectedChipId = dialogBinding.chipGroupLocationFilter.checkedChipId
+            if (selectedChipId == R.id.chipDivisions) {
+                when {
+                    drillDistrict != null -> {
+                        // User tapped a Thana (or the pinned "this district" option) - finalize
+                        saveSelectedDistrict(chosen)
+                        updatePrayerTimes()
+                        dialog.dismiss()
+                        Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                    }
+                    drillDivision != null -> {
+                        // User tapped a District within the chosen Division
+                        val hasThanas = LocationData.thanas.any { it.parentBn == chosen.nameBn }
+                        if (hasThanas) {
+                            drillDistrict = chosen
+                            refreshLocationList()
+                        } else {
+                            saveSelectedDistrict(chosen)
+                            updatePrayerTimes()
+                            dialog.dismiss()
+                            Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    else -> {
+                        // User tapped a Division - drill down into its Districts
+                        drillDivision = chosen
+                        refreshLocationList()
+                    }
+                }
+            } else {
+                saveSelectedDistrict(chosen)
+                updatePrayerTimes()
+                dialog.dismiss()
+                Toast.makeText(this, "${chosen.displayName} এর সময়সূচী সেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        updatedAdapter = LocationAdapter(currentFilteredList, itemClickListener)
+        dialogBinding.rvLocationList.adapter = updatedAdapter
+
+        dialogBinding.btnCloseLocationDialog.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // Auto GPS Detect Button
+        dialogBinding.btnDetectGpsLocation.setOnClickListener {
+            dialog.dismiss()
+            autoDetectLocationAndSetPrayerTimes(showToast = true)
+        }
+
         dialogBinding.tvLocationBreadcrumb.setOnClickListener {
             when {
                 drillDistrict != null -> {
@@ -556,7 +552,7 @@ class MainActivity : AppCompatActivity() {
                 dialogBinding.pbLocationLoading.visibility = View.GONE
                 if (onlineResults.isNotEmpty()) {
                     updatedAdapter.updateList(onlineResults)
-                    Toast.makeText(this@MainActivity, "${onlineResults.size}টি অনলাইন ফলাফল পাওয়া গেছে", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "${onlineResults.size}টি অনলাইন ফলাফল পাওয়া গেছে", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@MainActivity, "'$query' এর জন্য অনলাইন তথ্য পাওয়া যায়নি। অফলাইন তালিকা ব্যবহার করুন।", Toast.LENGTH_LONG).show()
                 }
