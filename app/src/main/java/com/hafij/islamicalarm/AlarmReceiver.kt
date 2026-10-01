@@ -104,13 +104,6 @@ class AlarmReceiver : BroadcastReceiver() {
 
             notificationManager.notify(alarm.id.hashCode(), notificationBuilder.build())
 
-            // Also directly trigger startActivity
-            try {
-                context.startActivity(lockIntent)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
             // Reschedule or disable based on repeat mode
             if (alarm.isRepeatDaily) {
                 AlarmScheduler.scheduleAlarm(context, alarm)
