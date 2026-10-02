@@ -76,7 +76,21 @@
                 android:paddingVertical="4dp"
                 android:textColor="@color/gold_accent"
                 android:textSize="13sp"
-                tools:text="🔒 ১৫ মিনিট লক" />
+                tools:text="🔒 ১৫ মিনিট" />
+
+            <!-- Hard Lock Badge -->
+            <TextView
+                android:id="@+id/tvLockLevelBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_challenge_badge"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:text="🔒 হার্ড লক"
+                android:textColor="@color/secondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
             <!-- Repeat Mode Chip -->
             <TextView

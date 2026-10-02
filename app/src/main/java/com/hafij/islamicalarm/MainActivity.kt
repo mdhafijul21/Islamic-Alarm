@@ -69,6 +69,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val enableGpsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            Toast.makeText(this, "✅ জিপিএস লোকেশন চালু হয়েছে! সময় সেট করা হচ্ছে...", Toast.LENGTH_SHORT).show()
+            autoDetectLocationAndSetPrayerTimes(showToast = true)
+        } else {
+            if (LocationHelper.isLocationEnabled(this)) {
+                autoDetectLocationAndSetPrayerTimes(showToast = true)
+            } else {
+                showEnableGpsDialog()
+            }
+        }
+    }
+
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -76,8 +91,8 @@ class MainActivity : AppCompatActivity() {
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
         if (fineGranted || coarseGranted) {
-            Toast.makeText(this, "📡 লোকেশন অনুমতি পাওয়া গেছে। GPS অনুযায়ী সময় সেট করা হচ্ছে...", Toast.LENGTH_SHORT).show()
-            autoDetectLocationAndSetPrayerTimes(showToast = true)
+            Toast.makeText(this, "📡 লোকেশন অনুমতি পাওয়া গেছে। GPS চেক করা হচ্ছে...", Toast.LENGTH_SHORT).show()
+            promptTurnOnGpsAndDetect(showToast = true)
         } else {
             Toast.makeText(
                 this,
@@ -236,8 +251,51 @@ class MainActivity : AppCompatActivity() {
         locationPermissionLauncher.launch(permissions)
     }
 
+    private fun promptTurnOnGpsAndDetect(showToast: Boolean = true) {
+        if (!LocationHelper.hasLocationPermission(this)) {
+            requestLocationPermissionDirect()
+            return
+        }
+
+        LocationHelper.checkAndPromptEnableGps(
+            activity = this,
+            onGpsAlreadyEnabled = {
+                autoDetectLocationAndSetPrayerTimes(showToast = showToast)
+            },
+            onResolutionRequired = { resolvable ->
+                try {
+                    val intentSenderRequest = androidx.activity.result.IntentSenderRequest.Builder(
+                        resolvable.resolution.intentSender
+                    ).build()
+                    enableGpsLauncher.launch(intentSenderRequest)
+                } catch (e: Exception) {
+                    showEnableGpsDialog()
+                }
+            },
+            onGpsUnavailable = {
+                showEnableGpsDialog()
+            }
+        )
+    }
+
+    private fun showEnableGpsDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("📍 ফোনের GPS/লোকেশন চালু করুন")
+            .setMessage("সঠিক নামাজের সময়সূচী স্বয়ংক্রিয়ভাবে সেট করার জন্য ফোনের লোকেশন (GPS) সেবা অন করা আবশ্যক।")
+            .setPositiveButton("সেটিংস খুলুন") { _, _ ->
+                try {
+                    val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            .setNegativeButton("পরে করব", null)
+            .show()
+    }
+
     private fun setupBottomNavigation() {
-        // Set default selection to Option 1: Prayer Times
+        // Set default selection to Home: Prayer Times & Alarms
         binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
         showPrayerTimesScreen()
 
@@ -245,10 +303,6 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_prayer_times -> {
                     showPrayerTimesScreen()
-                    true
-                }
-                R.id.nav_alarms -> {
-                    showAlarmsScreen()
                     true
                 }
                 R.id.nav_quran -> {
@@ -270,23 +324,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPrayerTimesScreen() {
         binding.layoutPrayerTimesContainer.visibility = View.VISIBLE
-        binding.layoutAlarmsContainer.visibility = View.GONE
-        binding.fabAddAlarm.visibility = View.GONE
+        binding.fabAddAlarm.visibility = View.VISIBLE
         binding.toolbar.title = "নামাজের সময়সূচী"
         binding.toolbar.subtitle = selectedDistrict.displayName
         updatePrayerTimes()
-    }
-
-    private fun showAlarmsScreen() {
-        binding.layoutPrayerTimesContainer.visibility = View.GONE
-        binding.layoutAlarmsContainer.visibility = View.VISIBLE
-        binding.fabAddAlarm.visibility = View.VISIBLE
-        binding.toolbar.title = "এলার্ম ও সাইলেন্ট মোড"
-        binding.toolbar.subtitle = "নামাজের সময় মোবাইল লক এলার্ম"
         loadAlarms()
     }
 
     private fun setupPrayerTimesHub() {
+        // Add Alarm button on Home
+        binding.btnQuickAddNewAlarm.setOnClickListener {
+            showAddOrEditAlarmDialog(null)
+        }
+
         // District Selector
         binding.btnSelectDistrict.setOnClickListener {
             showDistrictSelectionDialog()
@@ -294,7 +344,7 @@ class MainActivity : AppCompatActivity() {
 
         // Quick GPS Button
         binding.btnQuickGpsLocation.setOnClickListener {
-            autoDetectLocationAndSetPrayerTimes(showToast = true)
+            promptTurnOnGpsAndDetect(showToast = true)
         }
 
         // Quick feature cards
@@ -740,6 +790,7 @@ class MainActivity : AppCompatActivity() {
                     minute = selectedMinute,
                     label = label,
                     lockDurationMinutes = lockDuration,
+                    lockLevel = "HARD",
                     isRepeatDaily = isRepeatDaily,
                     isEnabled = true
                 )
@@ -749,6 +800,7 @@ class MainActivity : AppCompatActivity() {
                     minute = selectedMinute,
                     label = label,
                     lockDurationMinutes = lockDuration,
+                    lockLevel = "HARD",
                     isRepeatDaily = isRepeatDaily,
                     isEnabled = true
                 )
@@ -820,8 +872,12 @@ class MainActivity : AppCompatActivity() {
                 return
             }
         } else {
-            // Already has permission -> auto sync location silently on startup
-            autoDetectLocationAndSetPrayerTimes(showToast = false)
+            // Already has permission -> check if device GPS is enabled
+            if (LocationHelper.isLocationEnabled(this)) {
+                autoDetectLocationAndSetPrayerTimes(showToast = false)
+            } else {
+                promptTurnOnGpsAndDetect(showToast = false)
+            }
         }
         onNext()
     }

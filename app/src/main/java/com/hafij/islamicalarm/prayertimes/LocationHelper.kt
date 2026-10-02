@@ -47,6 +47,43 @@ object LocationHelper {
     }
 
     /**
+     * Checks if GPS is enabled on the device. If not, requests Google Play Services
+     * to prompt the user to enable GPS with a single click in a system dialog.
+     */
+    fun checkAndPromptEnableGps(
+        activity: android.app.Activity,
+        onGpsAlreadyEnabled: () -> Unit,
+        onResolutionRequired: (com.google.android.gms.common.api.ResolvableApiException) -> Unit,
+        onGpsUnavailable: () -> Unit
+    ) {
+        if (isLocationEnabled(activity)) {
+            onGpsAlreadyEnabled()
+            return
+        }
+
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+            .build()
+        val builder = com.google.android.gms.location.LocationSettingsRequest.Builder()
+            .addLocationRequest(locationRequest)
+            .setAlwaysShow(true)
+
+        val client = LocationServices.getSettingsClient(activity)
+        val task = client.checkLocationSettings(builder.build())
+
+        task.addOnSuccessListener {
+            onGpsAlreadyEnabled()
+        }
+
+        task.addOnFailureListener { exception ->
+            if (exception is com.google.android.gms.common.api.ResolvableApiException) {
+                onResolutionRequired(exception)
+            } else {
+                onGpsUnavailable()
+            }
+        }
+    }
+
+    /**
      * Gets the current GPS location with high reliability:
      * 1. FusedLocationProviderClient lastLocation
      * 2. Single high-accuracy getCurrentLocation request

@@ -49,7 +49,7 @@ class AlarmAdapter(
                 binding.tvAlarmLabel.visibility = View.GONE
             }
 
-            val lockText = "🔒 ${alarm.lockDurationMinutes} ${binding.root.context.getString(R.string.minutes_suffix)}"
+            val lockText = "🔒 হার্ড লক • ${alarm.lockDurationMinutes} ${binding.root.context.getString(R.string.minutes_suffix)}"
             binding.tvLockDuration.text = lockText
 
             binding.tvRepeatMode.text = alarm.getRepeatModeText()

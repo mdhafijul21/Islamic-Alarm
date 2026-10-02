@@ -257,6 +257,225 @@ object QuranRepository {
         )
     }
 
+    suspend fun fetchSurahAyahs(context: Context, surahNumber: Int): List<AyahItem> = withContext(Dispatchers.IO) {
+        val quranDir = java.io.File(context.filesDir, "quran_data").apply { if (!exists()) mkdirs() }
+        val persistentFile = java.io.File(quranDir, "surah_v4_$surahNumber.json")
+        val cacheFile = java.io.File(context.cacheDir, "surah_v2_$surahNumber.json")
+
+        // 1. Try reading from permanent local storage or cache
+        if (persistentFile.exists()) {
+            try {
+                val cachedJson = persistentFile.readText()
+                val parsed = parseAnySurahJson(cachedJson, surahNumber)
+                if (parsed.isNotEmpty()) return@withContext parsed
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else if (cacheFile.exists()) {
+            try {
+                val cachedJson = cacheFile.readText()
+                val parsed = parseAnySurahJson(cachedJson, surahNumber)
+                if (parsed.isNotEmpty()) {
+                    try { persistentFile.writeText(cachedJson) } catch (_: Exception) {}
+                    return@withContext parsed
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // 2. Primary: Fetch from Quran.com API v4 (Official MCP Quran backend from Quran Foundation)
+        try {
+            val quranDotComUrl = "https://api.quran.com/api/v4/verses/by_chapter/$surahNumber?language=bn&words=false&translations=163&fields=text_uthmani,chapter_id,page_number,juz_number&per_page=300"
+            val conn = URL(quranDotComUrl).openConnection() as HttpURLConnection
+            conn.connectTimeout = 7000
+            conn.readTimeout = 7000
+            conn.setRequestProperty("User-Agent", "IslamicAlarm-QuranApp/1.0")
+            conn.requestMethod = "GET"
+
+            if (conn.responseCode == 200) {
+                val jsonStr = conn.inputStream.bufferedReader().use { it.readText() }
+                val parsed = parseQuranDotComJson(jsonStr, surahNumber)
+                if (parsed.isNotEmpty()) {
+                    try { persistentFile.writeText(jsonStr) } catch (_: Exception) {}
+                    return@withContext parsed
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 3. Fallback: Fetch from Al-Quran Cloud API (Uthmani Arabic + Bengali Translation)
+        try {
+            val alquranCloudUrl = "https://api.alquran.cloud/v1/surah/$surahNumber/editions/quran-uthmani,bn.bengali"
+            val conn = URL(alquranCloudUrl).openConnection() as HttpURLConnection
+            conn.connectTimeout = 7000
+            conn.readTimeout = 7000
+            conn.setRequestProperty("User-Agent", "IslamicAlarm-QuranApp/1.0")
+            conn.requestMethod = "GET"
+
+            if (conn.responseCode == 200) {
+                val jsonStr = conn.inputStream.bufferedReader().use { it.readText() }
+                val parsed = parseAlQuranCloudJson(jsonStr, surahNumber)
+                if (parsed.isNotEmpty()) {
+                    try { persistentFile.writeText(jsonStr) } catch (_: Exception) {}
+                    return@withContext parsed
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 4. Offline Fallback
+        return@withContext getOfflineAyahsFallback(surahNumber)
+    }
+
+    private fun parseAnySurahJson(jsonStr: String, surahNumber: Int): List<AyahItem> {
+        if (jsonStr.contains("\"verses\"")) {
+            return parseQuranDotComJson(jsonStr, surahNumber)
+        }
+        return parseAlQuranCloudJson(jsonStr, surahNumber)
+    }
+
+    private fun parseQuranDotComJson(jsonStr: String, surahNumber: Int): List<AyahItem> {
+        val list = mutableListOf<AyahItem>()
+        try {
+            val root = JSONObject(jsonStr)
+            val versesArray = root.optJSONArray("verses") ?: return emptyList()
+
+            for (i in 0 until versesArray.length()) {
+                val vObj = versesArray.getJSONObject(i)
+                val verseNum = vObj.optInt("verse_number", i + 1)
+                var arabicText = vObj.optString("text_uthmani", "")
+                val page = vObj.optInt("page_number", 1)
+                val juz = vObj.optInt("juz_number", 1)
+
+                var banglaText = ""
+                val translationsArr = vObj.optJSONArray("translations")
+                if (translationsArr != null && translationsArr.length() > 0) {
+                    val rawTranslation = translationsArr.getJSONObject(0).optString("text", "")
+                    // Clean HTML tags and footnote numbers like <sup foot_note=...>1</sup>
+                    banglaText = cleanHtmlTags(rawTranslation)
+                }
+
+                if (!arabicText.endsWith("﴾") && !arabicText.endsWith("﴿")) {
+                    arabicText = "$arabicText ﴿${toArabicNumber(verseNum)}﴾"
+                }
+
+                list.add(
+                    AyahItem(
+                        surahNumber = surahNumber,
+                        numberInSurah = verseNum,
+                        textArabic = arabicText,
+                        textBangla = banglaText,
+                        page = page,
+                        juz = juz
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
+    private fun parseAlQuranCloudJson(jsonStr: String, surahNumber: Int): List<AyahItem> {
+        val list = mutableListOf<AyahItem>()
+        try {
+            val root = JSONObject(jsonStr)
+            val dataArray = root.getJSONArray("data")
+            if (dataArray.length() >= 2) {
+                val arabicObj = dataArray.getJSONObject(0)
+                val banglaObj = dataArray.getJSONObject(1)
+
+                val arabicAyahs = arabicObj.getJSONArray("ayahs")
+                val banglaAyahs = banglaObj.getJSONArray("ayahs")
+
+                val count = Math.min(arabicAyahs.length(), banglaAyahs.length())
+                for (i in 0 until count) {
+                    val aObj = arabicAyahs.getJSONObject(i)
+                    val bObj = banglaAyahs.getJSONObject(i)
+
+                    val numInSurah = aObj.optInt("numberInSurah", i + 1)
+                    var textArabic = aObj.optString("text", "")
+                    val textBangla = cleanHtmlTags(bObj.optString("text", ""))
+                    val page = aObj.optInt("page", 1)
+                    val juz = aObj.optInt("juz", 1)
+
+                    if (!textArabic.endsWith("﴾") && !textArabic.endsWith("﴿")) {
+                        textArabic = "$textArabic ﴿${toArabicNumber(numInSurah)}﴾"
+                    }
+
+                    list.add(
+                        AyahItem(
+                            surahNumber = surahNumber,
+                            numberInSurah = numInSurah,
+                            textArabic = textArabic,
+                            textBangla = textBangla,
+                            page = page,
+                            juz = juz
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
+    private fun cleanHtmlTags(raw: String): String {
+        return raw.replace(Regex("<[^>]*>"), "").trim()
+    }
+
+    private fun getOfflineAyahsFallback(surahNumber: Int): List<AyahItem> {
+        return when (surahNumber) {
+            1 -> listOf(
+                AyahItem(1, 1, "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ﴿١﴾", "শুরু করছি আল্লাহর নামে যিনি পরম করুণাময়, অতি দয়ালু।", 1, 1),
+                AyahItem(1, 2, "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ ﴿٢﴾", "সমস্ত প্রশংসা আল্লাহ তা'আলার যিনি সমগ্র সৃষ্টির পালনকর্তা।", 1, 1),
+                AyahItem(1, 3, "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ﴿٣﴾", "যিনি পরম করুণাময় ও অসীম দয়ালু।", 1, 1),
+                AyahItem(1, 4, "مَٰلِكِ يَوْمِ ٱلدِّينِ ﴿٤﴾", "যিনি প্রতিফল দিবসের মালিক।", 1, 1),
+                AyahItem(1, 5, "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ ﴿٥﴾", "আমরা কেবল আপনারই ইবাদত করি এবং কেবলমাত্র আপনারই সাহায্য প্রার্থনা করি।", 1, 1),
+                AyahItem(1, 6, "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ ﴿٦﴾", "আমাদের সরল সঠিক পথ প্রদর্শন করুন।", 1, 1),
+                AyahItem(1, 7, "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ ﴿٧﴾", "তাদের পথ, যাদের আপনি পুরস্কৃত করেছেন; তাদের পথ নয় যারা ক্রোধের শিকার এবং পথভ্রষ্ট।", 1, 1)
+            )
+            112 -> listOf(
+                AyahItem(112, 1, "قُلْ هُوَ ٱللَّهُ أَحَدٌ ﴿١﴾", "বলুন, তিনিই আল্লাহ, একক ও অদ্বিতীয়।", 604, 30),
+                AyahItem(112, 2, "ٱللَّهُ ٱلصَّمَدُ ﴿٢﴾", "আল্লাহ অমুখাপেক্ষী, সবাই তাঁর মুখাপেক্ষী।", 604, 30),
+                AyahItem(112, 3, "لَمْ يَلِدْ وَلَمْ يُولَدْ ﴿٣﴾", "তিনি কাউকে জন্ম দেননি এবং তাঁকেও কেউ জন্ম দেয়নি।", 604, 30),
+                AyahItem(112, 4, "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ ﴿٤﴾", "এবং তাঁর সমকক্ষ কেউ নেই।", 604, 30)
+            )
+            113 -> listOf(
+                AyahItem(113, 1, "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ ﴿١﴾", "বলুন, আমি আশ্রয় প্রার্থনা করছি প্রভাতের পালনকর্তার কাছে,", 604, 30),
+                AyahItem(113, 2, "مِن شَرِّ مَا خَلَقَ ﴿٢﴾", "তিনি যা সৃষ্টি করেছেন তার অনিষ্ট থেকে,", 604, 30),
+                AyahItem(113, 3, "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ﴿٣﴾", "এবং অন্ধকারের অনিষ্ট থেকে যখন তা সমাগত হয়,", 604, 30),
+                AyahItem(113, 4, "وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِى ٱلْعُقَدِ ﴿٤﴾", "এবং গ্রন্থিতে ফুঁকদানকারিণীদের অনিষ্ট থেকে,", 604, 30),
+                AyahItem(113, 5, "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ ﴿٥﴾", "এবং হিংসুকের অনিষ্ট থেকে যখন সে হিংসা করে।", 604, 30)
+            )
+            114 -> listOf(
+                AyahItem(114, 1, "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ ﴿١﴾", "বলুন, আমি আশ্রয় প্রার্থনা করছি মানুষের প্রতিপালকের কাছে,", 604, 30),
+                AyahItem(114, 2, "مَلِكِ ٱلنَّاسِ ﴿٢﴾", "মানুষের অধিপতির কাছে,", 604, 30),
+                AyahItem(114, 3, "إِلَٰهِ ٱلنَّاسِ ﴿٣﴾", "মানুষের মা'বুদের কাছে,", 604, 30),
+                AyahItem(114, 4, "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ ﴿٤﴾", "আত্মগোপনকারী কুমন্ত্রণাদাতার অনিষ্ট থেকে,", 604, 30),
+                AyahItem(114, 5, "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ ﴿٥﴾", "যে মানুষের অন্তরে কুমন্ত্রণা দেয়,", 604, 30),
+                AyahItem(114, 6, "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ ﴿٦﴾", "জ্বিনের মধ্য থেকে এবং মানুষের মধ্য থেকে।", 604, 30)
+            )
+            else -> {
+                val surah = surahList.find { it.id == surahNumber } ?: surahList.first()
+                List(surah.totalAyahs) { i ->
+                    AyahItem(
+                        surahNumber = surahNumber,
+                        numberInSurah = i + 1,
+                        textArabic = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ﴿${toArabicNumber(i + 1)}﴾",
+                        textBangla = "আয়াত ${i + 1} লোড করতে ইন্টারনেট সংযোগ চালু রাখুন।",
+                        page = surah.startPage,
+                        juz = surah.paraNumber
+                    )
+                }
+            }
+        }
+    }
+
     private fun toArabicNumber(num: Int): String {
         val arabicDigits = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
         val str = num.toString()

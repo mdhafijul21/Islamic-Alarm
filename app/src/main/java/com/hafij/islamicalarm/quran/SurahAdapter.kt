@@ -64,6 +64,10 @@ class SurahAdapter(
             binding.btnReadPage.setOnClickListener {
                 onReadPage(surah)
             }
+
+            binding.root.setOnClickListener {
+                onReadPage(surah)
+            }
         }
 
         private fun toBengaliNumber(number: Int): String {

@@ -18,7 +18,7 @@
             android:id="@+id/toolbarReader"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:navigationIcon="@drawable/ic_arrow_back"
             app:navigationIconTint="@color/secondary"
             app:subtitleTextColor="@color/text_secondary"
             app:title="কিতাব পাঠ"
@@ -53,7 +53,7 @@
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Font Smaller"
-            android:src="@android:drawable/ic_menu_zoom"
+            android:src="@drawable/ic_zoom_out"
             app:tint="@color/secondary" />
 
         <TextView
@@ -73,7 +73,7 @@
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Font Larger"
-            android:src="@android:drawable/ic_input_add"
+            android:src="@drawable/ic_zoom_in"
             app:tint="@color/secondary" />
 
         <com.google.android.material.button.MaterialButton

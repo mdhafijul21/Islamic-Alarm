@@ -101,9 +101,8 @@ class ChapterAdapter(
             }
 
             // Share Action
-            binding.btnShareChapter.apply {
-                setOnClickListener {
-                    val shareText = buildString {
+            binding.btnShareChapter.setOnClickListener {
+                val shareText = buildString {
                         append("📖 ").append(chapter.titleBn).append("\n\n")
                         if (chapter.arabicText.isNotBlank()) {
                             append(chapter.arabicText).append("\n\n")
@@ -123,7 +122,6 @@ class ChapterAdapter(
                         type = "text/plain"
                     }
                     context.startActivity(Intent.createChooser(sendIntent, "অধ্যায় শেয়ার করুন"))
-                }
             }
 
             // TTS Audio Listen

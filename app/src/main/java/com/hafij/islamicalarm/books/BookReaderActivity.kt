@@ -38,7 +38,12 @@ class BookReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setupFontControls()
         setupOnlineSearch()
 
-        tts = TextToSpeech(this, this)
+        try {
+            tts = TextToSpeech(this, this)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            isTtsReady = false
+        }
     }
 
     private fun setupToolbar() {

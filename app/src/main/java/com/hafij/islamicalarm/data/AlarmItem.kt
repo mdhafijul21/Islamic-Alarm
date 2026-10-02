@@ -10,6 +10,7 @@ data class AlarmItem(
     val minute: Int,
     val lockDurationMinutes: Int = 15,
     val label: String = "",
+    val lockLevel: String = "HARD",
     val isRepeatDaily: Boolean = true,
     val isEnabled: Boolean = true
 ) {
@@ -33,6 +34,7 @@ data class AlarmItem(
             put("minute", minute)
             put("lockDurationMinutes", lockDurationMinutes)
             put("label", label)
+            put("lockLevel", lockLevel)
             put("isRepeatDaily", isRepeatDaily)
             put("isEnabled", isEnabled)
         }
@@ -46,6 +48,7 @@ data class AlarmItem(
                 minute = json.getInt("minute"),
                 lockDurationMinutes = json.optInt("lockDurationMinutes", 15),
                 label = json.optString("label", ""),
+                lockLevel = json.optString("lockLevel", "HARD"),
                 isRepeatDaily = json.optBoolean("isRepeatDaily", true),
                 isEnabled = json.optBoolean("isEnabled", true)
             )

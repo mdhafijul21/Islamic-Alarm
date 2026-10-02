@@ -8,101 +8,136 @@
     android:keepScreenOn="true"
     tools:context="com.hafij.islamicalarm.LockScreenActivity">
 
-    <!-- Main Content Container matching user screenshot -->
-    <LinearLayout
+    <!-- Scrollable container ensuring it fits and looks stunning on any screen size -->
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="180dp"
-        android:paddingBottom="40dp">
+        android:fillViewport="true"
+        android:scrollbars="none">
 
-        <!-- Main Heading: "এখন নামাজের সময়" -->
-        <TextView
-            android:id="@+id/tvLockTitle"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:text="@string/now_prayer_time"
-            android:textColor="@color/gold_accent"
-            android:textSize="32sp"
-            android:textStyle="bold" />
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="32dp">
 
-        <!-- Optional Alarm Label (if set) -->
-        <TextView
-            android:id="@+id/tvLockAlarmLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textColor="@color/gold_accent"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:visibility="gone"
-            tools:text="ফজর সালাত"
-            tools:visibility="visible" />
+            <!-- Decorative Star Badge -->
+            <ImageView
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginBottom="12dp"
+                android:contentDescription="Islamic Star"
+                android:src="@drawable/ic_islamic_star_badge"
+                app:tint="@color/gold_accent" />
 
-        <!-- Arabic Ayah -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:gravity="center"
-            android:lineSpacingExtra="8dp"
-            android:text="@string/arabic_ayah"
-            android:textColor="@color/white"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            <!-- Main Heading: "এখন নামাজের সময়" -->
+            <TextView
+                android:id="@+id/tvLockTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="@string/now_prayer_time"
+                android:textColor="@color/gold_accent"
+                android:textSize="28sp"
+                android:textStyle="bold" />
 
-        <!-- Ayah Translation -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:gravity="center"
-            android:lineSpacingMultiplier="1.2"
-            android:text="@string/ayah_translation"
-            android:textColor="#D0E8EA"
-            android:textSize="14sp" />
+            <!-- Optional Alarm Label (if set) -->
+            <TextView
+                android:id="@+id/tvLockAlarmLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_label_chip"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="4dp"
+                android:textColor="@color/gold_accent"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="ফজর সালাত"
+                tools:visibility="visible" />
 
-        <!-- Divider Line -->
-        <View
-            android:layout_width="160dp"
-            android:layout_height="1.5dp"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="28dp"
-            android:background="#40FFD700" />
+            <!-- Arabic Ayah in framed card -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_arabic_verse"
+                android:gravity="center"
+                android:lineSpacingExtra="8dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp"
+                android:text="@string/arabic_ayah"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
-        <!-- Remaining Time Title: "অবশিষ্ট সময়" -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:letterSpacing="0.05"
-            android:text="@string/remaining_time"
-            android:textColor="#B0D8DC"
-            android:textSize="16sp" />
+            <!-- Ayah Translation -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.2"
+                android:paddingHorizontal="8dp"
+                android:text="@string/ayah_translation"
+                android:textColor="#D0E8EA"
+                android:textSize="13sp" />
 
-        <!-- Countdown Timer (mm:ss) e.g. "00:44" -->
-        <TextView
-            android:id="@+id/tvCountdownTimer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="@color/white"
-            android:textSize="64sp"
-            android:textStyle="bold"
-            tools:text="00:44" />
+            <!-- Divider Line -->
+            <View
+                android:layout_width="160dp"
+                android:layout_height="1.5dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="16dp"
+                android:background="#40FFD700" />
 
-        <!-- Subtext: "নামাজের জন্য মোবাইল ব্যবহারের সময় নিয়ন্ত্রিত" -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:gravity="center"
-            android:text="@string/locked_title"
-            android:textColor="#A0C8CC"
-            android:textSize="14sp" />
+            <!-- Remaining Time Title: "অবশিষ্ট সময়" -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.05"
+                android:text="@string/remaining_time"
+                android:textColor="#B0D8DC"
+                android:textSize="15sp" />
 
-    </LinearLayout>
+            <!-- Countdown Timer (mm:ss) e.g. "15:00" -->
+            <TextView
+                android:id="@+id/tvCountdownTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/white"
+                android:textSize="60sp"
+                android:textStyle="bold"
+                tools:text="15:00" />
+
+            <!-- Subtext: Hard Lock Badge -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:background="@drawable/bg_challenge_badge"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="🔒 হার্ড লক সক্রিয় (নামাজের জন্য মোবাইল সম্পূর্ণ লক)"
+                android:textColor="#D0E8EA"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="কাউন্টার ০ সেকেন্ড না হওয়া পর্যন্ত কোনো বাটন কাজ করবে না"
+                android:textColor="#A0C8CC"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+    </ScrollView>
 
 </RelativeLayout>

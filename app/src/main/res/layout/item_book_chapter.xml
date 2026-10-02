@@ -131,7 +131,7 @@
                 android:layout_height="wrap_content"
                 android:text="শুনুন"
                 android:textColor="@color/secondary"
-                app:icon="@android:drawable/ic_lock_silent_mode_off"
+                app:icon="@drawable/ic_volume_up"
                 app:iconTint="@color/secondary" />
 
             <com.google.android.material.button.MaterialButton
@@ -141,7 +141,7 @@
                 android:layout_height="wrap_content"
                 android:text="কপি"
                 android:textColor="@color/secondary"
-                app:icon="@android:drawable/ic_menu_save"
+                app:icon="@drawable/ic_content_copy"
                 app:iconTint="@color/secondary" />
 
             <com.google.android.material.button.MaterialButton
@@ -151,7 +151,7 @@
                 android:layout_height="wrap_content"
                 android:text="শেয়ার"
                 android:textColor="@color/secondary"
-                app:icon="@android:drawable/ic_menu_share"
+                app:icon="@drawable/ic_share"
                 app:iconTint="@color/secondary" />
 
         </LinearLayout>

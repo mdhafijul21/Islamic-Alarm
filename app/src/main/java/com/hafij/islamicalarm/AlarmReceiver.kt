@@ -68,11 +68,19 @@ class AlarmReceiver : BroadcastReceiver() {
             )
 
             // Notification Channel for High Priority Alarm
-            val channelId = "islamic_alarm_channel"
+            val channelId = "islamic_alarm_channel_v4"
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+            val alarmSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+                ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val audioAttributes = android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+
                 val channel = NotificationChannel(
                     channelId,
                     "Islamic Alarm Clock",
@@ -80,8 +88,10 @@ class AlarmReceiver : BroadcastReceiver() {
                 ).apply {
                     description = "Prayer Time Lock Screen Alarm"
                     enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 500, 250, 500, 250, 500)
                     setBypassDnd(true)
                     lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                    setSound(alarmSoundUri, audioAttributes)
                 }
                 notificationManager.createNotificationChannel(channel)
             }
@@ -98,8 +108,10 @@ class AlarmReceiver : BroadcastReceiver() {
                 .setContentText("ফোন লক হচ্ছে, নামাজের প্রস্তুতি নিন")
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setSound(alarmSoundUri)
                 .setFullScreenIntent(fullScreenPendingIntent, true)
                 .setAutoCancel(true)
+                .setOngoing(true)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
             notificationManager.notify(alarm.id.hashCode(), notificationBuilder.build())

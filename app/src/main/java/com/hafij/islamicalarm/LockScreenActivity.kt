@@ -36,7 +36,6 @@ class LockScreenActivity : AppCompatActivity() {
     private var textToSpeech: TextToSpeech? = null
     private var ringtone: Ringtone? = null
     private var azanMediaPlayer: android.media.MediaPlayer? = null
-    private var ttsSpeakCount: Int = 0
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private val callStateReceiver = object : BroadcastReceiver() {
@@ -78,12 +77,14 @@ class LockScreenActivity : AppCompatActivity() {
             // Non-kiosk or standard mode fallback
         }
 
-        // 3. Disable Back Button Completely
+        // 3. Disable Back Button Completely (Strict Hard Lock)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Completely disabled - do nothing
+                // Hard Lock: Completely disabled - do nothing
             }
         })
+
+        // Hard Lock: No touch or button bypass allowed during prayer lock session
 
         // 4. Initialize or Resume Timer and Verify Alarm Validity
         initOrResumeLockTimer(intent)
@@ -126,18 +127,6 @@ class LockScreenActivity : AppCompatActivity() {
         val intentAlarmId = intent.getStringExtra("ALARM_ID")
         val currentAlarmId = intentAlarmId ?: savedAlarmId ?: ""
 
-        val alarmStore = AlarmStore(this)
-        if (currentAlarmId.isNotBlank()) {
-            val alarm = alarmStore.getAlarm(currentAlarmId)
-            // If alarm was deleted, finish lock activity immediately.
-            // isEnabled must NOT be checked here - it auto-flips to false the instant
-            // a one-time alarm fires, which would close the lock screen immediately.
-            if (alarm == null) {
-                releaseLockAndFinish()
-                return
-            }
-        }
-
         val now = System.currentTimeMillis()
         var endTime = prefs.getLong("active_end_time", 0L)
         val label = intent.getStringExtra("LABEL")
@@ -151,13 +140,7 @@ class LockScreenActivity : AppCompatActivity() {
             binding.tvLockAlarmLabel.visibility = View.GONE
         }
 
-        // Only start a brand-new session when a genuinely NEW/different alarm fires.
-        // Any relaunch/resume (intentAlarmId null, or same id as before) must always
-        // continue the already-running countdown - never restart it back to the full
-        // duration, otherwise trying to leave the lock screen keeps resetting the timer.
-        val isNewAlarmFiring = intentAlarmId != null && intentAlarmId != savedAlarmId
-
-        if (!isNewAlarmFiring && endTime > now) {
+        if (endTime > now && savedAlarmId == currentAlarmId) {
             // Continuation of active timer
             remainingTimeMillis = endTime - now
         } else {
@@ -270,16 +253,15 @@ class LockScreenActivity : AppCompatActivity() {
                 }
 
                 val speechMsg = if (label.isNotBlank()) {
-                    "$label এর নামাজের সময় হয়েছে, নামাজে যান।"
+                    "$label এর নামাজের সময় হয়েছে, নামাজে যান।"
                 } else {
-                    "নামাজের সময় হয়েছে, নামাজে যান।"
+                    "নামাজের সময় হয়েছে, নামাজে যান।"
                 }
 
                 textToSpeech?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {}
                     override fun onDone(utteranceId: String?) {
-                        ttsSpeakCount++
-                        if (ttsSpeakCount < 2 && remainingTimeMillis > 0 && !isFinishing) {
+                        if (remainingTimeMillis > 0 && !isFinishing) {
                             handler.postDelayed({
                                 try {
                                     textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_FLUSH, null, "IslamicAlarmTTS_Loop")
@@ -292,7 +274,6 @@ class LockScreenActivity : AppCompatActivity() {
                     override fun onError(utteranceId: String?) {}
                 })
 
-                ttsSpeakCount = 1
                 textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_FLUSH, null, "IslamicAlarmTTS_Loop")
             }
         }
@@ -302,17 +283,20 @@ class LockScreenActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
-            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-            keyguardManager.requestDismissKeyguard(this, null)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                        WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
+            try {
+                val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                keyguardManager.requestDismissKeyguard(this, null)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        @Suppress("DEPRECATION")
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        )
     }
 
     private fun hideSystemUI() {
@@ -396,38 +380,6 @@ class LockScreenActivity : AppCompatActivity() {
                 releaseLockAndFinish()
             }
         }.start()
-        startEndTimeWatchdog()
-    }
-
-    // Safety net: on some devices the CountDownTimer's tick/finish callback can stall
-    // (e.g. under battery optimization or Doze). This independently checks the absolute
-    // saved end-time every 2 seconds and force-unlocks if that time has already passed,
-    // even if onFinish() above never fired.
-    private var watchdogRunnable: Runnable? = null
-
-    private fun startEndTimeWatchdog() {
-        watchdogRunnable?.let { handler.removeCallbacks(it) }
-        val runnable = object : Runnable {
-            override fun run() {
-                if (isFinishing) return
-                val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
-                val endTime = prefs.getLong("active_end_time", 0L)
-                if (endTime in 1 until System.currentTimeMillis()) {
-                    releaseLockAndFinish()
-                    return
-                }
-                if (remainingTimeMillis > 0) {
-                    handler.postDelayed(this, 2000)
-                }
-            }
-        }
-        watchdogRunnable = runnable
-        handler.postDelayed(runnable, 2000)
-    }
-
-    private fun stopEndTimeWatchdog() {
-        watchdogRunnable?.let { handler.removeCallbacks(it) }
-        watchdogRunnable = null
     }
 
     private fun updateTimerDisplay(millis: Long) {
@@ -475,8 +427,6 @@ class LockScreenActivity : AppCompatActivity() {
 
     private fun releaseLockAndFinish() {
         remainingTimeMillis = 0L
-        stopEndTimeWatchdog()
-        countDownTimer?.cancel()
         val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
         prefs.edit().clear().apply()
 
@@ -532,7 +482,6 @@ class LockScreenActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopEndTimeWatchdog()
         com.hafij.islamicalarm.silent.AutoSilentManager.restoreRingerMode(this)
         stopAlarmSound()
         countDownTimer?.cancel()

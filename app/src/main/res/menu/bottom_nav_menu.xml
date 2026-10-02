@@ -3,15 +3,11 @@
     <item
         android:id="@+id/nav_prayer_times"
         android:icon="@android:drawable/ic_menu_today"
-        android:title="নামাজের সময়" />
-    <item
-        android:id="@+id/nav_alarms"
-        android:icon="@android:drawable/ic_lock_idle_alarm"
-        android:title="এলার্ম" />
+        android:title="হোম" />
     <item
         android:id="@+id/nav_quran"
         android:icon="@android:drawable/ic_menu_compass"
-        android:title="কুরআন" />
+        android:title="আল-কুরআন" />
     <item
         android:id="@+id/nav_tasbih"
         android:icon="@android:drawable/ic_menu_edit"
@@ -21,4 +17,3 @@
         android:icon="@android:drawable/ic_menu_agenda"
         android:title="আমল ও দোআ" />
 </menu>
-

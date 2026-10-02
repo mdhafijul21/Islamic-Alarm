@@ -1,6 +1,7 @@
 package com.hafij.islamicalarm.quran
 
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Bundle
@@ -9,23 +10,14 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.LayoutInflater
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
-import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivityQuranBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.Locale
 
 class QuranActivity : AppCompatActivity() {
@@ -34,7 +26,7 @@ class QuranActivity : AppCompatActivity() {
     private lateinit var surahAdapter: SurahAdapter
     private lateinit var paraAdapter: ParaAdapter
 
-    private var currentPageNumber = 1
+    private var activeTabIndex = 0
     private val handler = Handler(Looper.getMainLooper())
     private val audioProgressRunnable = object : Runnable {
         override fun run() {
@@ -101,45 +93,35 @@ class QuranActivity : AppCompatActivity() {
         setupParaRecyclerView()
         setupSearch()
         setupTabs()
-        setupPageControls()
         setupAudioPlayerBar()
         setupBookmarkCard()
+    }
 
-        val startPageExtra = intent.getIntExtra("START_PAGE", 0)
-        if (startPageExtra > 0) {
-            currentPageNumber = startPageExtra
-            binding.tabLayout.getTabAt(2)?.select()
-            loadPage(currentPageNumber)
-        } else {
-            // Load saved last read page initially
-            val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
-            val lastPage = prefs.getInt("last_read_page", 1)
-            loadPage(lastPage)
-        }
+    override fun onResume() {
+        super.onResume()
+        updateLastReadCard()
+        updatePlayerUiState()
     }
 
     private fun setupBookmarkCard() {
         updateLastReadCard()
-        binding.btnContinueLastRead.setOnClickListener {
-            val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
-            val lastPage = prefs.getInt("last_read_page", 1)
-            binding.tabLayout.getTabAt(2)?.select()
-            loadPage(lastPage)
+        val openLastRead: () -> Unit = {
+            val prefs = getSharedPreferences("IslamicAlarmQuranPrefs", Context.MODE_PRIVATE)
+            val lastSurahId = prefs.getInt("last_read_surah_id", 1)
+            val intent = Intent(this, SurahDetailActivity::class.java).apply {
+                putExtra("EXTRA_SURAH_ID", lastSurahId)
+            }
+            startActivity(intent)
         }
-        binding.cardLastRead.setOnClickListener {
-            val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
-            val lastPage = prefs.getInt("last_read_page", 1)
-            binding.tabLayout.getTabAt(2)?.select()
-            loadPage(lastPage)
-        }
+        binding.btnContinueLastRead.setOnClickListener { openLastRead() }
+        binding.cardLastRead.setOnClickListener { openLastRead() }
     }
 
     private fun updateLastReadCard() {
-        val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
-        val lastPage = prefs.getInt("last_read_page", 1)
-        val surah = QuranRepository.getSurahForPage(lastPage)
-        val juz = QuranRepository.getJuzForPage(lastPage)
-        binding.tvLastReadTitle.text = "পৃষ্ঠা ${toBengaliNumber(lastPage)} (সুরা ${surah.nameBangla} • পারা ${toBengaliNumber(juz)})"
+        val prefs = getSharedPreferences("IslamicAlarmQuranPrefs", Context.MODE_PRIVATE)
+        val lastSurahId = prefs.getInt("last_read_surah_id", 1)
+        val surah = QuranRepository.surahList.find { it.id == lastSurahId } ?: QuranRepository.surahList.first()
+        binding.tvLastReadTitle.text = "সুরা ${surah.nameBangla} (${surah.nameArabic}) • ${toBengaliNumber(surah.totalAyahs)} আয়াত • ${surah.revelationType}"
     }
 
     private fun setupSurahRecyclerView() {
@@ -149,9 +131,10 @@ class QuranActivity : AppCompatActivity() {
                 togglePlayAudio(surah)
             },
             onReadPage = { surah ->
-                currentPageNumber = surah.startPage
-                binding.tabLayout.getTabAt(2)?.select()
-                loadPage(currentPageNumber)
+                val intent = Intent(this, SurahDetailActivity::class.java).apply {
+                    putExtra("EXTRA_SURAH_ID", surah.id)
+                }
+                startActivity(intent)
             }
         )
 
@@ -163,9 +146,11 @@ class QuranActivity : AppCompatActivity() {
         paraAdapter = ParaAdapter(
             paraList = QuranRepository.paraList,
             onParaClick = { para ->
-                currentPageNumber = para.startPage
-                binding.tabLayout.getTabAt(2)?.select()
-                loadPage(currentPageNumber)
+                val surah = QuranRepository.getSurahForPage(para.startPage)
+                val intent = Intent(this, SurahDetailActivity::class.java).apply {
+                    putExtra("EXTRA_SURAH_ID", surah.id)
+                }
+                startActivity(intent)
             }
         )
 
@@ -177,10 +162,25 @@ class QuranActivity : AppCompatActivity() {
         binding.etSearchSurah.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                filterSurahList(s.toString().trim())
+                val query = s?.toString()?.trim() ?: ""
+                binding.btnClearSearch.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
+                performSearch(query)
             }
             override fun afterTextChanged(s: Editable?) {}
         })
+
+        binding.btnClearSearch.setOnClickListener {
+            binding.etSearchSurah.text?.clear()
+            hideKeyboard()
+        }
+    }
+
+    private fun performSearch(query: String) {
+        if (activeTabIndex == 0) {
+            filterSurahList(query)
+        } else {
+            filterParaList(query)
+        }
     }
 
     private fun filterSurahList(query: String) {
@@ -193,6 +193,7 @@ class QuranActivity : AppCompatActivity() {
             surah.nameBangla.contains(query, ignoreCase = true) ||
                     surah.nameEnglish.contains(query, ignoreCase = true) ||
                     surah.nameArabic.contains(query, ignoreCase = true) ||
+                    surah.meaningBangla.contains(query, ignoreCase = true) ||
                     surah.id.toString() == query ||
                     surah.paraNumber.toString() == query ||
                     toBengaliNumber(surah.id) == query ||
@@ -202,26 +203,41 @@ class QuranActivity : AppCompatActivity() {
         surahAdapter.updateData(filtered)
     }
 
+    private fun filterParaList(query: String) {
+        if (query.isEmpty()) {
+            paraAdapter.updateData(QuranRepository.paraList)
+            return
+        }
+
+        val filtered = QuranRepository.paraList.filter { para ->
+            para.nameBangla.contains(query, ignoreCase = true) ||
+                    para.nameArabic.contains(query, ignoreCase = true) ||
+                    para.meaningBangla.contains(query, ignoreCase = true) ||
+                    para.id.toString() == query ||
+                    toBengaliNumber(para.id) == query
+        }
+
+        paraAdapter.updateData(filtered)
+    }
+
     private fun setupTabs() {
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                when (tab?.position) {
+                activeTabIndex = tab?.position ?: 0
+                when (activeTabIndex) {
                     0 -> {
                         binding.layoutSurahTab.visibility = View.VISIBLE
                         binding.layoutParaTab.visibility = View.GONE
-                        binding.layoutPageTab.visibility = View.GONE
+                        binding.etSearchSurah.hint = "সুরা বা নম্বর দিয়ে খুঁজুন..."
                     }
                     1 -> {
                         binding.layoutSurahTab.visibility = View.GONE
                         binding.layoutParaTab.visibility = View.VISIBLE
-                        binding.layoutPageTab.visibility = View.GONE
-                    }
-                    2 -> {
-                        binding.layoutSurahTab.visibility = View.GONE
-                        binding.layoutParaTab.visibility = View.GONE
-                        binding.layoutPageTab.visibility = View.VISIBLE
+                        binding.etSearchSurah.hint = "পারার নাম বা নম্বর দিয়ে খুঁজুন..."
                     }
                 }
+                val currentQuery = binding.etSearchSurah.text?.toString()?.trim() ?: ""
+                performSearch(currentQuery)
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
@@ -229,95 +245,11 @@ class QuranActivity : AppCompatActivity() {
         })
     }
 
-    private fun setupPageControls() {
-        binding.btnNextPage.setOnClickListener {
-            if (currentPageNumber < 604) {
-                currentPageNumber++
-                loadPage(currentPageNumber)
-            } else {
-                Toast.makeText(this, "এটি কোরআনের শেষ পৃষ্ঠা", Toast.LENGTH_SHORT).show()
-            }
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        currentFocus?.let {
+            imm?.hideSoftInputFromWindow(it.windowToken, 0)
         }
-
-        binding.btnPrevPage.setOnClickListener {
-            if (currentPageNumber > 1) {
-                currentPageNumber--
-                loadPage(currentPageNumber)
-            } else {
-                Toast.makeText(this, "এটি কোরআনের প্রথম পৃষ্ঠা", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        binding.btnGoJump.setOnClickListener {
-            val pageStr = binding.etPageNumberInput.text.toString().trim()
-            val paraStr = binding.etParaNumberInput.text.toString().trim()
-
-            hideKeyboard()
-
-            if (pageStr.isNotEmpty()) {
-                val p = pageStr.toIntOrNull()
-                if (p != null && p in 1..604) {
-                    loadPage(p)
-                } else {
-                    Toast.makeText(this, "১ থেকে ৬০৪ এর মধ্যে পৃষ্ঠা নম্বর দিন", Toast.LENGTH_SHORT).show()
-                }
-            } else if (paraStr.isNotEmpty()) {
-                val para = paraStr.toIntOrNull()
-                if (para != null && para in 1..30) {
-                    val startP = QuranRepository.paraStartPages[para] ?: 1
-                    loadPage(startP)
-                } else {
-                    Toast.makeText(this, "১ থেকে ৩০ এর মধ্যে পারা নম্বর দিন", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(this, "পারা বা পৃষ্ঠা নম্বর লিখুন", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun loadPage(pageNumber: Int) {
-        currentPageNumber = pageNumber
-        val prefs = getSharedPreferences("IslamicQuranPrefs", Context.MODE_PRIVATE)
-        prefs.edit().putInt("last_read_page", pageNumber).apply()
-        updateLastReadCard()
-
-        val juz = QuranRepository.getJuzForPage(pageNumber)
-        val surah = QuranRepository.getSurahForPage(pageNumber)
-        val para = QuranRepository.paraList.find { it.id == juz }
-
-        // Update Nav Bar Title
-        binding.tvPageHeader.text = "পৃষ্ঠা ${toBengaliNumber(pageNumber)} • পারা ${toBengaliNumber(juz)}"
-
-        // Update Jump Controls Inputs
-        binding.etParaNumberInput.setText(juz.toString())
-        binding.etPageNumberInput.setText(pageNumber.toString())
-
-        // Update Traditional Frame Header
-        binding.tvFrameLeftInfo.text = "سورة ${surah.nameArabic}"
-        binding.tvFramePageNumber.text = toBengaliNumber(pageNumber)
-        binding.tvFrameRightInfo.text = "${para?.nameArabic ?: ""} ${toBengaliNumber(juz)}"
-
-        binding.pbPageLoading.visibility = View.VISIBLE
-        binding.layout15LinesContainer.removeAllViews()
-
-        lifecycleScope.launch {
-            val pageData = QuranRepository.fetchPageData(pageNumber)
-            binding.pbPageLoading.visibility = View.GONE
-            binding.layout15LinesContainer.removeAllViews()
-
-            val inflater = LayoutInflater.from(this@QuranActivity)
-            for (lineText in pageData.lines) {
-                val lineView = inflater.inflate(R.layout.item_quran_line, binding.layout15LinesContainer, false)
-                val tvLine = lineView.findViewById<TextView>(R.id.tvQuranLineText)
-                tvLine.text = lineText
-                binding.layout15LinesContainer.addView(lineView)
-            }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        updatePlayerUiState()
     }
 
     private fun updatePlayerUiState() {
@@ -336,13 +268,6 @@ class QuranActivity : AppCompatActivity() {
         } else {
             binding.cardAudioPlayer.visibility = View.GONE
             surahAdapter.setCurrentlyPlayingId(null)
-        }
-    }
-
-    private fun hideKeyboard() {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        currentFocus?.let {
-            imm?.hideSoftInputFromWindow(it.windowToken, 0)
         }
     }
 
@@ -384,7 +309,7 @@ class QuranActivity : AppCompatActivity() {
         if (quranTts == null) {
             quranTts = TextToSpeech(applicationContext) { status ->
                 if (status == TextToSpeech.SUCCESS) {
-                    var result = quranTts?.setLanguage(Locale("ar"))
+                    val result = quranTts?.setLanguage(Locale("ar"))
                     if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                         quranTts?.setLanguage(Locale("ar", "SA"))
                     }
@@ -440,14 +365,11 @@ class QuranActivity : AppCompatActivity() {
 
         val localFile = getAudioFile(surah.id)
         if (localFile.exists() && localFile.length() > 1024) {
-            // Offline cached file ready
-            binding.tvAudioReciter.text = "ক্বারী মিশারী রশিদ (অফলাইনে প্রস্তুত ✅)"
+            binding.tvAudioReciter.text = "ক্বারী মিশারী রশিদ (অফলাইন)"
             binding.pbAudioProgress.isIndeterminate = false
             startMediaPlayerWithFile(surah, localFile)
         } else {
-            // Stream the real reciter's (male) voice directly - no more TTS placeholder
-            binding.tvAudioReciter.text = "লোড হচ্ছে... (অনলাইন)"
-            binding.pbAudioProgress.isIndeterminate = true
+            playTtsSurah(surah)
             startMediaPlayerWithUrl(surah, useFallback = false)
         }
     }
@@ -455,7 +377,7 @@ class QuranActivity : AppCompatActivity() {
     private fun playTtsSurah(surah: Surah) {
         isTtsMode = true
         isAudioPlaying = true
-        binding.tvAudioReciter.text = "অফলাইন অডিও প্লেয়ার (ডাউনলোড ছাড়াই প্রস্তুত ✅)"
+        binding.tvAudioReciter.text = "অফলাইন অডিও প্লেয়ার"
         binding.pbAudioProgress.isIndeterminate = true
         binding.btnAudioToggle.setImageResource(android.R.drawable.ic_media_pause)
         surahAdapter.setCurrentlyPlayingId(surah.id)
@@ -505,7 +427,6 @@ class QuranActivity : AppCompatActivity() {
                     }
                 }
                 setOnErrorListener { _, _, _ ->
-                    Toast.makeText(this@QuranActivity, "অফলাইন অডিও চালাতে সমস্যা হয়েছে", Toast.LENGTH_SHORT).show()
                     stopAudio()
                     true
                 }
@@ -513,7 +434,6 @@ class QuranActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "অডিও চালুর সময় ত্রুটি ঘটেছে", Toast.LENGTH_SHORT).show()
             stopAudio()
         }
     }
@@ -554,8 +474,7 @@ class QuranActivity : AppCompatActivity() {
                     if (!useFallback) {
                         startMediaPlayerWithUrl(surah, useFallback = true)
                     } else {
-                        Toast.makeText(this@QuranActivity, "অনলাইন অডিও লোড করা যায়নি, ইন্টারনেট সংযোগ চেক করুন", Toast.LENGTH_LONG).show()
-                        stopAudio()
+                        playTtsSurah(surah)
                     }
                     true
                 }
@@ -566,8 +485,7 @@ class QuranActivity : AppCompatActivity() {
             if (!useFallback) {
                 startMediaPlayerWithUrl(surah, useFallback = true)
             } else {
-                Toast.makeText(this@QuranActivity, "অনলাইন অডিও লোড করা যায়নি, ইন্টারনেট সংযোগ চেক করুন", Toast.LENGTH_LONG).show()
-                stopAudio()
+                playTtsSurah(surah)
             }
         }
     }
@@ -580,12 +498,14 @@ class QuranActivity : AppCompatActivity() {
     }
 
     private fun toBengaliNumber(number: Int): String {
-        val banglaDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+        val banglaDigits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '⑧', '৯')
         val str = number.toString()
         val sb = StringBuilder()
         for (ch in str) {
             if (ch.isDigit()) {
-                sb.append(banglaDigits[ch - '0'])
+                val idx = ch - '0'
+                val digit = if (idx == 8) '৮' else banglaDigits[idx]
+                sb.append(digit)
             } else {
                 sb.append(ch)
             }

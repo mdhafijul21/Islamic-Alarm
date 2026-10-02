@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="14dp"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="@color/surface"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Ayah Header (Number & Action buttons) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Ayah Number Badge -->
+            <TextView
+                android:id="@+id/tvAyahNumberBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_label_chip"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp"
+                android:textColor="@color/secondary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="আয়াত ১" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- Copy Ayah -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCopyAyah"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="কপি"
+                android:textColor="@color/secondary"
+                android:textSize="12sp"
+                app:icon="@drawable/ic_content_copy"
+                app:iconTint="@color/secondary" />
+
+            <!-- Share Ayah -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnShareAyah"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="শেয়ার"
+                android:textColor="@color/secondary"
+                android:textSize="12sp"
+                app:icon="@drawable/ic_share"
+                app:iconTint="@color/secondary" />
+
+        </LinearLayout>
+
+        <!-- Arabic Uthmani Ayah Text -->
+        <TextView
+            android:id="@+id/tvAyahArabic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_arabic_verse"
+            android:gravity="end"
+            android:lineSpacingExtra="8dp"
+            android:padding="14dp"
+            android:textColor="@color/secondary"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            tools:text="بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ﴿١﴾" />
+
+        <!-- Bengali Translation -->
+        <TextView
+            android:id="@+id/tvAyahBangla"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:lineSpacingExtra="4dp"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            tools:text="শুরু করছি আল্লাহর নামে যিনি পরম করুণাময়, অতি দয়ালু।" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
