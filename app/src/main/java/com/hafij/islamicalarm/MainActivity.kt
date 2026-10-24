@@ -1079,30 +1079,4 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_audio_quran -> {
-                openAudioQuranActivity()
-                true
-            }
-            R.id.action_azan -> {
-                openAzanAudioActivity()
-                true
-            }
-            R.id.action_books -> {
-                openLibraryActivity()
-                true
-            }
-            R.id.action_quran -> {
-                openQuranActivity()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
 }

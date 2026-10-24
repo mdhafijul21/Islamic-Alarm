@@ -11,7 +11,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/primary"
-        app:elevation="4dp">
+        app:elevation="0dp"
+        app:liftOnScroll="false">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -43,7 +44,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="13dp">
 
                 <!-- District & Hijri Date Bar -->
                 <LinearLayout
@@ -61,7 +62,7 @@
                         android:backgroundTint="@color/surface"
                         android:text="📍 ঢাকা"
                         android:textColor="@color/secondary"
-                        android:textSize="13sp"
+                        android:textSize="11sp"
                         app:cornerRadius="12dp"
                         app:strokeColor="@color/border"
                         app:strokeWidth="1dp" />
@@ -71,7 +72,7 @@
                         android:id="@+id/btnQuickGpsLocation"
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:layout_marginStart="6dp"
+                        android:layout_marginStart="4dp"
                         android:background="@drawable/bg_duration_chip"
                         android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
                         android:src="@android:drawable/ic_menu_mylocation"
@@ -88,10 +89,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_challenge_badge"
-                        android:paddingHorizontal="10dp"
+                        android:paddingHorizontal="8dp"
                         android:paddingVertical="6dp"
                         android:textColor="@color/secondary"
-                        android:textSize="12sp"
+                        android:textSize="10sp"
                         android:textStyle="bold"
                         tools:text="২৯ সফর, ১৪৪৮ হিজরি" />
 
@@ -101,8 +102,8 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="16dp"
+                    android:layout_marginTop="9dp"
+                    android:layout_marginBottom="12dp"
                     app:cardBackgroundColor="@color/surface"
                     app:cardCornerRadius="18dp"
                     app:cardElevation="3dp"
@@ -114,23 +115,23 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="18dp">
+                        android:padding="14dp">
 
                         <TextView
                             android:id="@+id/tvCurrentWaqtStatus"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="11sp"
                             tools:text="যোহরের ওয়াক্ত চলছে" />
 
                         <TextView
                             android:id="@+id/tvNextPrayerTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="3dp"
                             android:textColor="@color/secondary"
-                            android:textSize="22sp"
+                            android:textSize="19sp"
                             android:textStyle="bold"
                             tools:text="পরবর্তী নামাজ: আসর (০৪:৩৫)" />
 
@@ -138,12 +139,12 @@
                             android:id="@+id/tvNextPrayerCountdown"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="3dp"
                             android:background="@drawable/bg_challenge_badge"
-                            android:paddingHorizontal="12dp"
+                            android:paddingHorizontal="10dp"
                             android:paddingVertical="4dp"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             tools:text="বাকি ১ ঘণ্টা ২৫ মিনিট ৩০ সেকেন্ড" />
 
@@ -155,17 +156,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="6dp"
                     android:text="🕌 আজকের পাঁচ ওয়াক্ত নামাজের সময়"
                     android:textColor="@color/secondary"
-                    android:textSize="15sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <!-- Fajr Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="6dp"
                     app:cardBackgroundColor="@color/surface"
                     app:cardCornerRadius="14dp"
                     app:cardElevation="1dp"
@@ -177,20 +178,20 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="12dp">
+                        android:padding="10dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="الفجر"
                             android:textColor="@color/secondary"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="9dp"
                             android:layout_weight="1"
                             android:orientation="vertical">
 
@@ -199,7 +200,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="ফজর (সাহরী শেষ)"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -207,7 +208,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp"
+                                android:textSize="11sp"
                                 tools:text="ভোর ০৪:২৩ হতে ভোর ০৫:৩৮ পর্যন্ত" />
 
                         </LinearLayout>
@@ -219,7 +220,7 @@
                             android:layout_height="wrap_content"
                             android:text="⏰ এলার্ম"
                             android:textColor="@color/secondary"
-                            android:textSize="12sp" />
+                            android:textSize="10sp" />
 
                     </LinearLayout>
 
@@ -229,7 +230,7 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="6dp"
                     app:cardBackgroundColor="@color/surface"
                     app:cardCornerRadius="14dp"
                     app:cardElevation="1dp"
@@ -241,20 +242,20 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="12dp">
+                        android:padding="10dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="الظهر"
                             android:textColor="@color/secondary"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="9dp"
                             android:layout_weight="1"
                             android:orientation="vertical">
 
@@ -263,7 +264,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="যোহর সালাত"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -271,7 +272,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp"
+                                android:textSize="11sp"
                                 tools:text="দুপুর ১২:০৪ হতে বিকাল ০৪:৩০ পর্যন্ত" />
 
                         </LinearLayout>
@@ -283,7 +284,7 @@
                             android:layout_height="wrap_content"
                             android:text="⏰ এলার্ম"
                             android:textColor="@color/secondary"
-                            android:textSize="12sp" />
+                            android:textSize="10sp" />
 
                     </LinearLayout>
 
@@ -293,7 +294,7 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="6dp"
                     app:cardBackgroundColor="@color/surface"
                     app:cardCornerRadius="14dp"
                     app:cardElevation="1dp"
@@ -305,20 +306,20 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="12dp">
+                        android:padding="10dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="العصر"
                             android:textColor="@color/secondary"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="9dp"
                             android:layout_weight="1"
                             android:orientation="vertical">
 
@@ -327,7 +328,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="আসর সালাত"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -335,7 +336,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp"
+                                android:textSize="11sp"
                                 tools:text="বিকাল ০৪:৩০ হতে সন্ধ্যা ০৬:৩০ পর্যন্ত" />
 
                         </LinearLayout>
@@ -347,7 +348,7 @@
                             android:layout_height="wrap_content"
                             android:text="⏰ এলার্ম"
                             android:textColor="@color/secondary"
-                            android:textSize="12sp" />
+                            android:textSize="10sp" />
 
                     </LinearLayout>
 
@@ -357,7 +358,7 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="6dp"
                     app:cardBackgroundColor="@color/surface"
                     app:cardCornerRadius="14dp"
                     app:cardElevation="1dp"
@@ -369,20 +370,20 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="12dp">
+                        android:padding="10dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="المغرب"
                             android:textColor="@color/secondary"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="9dp"
                             android:layout_weight="1"
                             android:orientation="vertical">
 
@@ -391,7 +392,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="মাগরিব (ইফতারের সময়)"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -399,7 +400,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp"
+                                android:textSize="11sp"
                                 tools:text="সন্ধ্যা ০৬:৩০ হতে রাত ০৭:৪৭ পর্যন্ত" />
 
                         </LinearLayout>
@@ -411,7 +412,7 @@
                             android:layout_height="wrap_content"
                             android:text="⏰ এলার্ম"
                             android:textColor="@color/secondary"
-                            android:textSize="12sp" />
+                            android:textSize="10sp" />
 
                     </LinearLayout>
 
@@ -421,7 +422,7 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
+                    android:layout_marginBottom="12dp"
                     app:cardBackgroundColor="@color/surface"
                     app:cardCornerRadius="14dp"
                     app:cardElevation="1dp"
@@ -433,20 +434,20 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="12dp">
+                        android:padding="10dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="العشاء"
                             android:textColor="@color/secondary"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="9dp"
                             android:layout_weight="1"
                             android:orientation="vertical">
 
@@ -455,7 +456,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="ইশা ও বিতর সালাত"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -463,7 +464,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp"
+                                android:textSize="11sp"
                                 tools:text="রাত ০৭:৪৭ হতে ভোর ০৪:২৩ পর্যন্ত" />
 
                         </LinearLayout>
@@ -475,7 +476,7 @@
                             android:layout_height="wrap_content"
                             android:text="⏰ এলার্ম"
                             android:textColor="@color/secondary"
-                            android:textSize="12sp" />
+                            android:textSize="10sp" />
 
                     </LinearLayout>
 
@@ -485,8 +486,8 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:layout_marginBottom="12dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="9dp"
                     app:cardBackgroundColor="@color/surface"
                     app:cardCornerRadius="14dp"
                     app:cardElevation="2dp"
@@ -498,7 +499,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="14dp">
+                        android:padding="11dp">
 
                         <ImageView
                             android:layout_width="26dp"
@@ -509,7 +510,7 @@
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="9dp"
                             android:layout_weight="1"
                             android:orientation="vertical">
 
@@ -518,7 +519,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="নামাজে অটো সাইলেন্ট মোড"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -526,7 +527,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="এলার্মের সময় ফোন স্বয়ংক্রিয়ভাবে সাইলেন্ট হবে"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -545,8 +546,8 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginTop="3dp"
+                    android:layout_marginBottom="6dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -556,7 +557,7 @@
                         android:layout_weight="1"
                         android:text="⏰ সেট করা নামাজের এলার্মসমূহ (হার্ড লক)"
                         android:textColor="@color/secondary"
-                        android:textSize="15sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <com.google.android.material.button.MaterialButton
@@ -566,7 +567,7 @@
                         android:layout_height="wrap_content"
                         android:text="+ নতুন এলার্ম"
                         android:textColor="@color/secondary"
-                        android:textSize="12sp" />
+                        android:textSize="10sp" />
 
                 </LinearLayout>
 
@@ -577,7 +578,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingVertical="18dp"
+                    android:paddingVertical="14dp"
                     android:visibility="gone"
                     tools:visibility="visible">
 
@@ -587,7 +588,7 @@
                         android:gravity="center"
                         android:text="@string/no_alarms"
                         android:textColor="@color/text_secondary"
-                        android:textSize="14sp" />
+                        android:textSize="12sp" />
 
                 </LinearLayout>
 
@@ -597,17 +598,17 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false"
-                    android:layout_marginBottom="16dp"
+                    android:layout_marginBottom="12dp"
                     tools:listitem="@layout/item_alarm" />
 
                 <!-- Islamic Feature Shortcut Cards -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginBottom="6dp"
                     android:text="✨ গুরুত্বপূর্ণ ইসলামিক ফিচারসমূহ"
                     android:textColor="@color/secondary"
-                    android:textSize="15sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <!-- Grid Row 1: Amal Tracker & Tahajjud -->
@@ -621,8 +622,8 @@
                         android:id="@+id/cardFeatureAmal"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_marginBottom="10dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_marginBottom="8dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="14dp"
@@ -634,23 +635,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="📊 আমল ট্র্যাকার"
                                 android:textColor="@color/secondary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="3dp"
                                 android:text="দৈনিক ৫ ওয়াক্ত নামাজ ও সুন্নাত আমলের হিসাব"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -661,8 +662,8 @@
                         android:id="@+id/cardFeatureTahajjud"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_marginBottom="10dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginBottom="8dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="14dp"
@@ -674,23 +675,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="🌙 তাহাজ্জুদ"
                                 android:textColor="@color/secondary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="3dp"
                                 android:text="রাতের শেষ তৃতীয়াংশের হিসাব ও এলার্ম"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -709,8 +710,8 @@
                         android:id="@+id/cardFeatureNames"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_marginBottom="10dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_marginBottom="8dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="14dp"
@@ -722,23 +723,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="✨ আল্লাহর ৯৯ নাম"
                                 android:textColor="@color/secondary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="3dp"
                                 android:text="আসমাউল হুসনা অর্থ ও ফজিলত"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -749,8 +750,8 @@
                         android:id="@+id/cardFeatureCalendar"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_marginBottom="10dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginBottom="8dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="14dp"
@@ -762,23 +763,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="📅 হিজরি দিনপঞ্জি"
                                 android:textColor="@color/secondary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="3dp"
                                 android:text="আইয়ামে বীজ ও ইসলামিক দিনসমূহ"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -797,8 +798,8 @@
                         android:id="@+id/cardFeatureBooks"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_marginBottom="14dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_marginBottom="10dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="14dp"
@@ -810,23 +811,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="📚 কিতাব ও হাদিস লাইব্রেরি"
                                 android:textColor="@color/secondary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="3dp"
                                 android:text="সহিহ হাদিস, সিরাত ও কিতাব পাঠ (অফলাইন/অনলাইন)"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -837,8 +838,8 @@
                         android:id="@+id/cardFeatureRamadan"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_marginBottom="14dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginBottom="10dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="14dp"
@@ -850,23 +851,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="🌙 রমজান ও নফল রোজা"
                                 android:textColor="@color/secondary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="3dp"
                                 android:text="সাহরী ও ইফতার সময়সূচী এবং দোয়া"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -885,8 +886,8 @@
                         android:id="@+id/cardFeatureAudioQuran"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_marginBottom="14dp"
+                        android:layout_marginEnd="4dp"
+                        android:layout_marginBottom="10dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="14dp"
@@ -898,23 +899,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="🎧 অডিও কুরআন (১১৪ সুরা)"
                                 android:textColor="@color/secondary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="3dp"
                                 android:text="৫ জন বিশ্বখ্যাত ক্বারীর কণ্ঠে সকল সুরার তিলাওয়াত"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
@@ -925,8 +926,8 @@
                         android:id="@+id/cardFeatureAzan"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_marginBottom="14dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginBottom="10dp"
                         android:layout_weight="1"
                         app:cardBackgroundColor="@color/surface"
                         app:cardCornerRadius="14dp"
@@ -938,23 +939,23 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:padding="10dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="🕌 অডিও আজান ও দোয়া"
                                 android:textColor="@color/secondary"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="3dp"
                                 android:text="মক্কা-মদিনার সুমধুর আজান ও এলার্ম টিউন সেট"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="10sp" />
 
                         </LinearLayout>
 
