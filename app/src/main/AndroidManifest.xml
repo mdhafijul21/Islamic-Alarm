@@ -60,6 +60,13 @@
             android:label="আল-কুরআন"
             android:theme="@style/Theme.IslamicAlarm" />
 
+        <!-- Surah Detail Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.quran.SurahDetailActivity"
+            android:exported="false"
+            android:label="সূরা"
+            android:theme="@style/Theme.IslamicAlarm" />
+
         <!-- Tasbih Activity -->
         <activity
             android:name="com.hafij.islamicalarm.tasbih.TasbihActivity"
