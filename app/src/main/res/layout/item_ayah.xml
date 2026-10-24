@@ -79,7 +79,7 @@
             android:gravity="end"
             android:lineSpacingExtra="5dp"
             android:padding="10dp"
-            android:textColor="@color/secondary"
+            android:textColor="@color/text_primary"
             android:textSize="19sp"
             android:textStyle="bold"
             tools:text="بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ﴿١﴾" />

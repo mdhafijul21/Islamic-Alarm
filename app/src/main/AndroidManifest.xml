@@ -29,18 +29,25 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.IslamicAlarm">
 
-        <!-- Main Alarm List Activity -->
+        <!-- Splash Activity (app entry point) -->
         <activity
-            android:name="com.hafij.islamicalarm.MainActivity"
+            android:name="com.hafij.islamicalarm.SplashActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:launchMode="singleTop"
             android:theme="@style/Theme.IslamicAlarm">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Main Alarm List Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.MainActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- Fullscreen Lock Screen Activity -->
         <activity
