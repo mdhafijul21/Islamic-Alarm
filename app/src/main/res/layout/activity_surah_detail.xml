@@ -35,7 +35,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp">
+        android:paddingVertical="4dp">
 
         <!-- Audio Recitation Button -->
         <com.google.android.material.button.MaterialButton
@@ -85,78 +85,6 @@
             app:tint="@color/secondary" />
 
     </LinearLayout>
-
-    <!-- Surah Info & Bismillah Banner -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardSurahHeader"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="14dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="6dp"
-        app:cardBackgroundColor="@color/surface"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="2dp"
-        app:strokeColor="@color/card_border"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:id="@+id/tvHeaderSurahArabic"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/secondary"
-                android:textSize="26sp"
-                android:textStyle="bold"
-                tools:text="سورة الفاتحة" />
-
-            <TextView
-                android:id="@+id/tvHeaderSurahDetails"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                tools:text="অর্থ: সূচনা • ৭টি আয়াত • মক্কী অবতীর্ণ" />
-
-            <LinearLayout
-                android:id="@+id/layoutBismillah"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_challenge_badge"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingVertical="10dp">
-
-                <TextView
-                    android:id="@+id/tvBismillahText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-                    android:textColor="@color/secondary"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="শুরু করছি পরম করুণাময় ও অসীম দয়ালু আল্লাহর নামে"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -208,8 +136,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingTop="8dp"
-            android:paddingBottom="40dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="24dp"
             tools:listitem="@layout/item_ayah" />
 
     </FrameLayout>

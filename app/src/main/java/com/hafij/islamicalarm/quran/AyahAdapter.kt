@@ -46,8 +46,8 @@ class AyahAdapter(
             binding.tvAyahNumberBadge.text = "আয়াত ${toBengaliNumber(ayah.numberInSurah)}"
 
             // Dynamic font sizing
-            val baseArabicSize = 22f + fontScaleDelta
-            val baseBanglaSize = 15f + fontScaleDelta
+            val baseArabicSize = 19f + fontScaleDelta
+            val baseBanglaSize = 13f + fontScaleDelta
 
             binding.tvAyahArabic.textSize = baseArabicSize
             binding.tvAyahBangla.textSize = baseBanglaSize

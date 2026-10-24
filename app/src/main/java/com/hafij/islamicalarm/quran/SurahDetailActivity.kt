@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivitySurahDetailBinding
@@ -44,14 +45,6 @@ class SurahDetailActivity : AppCompatActivity() {
         binding.toolbarSurah.subtitle = "${s.revelationType} • ${toBengaliNumber(s.totalAyahs)}টি আয়াত • পারা ${toBengaliNumber(s.paraNumber)}"
         binding.toolbarSurah.setNavigationOnClickListener {
             finish()
-        }
-
-        binding.tvHeaderSurahArabic.text = "سورة ${s.nameArabic}"
-        binding.tvHeaderSurahDetails.text = "অর্থ: ${s.meaningBangla} • ${toBengaliNumber(s.totalAyahs)}টি আয়াত • ${s.revelationType} • পারা ${toBengaliNumber(s.paraNumber)}"
-        if (s.id == 9) {
-            binding.layoutBismillah.visibility = View.GONE
-        } else {
-            binding.layoutBismillah.visibility = View.VISIBLE
         }
     }
 
@@ -155,8 +148,13 @@ class SurahDetailActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         val s = surah ?: return
         ayahAdapter = AyahAdapter(emptyList(), s.nameBangla)
+        val headerAdapter = SurahHeaderAdapter(
+            arabicName = "سورة ${s.nameArabic}",
+            detailsText = "অর্থ: ${s.meaningBangla} • ${toBengaliNumber(s.totalAyahs)}টি আয়াত • ${s.revelationType} • পারা ${toBengaliNumber(s.paraNumber)}",
+            showBismillah = s.id != 9
+        )
         binding.rvAyahs.layoutManager = LinearLayoutManager(this)
-        binding.rvAyahs.adapter = ayahAdapter
+        binding.rvAyahs.adapter = ConcatAdapter(headerAdapter, ayahAdapter)
 
         binding.btnRetryLoadSurah.setOnClickListener {
             loadAyahs()
