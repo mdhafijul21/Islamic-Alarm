@@ -3,6 +3,7 @@ package com.hafij.islamicalarm.quran
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -285,19 +286,41 @@ object QuranRepository {
         }
 
         // 2. Primary: Fetch from Quran.com API v4 (Official MCP Quran backend from Quran Foundation)
+        // NOTE: the API caps each response at 50 verses per page regardless of per_page requested,
+        // so surahs with more than 50 ayahs (e.g. Al-Baqarah's 286) must be paged through.
         try {
-            val quranDotComUrl = "https://api.quran.com/api/v4/verses/by_chapter/$surahNumber?language=bn&words=false&translations=163&fields=text_uthmani,chapter_id,page_number,juz_number&per_page=300"
-            val conn = URL(quranDotComUrl).openConnection() as HttpURLConnection
-            conn.connectTimeout = 7000
-            conn.readTimeout = 7000
-            conn.setRequestProperty("User-Agent", "IslamicAlarm-QuranApp/1.0")
-            conn.requestMethod = "GET"
+            val allVerses = mutableListOf<JSONObject>()
+            var currentPage = 1
+            var totalPages = 1
 
-            if (conn.responseCode == 200) {
+            do {
+                val quranDotComUrl = "https://api.quran.com/api/v4/verses/by_chapter/$surahNumber?language=bn&words=false&translations=163&fields=text_uthmani,chapter_id,page_number,juz_number&per_page=50&page=$currentPage"
+                val conn = URL(quranDotComUrl).openConnection() as HttpURLConnection
+                conn.connectTimeout = 7000
+                conn.readTimeout = 7000
+                conn.setRequestProperty("User-Agent", "IslamicAlarm-QuranApp/1.0")
+                conn.requestMethod = "GET"
+
+                if (conn.responseCode != 200) break
+
                 val jsonStr = conn.inputStream.bufferedReader().use { it.readText() }
-                val parsed = parseQuranDotComJson(jsonStr, surahNumber)
+                val root = JSONObject(jsonStr)
+                val versesArray = root.optJSONArray("verses")
+                if (versesArray != null) {
+                    for (i in 0 until versesArray.length()) {
+                        allVerses.add(versesArray.getJSONObject(i))
+                    }
+                }
+
+                totalPages = root.optJSONObject("pagination")?.optInt("total_pages", 1) ?: 1
+                currentPage++
+            } while (currentPage <= totalPages)
+
+            if (allVerses.isNotEmpty()) {
+                val combinedJson = JSONObject().put("verses", JSONArray(allVerses)).toString()
+                val parsed = parseQuranDotComJson(combinedJson, surahNumber)
                 if (parsed.isNotEmpty()) {
-                    try { persistentFile.writeText(jsonStr) } catch (_: Exception) {}
+                    try { persistentFile.writeText(combinedJson) } catch (_: Exception) {}
                     return@withContext parsed
                 }
             }
