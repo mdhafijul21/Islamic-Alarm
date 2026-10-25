@@ -14,7 +14,7 @@
     <string name="save">সংরক্ষণ করুন</string>
     <string name="delete">মুছুন</string>
     <string name="delete_alarm_confirm">আপনি কি এই এলার্মটি মুছে ফেলতে চান?</string>
-    <string name="no_alarms">কোনো এলার্ম যোগ করা হয়নি।\nনিচের + বাটনে চাপ দিয়ে নতুন এলার্ম যোগ করুন।</string>
+    <string name="no_alarms">কোনো এলার্ম যোগ করা হয়নি।\nউপরে নামাজের তালিকা থেকে \'এলার্ম\' বাটনে চাপ দিয়ে এলার্ম যোগ করুন।</string>
     <string name="alarm_set_today">এলার্ম সেট করা হয়েছে: আজ %s এ বাজবে</string>
     <string name="alarm_set_tomorrow">এলার্ম সেট করা হয়েছে: আগামীকাল %s এ বাজবে</string>
     <string name="alarm_disabled">এলার্ম বন্ধ করা হয়েছে</string>

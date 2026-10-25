@@ -22,11 +22,11 @@
 
     <!-- Home header art (mosque silhouette banner), per time of day -->
     <!-- Night (Isha – Fajr) -->
-    <color name="header_teal_top">#1C4A42</color>
-    <color name="header_teal_bottom">#06120F</color>
+    <color name="header_teal_top">#2A5C52</color>
+    <color name="header_teal_bottom">#13332B</color>
     <color name="header_moon">#F5F0DC</color>
     <color name="header_moon_glow">#33F5F0DC</color>
-    <color name="header_silhouette">#99030906</color>
+    <color name="header_silhouette">#E8050705</color>
     <!-- Fajr / dawn (Fajr – sunrise) -->
     <color name="header_fajr_top">#3B4A6B</color>
     <color name="header_fajr_bottom">#D98A5F</color>
