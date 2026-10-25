@@ -115,23 +115,23 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="14dp">
+                        android:padding="9dp">
 
                         <TextView
                             android:id="@+id/tvCurrentWaqtStatus"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="@color/text_secondary"
-                            android:textSize="11sp"
-                            tools:text="যোহরের ওয়াক্ত চলছে" />
+                            android:textSize="10sp"
+                            tools:text="যোহরের ওয়াক্ত চলছে" />
 
                         <TextView
                             android:id="@+id/tvNextPrayerTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
+                            android:layout_marginTop="2dp"
                             android:textColor="@color/secondary"
-                            android:textSize="19sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             tools:text="পরবর্তী নামাজ: আসর (০৪:৩৫)" />
 
@@ -139,12 +139,12 @@
                             android:id="@+id/tvNextPrayerCountdown"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
+                            android:layout_marginTop="2dp"
                             android:background="@drawable/bg_challenge_badge"
-                            android:paddingHorizontal="10dp"
-                            android:paddingVertical="4dp"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp"
                             android:textColor="@color/text_primary"
-                            android:textSize="12sp"
+                            android:textSize="10sp"
                             android:textStyle="bold"
                             tools:text="বাকি ১ ঘণ্টা ২৫ মিনিট ৩০ সেকেন্ড" />
 
@@ -162,23 +162,14 @@
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
-                <!-- Fajr Card -->
-                <com.google.android.material.card.MaterialCardView
+                <!-- Fajr Row (no card, compact) -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="6dp"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="14dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="@color/border"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:padding="10dp">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="6dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -224,25 +215,14 @@
 
                     </LinearLayout>
 
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Dhuhr Card -->
-                <com.google.android.material.card.MaterialCardView
+                <!-- Dhuhr Row (no card, compact) -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="6dp"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="14dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="@color/border"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:padding="10dp">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="6dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -288,25 +268,14 @@
 
                     </LinearLayout>
 
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Asr Card -->
-                <com.google.android.material.card.MaterialCardView
+                <!-- Asr Row (no card, compact) -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="6dp"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="14dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="@color/border"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:padding="10dp">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="6dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -352,25 +321,14 @@
 
                     </LinearLayout>
 
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Maghrib Card -->
-                <com.google.android.material.card.MaterialCardView
+                <!-- Maghrib Row (no card, compact) -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="6dp"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="14dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="@color/border"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:padding="10dp">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="6dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -416,25 +374,14 @@
 
                     </LinearLayout>
 
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Isha Card -->
-                <com.google.android.material.card.MaterialCardView
+                <!-- Isha Row (no card, compact) -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="14dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="@color/border"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:padding="10dp">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingVertical="6dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -479,8 +426,6 @@
                             android:textSize="10sp" />
 
                     </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
 
                 <!-- Auto Silent Card on Home -->
                 <com.google.android.material.card.MaterialCardView
@@ -559,16 +504,6 @@
                         android:textColor="@color/secondary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnQuickAddNewAlarm"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="+ নতুন এলার্ম"
-                        android:textColor="@color/secondary"
-                        android:textSize="10sp" />
-
                 </LinearLayout>
 
                 <!-- Empty State View -->
@@ -968,21 +903,6 @@
         </androidx.core.widget.NestedScrollView>
 
     </FrameLayout>
-
-    <!-- Floating Action Button to Add Alarm -->
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fabAddAlarm"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="90dp"
-        android:backgroundTint="@color/secondary"
-        android:contentDescription="@string/add_alarm"
-        android:text="@string/add_alarm"
-        android:textColor="@color/primary"
-        app:icon="@android:drawable/ic_input_add"
-        app:iconTint="@color/primary" />
 
     <!-- Bottom Navigation Bar for main sections -->
     <com.google.android.material.bottomnavigation.BottomNavigationView

@@ -125,9 +125,6 @@ class MainActivity : AppCompatActivity() {
         setupPrayerTimesHub()
         setupBottomNavigation()
 
-        binding.fabAddAlarm.setOnClickListener {
-            showAddOrEditAlarmDialog(null)
-        }
 
         binding.switchAutoSilent.isChecked =
             com.hafij.islamicalarm.silent.AutoSilentManager.isAutoSilentEnabled(this)
@@ -324,7 +321,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPrayerTimesScreen() {
         binding.layoutPrayerTimesContainer.visibility = View.VISIBLE
-        binding.fabAddAlarm.visibility = View.VISIBLE
         binding.toolbar.title = "নামাজের সময়সূচী"
         binding.toolbar.subtitle = selectedDistrict.displayName
         updatePrayerTimes()
@@ -332,10 +328,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupPrayerTimesHub() {
-        // Add Alarm button on Home
-        binding.btnQuickAddNewAlarm.setOnClickListener {
-            showAddOrEditAlarmDialog(null)
-        }
 
         // District Selector
         binding.btnSelectDistrict.setOnClickListener {
@@ -872,11 +864,18 @@ class MainActivity : AppCompatActivity() {
                 return
             }
         } else {
-            // Already has permission -> check if device GPS is enabled
-            if (LocationHelper.isLocationEnabled(this)) {
-                autoDetectLocationAndSetPrayerTimes(showToast = false)
-            } else {
-                promptTurnOnGpsAndDetect(showToast = false)
+            // Already has permission. Only auto-detect via GPS if no district has
+            // EVER been saved yet (true first run) — otherwise respect whatever
+            // location is already saved and do not silently overwrite it just
+            // because the app was reopened. Re-detecting here on every launch was
+            // the cause of the saved location silently changing after a day or two.
+            val hasSavedDistrict = prefs.getString("selected_district_bn", null) != null
+            if (!hasSavedDistrict) {
+                if (LocationHelper.isLocationEnabled(this)) {
+                    autoDetectLocationAndSetPrayerTimes(showToast = false)
+                } else {
+                    promptTurnOnGpsAndDetect(showToast = false)
+                }
             }
         }
         onNext()
