@@ -24,7 +24,9 @@ data class PrayerSchedule(
     val asrCal: Calendar,
     val maghribCal: Calendar,
     val ishaCal: Calendar,
-    val tahajjudStartCal: Calendar
+    val tahajjudStartCal: Calendar,
+    val sehriCal: Calendar,
+    val midnightCal: Calendar
 )
 
 data class NextPrayerInfo(
@@ -152,7 +154,9 @@ object PrayerTimeCalculator {
             asrCal = asrCal,
             maghribCal = maghribCal,
             ishaCal = ishaCal,
-            tahajjudStartCal = tahajjudStartCal
+            tahajjudStartCal = tahajjudStartCal,
+            sehriCal = sehriCal,
+            midnightCal = midnightCal
         )
     }
 

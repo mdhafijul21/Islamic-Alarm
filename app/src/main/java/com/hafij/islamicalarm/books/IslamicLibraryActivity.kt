@@ -5,20 +5,28 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivityIslamicLibraryBinding
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class IslamicLibraryActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityIslamicLibraryBinding
     private lateinit var bookAdapter: BookAdapter
+    private lateinit var remoteAdapter: RemoteLibraryAdapter
     private var selectedCategory = BookData.CAT_ALL
     private var searchQuery = ""
+
+    private var remoteBooks: List<RemoteLibraryBook> = emptyList()
+    private var remoteBooksLoaded = false
+    private val downloadingSlugs = mutableSetOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +41,9 @@ class IslamicLibraryActivity : AppCompatActivity() {
         setupCategories()
         setupSearch()
         filterBooks()
+
+        setupRemoteLibrary()
+        setupTabs()
     }
 
     private fun setupRecyclerView() {
@@ -113,5 +124,100 @@ class IslamicLibraryActivity : AppCompatActivity() {
         }
 
         bookAdapter.updateList(filtered)
+    }
+
+    private fun setupTabs() {
+        binding.btnTabLocalBooks.setOnClickListener { showLocalTab() }
+        binding.btnTabOnlineLibrary.setOnClickListener { showOnlineTab() }
+    }
+
+    private fun showLocalTab() {
+        binding.btnTabLocalBooks.setBackgroundColor(resources.getColor(R.color.secondary, theme))
+        binding.btnTabLocalBooks.setTextColor(resources.getColor(R.color.primary, theme))
+        binding.btnTabOnlineLibrary.setBackgroundColor(resources.getColor(R.color.surface_container, theme))
+        binding.btnTabOnlineLibrary.setTextColor(resources.getColor(R.color.text_primary, theme))
+
+        binding.rvBooks.visibility = View.VISIBLE
+        binding.rvRemoteBooks.visibility = View.GONE
+        binding.pbRemoteBooksLoading.visibility = View.GONE
+    }
+
+    private fun showOnlineTab() {
+        binding.btnTabOnlineLibrary.setBackgroundColor(resources.getColor(R.color.secondary, theme))
+        binding.btnTabOnlineLibrary.setTextColor(resources.getColor(R.color.primary, theme))
+        binding.btnTabLocalBooks.setBackgroundColor(resources.getColor(R.color.surface_container, theme))
+        binding.btnTabLocalBooks.setTextColor(resources.getColor(R.color.text_primary, theme))
+
+        binding.rvBooks.visibility = View.GONE
+        binding.rvRemoteBooks.visibility = View.VISIBLE
+
+        if (!remoteBooksLoaded) {
+            loadRemoteCatalog()
+        }
+    }
+
+    private fun setupRemoteLibrary() {
+        remoteAdapter = RemoteLibraryAdapter(
+            books = emptyList(),
+            isDownloaded = { it.isDownloaded(this) },
+            isDownloading = { downloadingSlugs.contains(it.slug) },
+            onDownloadClick = { book -> downloadBook(book) },
+            onOpenClick = { book -> openPdf(book) }
+        )
+        binding.rvRemoteBooks.layoutManager = LinearLayoutManager(this)
+        binding.rvRemoteBooks.adapter = remoteAdapter
+    }
+
+    private fun loadRemoteCatalog() {
+        binding.pbRemoteBooksLoading.visibility = View.VISIBLE
+        binding.rvRemoteBooks.visibility = View.GONE
+
+        lifecycleScope.launch {
+            val books = LibraryApiClient.fetchBooks(limit = 40)
+            remoteBooks = books
+            remoteBooksLoaded = true
+            remoteAdapter.updateBooks(books)
+
+            binding.pbRemoteBooksLoading.visibility = View.GONE
+            binding.rvRemoteBooks.visibility = View.VISIBLE
+
+            if (books.isEmpty()) {
+                Toast.makeText(
+                    this@IslamicLibraryActivity,
+                    "লাইব্রেরি থেকে বই আনা যায়নি, ইন্টারনেট সংযোগ চেক করুন",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun downloadBook(book: RemoteLibraryBook) {
+        downloadingSlugs.add(book.slug)
+        remoteAdapter.updateBooks(remoteBooks)
+
+        lifecycleScope.launch {
+            val success = LibraryApiClient.downloadBookPdf(this@IslamicLibraryActivity, book)
+            downloadingSlugs.remove(book.slug)
+            remoteAdapter.updateBooks(remoteBooks)
+
+            if (success) {
+                Toast.makeText(this@IslamicLibraryActivity, "ডাউনলোড সম্পন্ন — এখন অফলাইনে পড়া যাবে", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this@IslamicLibraryActivity, "ডাউনলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun openPdf(book: RemoteLibraryBook) {
+        val file = book.localFile(this)
+        if (!file.exists()) {
+            Toast.makeText(this, "ফাইলটি খুঁজে পাওয়া যায়নি, আবার ডাউনলোড করুন", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = Intent(this, PdfReaderActivity::class.java).apply {
+            putExtra("EXTRA_PDF_PATH", file.absolutePath)
+            putExtra("EXTRA_PDF_TITLE", book.titleBn.ifBlank { book.titleEn })
+        }
+        startActivity(intent)
     }
 }

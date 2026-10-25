@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Base gradient: teal at top fading to near-black at bottom -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="@color/header_teal_top"
+                android:endColor="@color/header_teal_bottom"
+                android:type="linear" />
+        </shape>
+    </item>
+
+    <!-- Moon, top-right -->
+    <item
+        android:width="92dp"
+        android:height="92dp"
+        android:gravity="top|end"
+        android:drawable="@drawable/ic_moon_decor"
+        android:top="18dp"
+        android:end="18dp" />
+
+    <!-- Mosque skyline silhouette along the bottom edge -->
+    <item
+        android:height="90dp"
+        android:gravity="bottom|fill_horizontal"
+        android:drawable="@drawable/ic_mosque_silhouette" />
+
+</layer-list>

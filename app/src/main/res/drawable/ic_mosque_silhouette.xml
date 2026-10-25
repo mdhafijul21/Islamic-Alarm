@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="130dp"
+    android:viewportWidth="400"
+    android:viewportHeight="130">
+
+    <!-- Ground strip -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M0,118 L400,118 L400,130 L0,130 Z" />
+
+    <!-- Left minaret -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M44,35 A6,6 0 0,1 56,35 L56,128 L44,128 Z" />
+
+    <!-- Left small dome -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M92,108 A28,28 0 0,1 148,108 L148,128 L92,128 Z" />
+
+    <!-- Center large dome -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M155,95 A45,45 0 0,1 245,95 L245,128 L155,128 Z" />
+
+    <!-- Crescent finial on the center dome -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M200,92 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+
+    <!-- Right small dome -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M252,108 A28,28 0 0,1 308,108 L308,128 L252,128 Z" />
+
+    <!-- Right minaret -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M344,30 A6,6 0 0,1 356,30 L356,128 L344,128 Z" />
+
+</vector>

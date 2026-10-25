@@ -8,9 +8,10 @@
     tools:context="com.hafij.islamicalarm.MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary"
+        android:background="@drawable/bg_header_night"
         app:elevation="0dp"
         app:liftOnScroll="false">
 
@@ -23,28 +24,13 @@
             app:subtitle="নামাজের সময় মোবাইল লক এলার্ম"
             app:subtitleTextColor="@color/secondary" />
 
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginBottom="65dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <!-- OPTION 1: Prayer Times Hub Screen -->
-        <androidx.core.widget.NestedScrollView
-            android:id="@+id/layoutPrayerTimesContainer"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingBottom="24dp"
-            android:visibility="visible">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="13dp">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="13dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="10dp">
 
                 <!-- District & Hijri Date Bar -->
                 <LinearLayout
@@ -151,6 +137,32 @@
                     </LinearLayout>
 
                 </com.google.android.material.card.MaterialCardView>
+
+
+        </LinearLayout>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="65dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <!-- OPTION 1: Prayer Times Hub Screen -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/layoutPrayerTimesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="24dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="10dp">
 
                 <!-- 5 Waqt Prayer Times Grid/Cards -->
                 <TextView
@@ -427,6 +439,124 @@
 
                     </LinearLayout>
 
+                <!-- Sahri & Iftar Section -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="9dp"
+                    android:orientation="horizontal"
+                    android:weightSum="2">
+
+                    <!-- Sahri Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="5dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌙 সাহরি"
+                                android:textColor="@color/secondary"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvSahriTimes"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:gravity="center"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="10sp"
+                                tools:text="শুরু: ১২:১০ — শেষ: ০৪:৪৭" />
+
+                            <TextView
+                                android:id="@+id/tvSahriCountdown"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="5dp"
+                                android:background="@drawable/bg_challenge_badge"
+                                android:paddingHorizontal="7dp"
+                                android:paddingVertical="3dp"
+                                android:textColor="@color/text_primary"
+                                android:textSize="9sp"
+                                android:textStyle="bold"
+                                tools:text="শেষ হতে বাকি ২ ঘ ৪২ মি" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Iftar Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌆 ইফতার"
+                                android:textColor="@color/secondary"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvIftarTimes"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:gravity="center"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="10sp"
+                                tools:text="শুরু: ০৬:২৯ — শেষ: ০৭:৪৭" />
+
+                            <TextView
+                                android:id="@+id/tvIftarCountdown"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="5dp"
+                                android:background="@drawable/bg_challenge_badge"
+                                android:paddingHorizontal="7dp"
+                                android:paddingVertical="3dp"
+                                android:textColor="@color/text_primary"
+                                android:textSize="9sp"
+                                android:textStyle="bold"
+                                tools:text="শুরু হতে বাকি ৫ ঘ ১০ মি" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
                 <!-- Auto Silent Card on Home -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
@@ -570,7 +700,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="10dp">
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -610,7 +740,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="10dp">
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -658,7 +788,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="10dp">
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -698,7 +828,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="10dp">
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -746,7 +876,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="10dp">
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -786,7 +916,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="10dp">
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -834,7 +964,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="10dp">
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -874,7 +1004,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="10dp">
+                            android:padding="8dp">
 
                             <TextView
                                 android:layout_width="wrap_content"

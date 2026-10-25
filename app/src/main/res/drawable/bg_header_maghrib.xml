@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Base gradient: dusky purple at top fading to warm sunset orange -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="@color/header_maghrib_top"
+                android:endColor="@color/header_maghrib_bottom"
+                android:type="linear" />
+        </shape>
+    </item>
+
+    <!-- Sun, low near the horizon, large and warm -->
+    <item
+        android:width="80dp"
+        android:height="80dp"
+        android:gravity="bottom|end"
+        android:drawable="@drawable/ic_sun_decor"
+        android:bottom="60dp"
+        android:end="30dp" />
+
+    <!-- Mosque skyline silhouette along the bottom edge -->
+    <item
+        android:height="90dp"
+        android:gravity="bottom|fill_horizontal"
+        android:drawable="@drawable/ic_mosque_silhouette" />
+
+</layer-list>

@@ -19,4 +19,23 @@
     <color name="divider">#2A2F3B</color>
     <color name="surface_container">#1F242D</color>
     <color name="error">#EF4444</color>
+
+    <!-- Home header art (mosque silhouette banner), per time of day -->
+    <!-- Night (Isha – Fajr) -->
+    <color name="header_teal_top">#1C4A42</color>
+    <color name="header_teal_bottom">#06120F</color>
+    <color name="header_moon">#F5F0DC</color>
+    <color name="header_moon_glow">#33F5F0DC</color>
+    <color name="header_silhouette">#99030906</color>
+    <!-- Fajr / dawn (Fajr – sunrise) -->
+    <color name="header_fajr_top">#3B4A6B</color>
+    <color name="header_fajr_bottom">#D98A5F</color>
+    <!-- Day (sunrise – Asr) -->
+    <color name="header_day_top">#2E8BC0</color>
+    <color name="header_day_bottom">#1C4A6B</color>
+    <!-- Maghrib / sunset (Asr – Isha) -->
+    <color name="header_maghrib_top">#5B3A5C</color>
+    <color name="header_maghrib_bottom">#D9643C</color>
+    <color name="header_sun">#FFE08A</color>
+    <color name="header_sun_glow">#40FFE08A</color>
 </resources>

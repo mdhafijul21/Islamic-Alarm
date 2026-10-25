@@ -626,9 +626,36 @@ class MainActivity : AppCompatActivity() {
         binding.tvMaghribTime.text = "শুরু: সন্ধ্যা ${schedule.maghrib} (ইফতার) — ইশা শুরু পর্যন্ত"
         binding.tvIshaTime.text = "শুরু: রাত ${schedule.isha} — ফজর শুরু পর্যন্ত"
 
+        // Sahri: starts at midnight (last part of the night), ends 5 minutes before Fajr
+        binding.tvSahriTimes.text = "শুরু: ${schedule.midnight} — শেষ: ${schedule.sehriEnd}"
+
+        // Iftar: starts at Maghrib, the waqt runs until Isha begins
+        binding.tvIftarTimes.text = "শুরু: ${schedule.maghrib} — শেষ: ${schedule.isha}"
+
         binding.tvCurrentWaqtStatus.text = PrayerTimeCalculator.getCurrentWaqtName(now, schedule)
+        updateHeaderBackground(now, schedule)
 
         startPrayerCountdownTicker()
+    }
+
+    /**
+     * Swaps the home header's background art (mosque silhouette + sun/moon) to match
+     * the current prayer waqt: dawn colors at Fajr, bright sky through the day,
+     * sunset colors from Asr to Isha, and night colors from Isha to Fajr.
+     */
+    private fun updateHeaderBackground(now: Calendar, schedule: com.hafij.islamicalarm.prayertimes.PrayerSchedule) {
+        val nowMillis = now.timeInMillis
+        val bgRes = when {
+            nowMillis in schedule.fajrCal.timeInMillis until schedule.sunriseCal.timeInMillis ->
+                R.drawable.bg_header_fajr
+            nowMillis in schedule.sunriseCal.timeInMillis until schedule.asrCal.timeInMillis ->
+                R.drawable.bg_header_day
+            nowMillis in schedule.asrCal.timeInMillis until schedule.ishaCal.timeInMillis ->
+                R.drawable.bg_header_maghrib
+            else ->
+                R.drawable.bg_header_night
+        }
+        binding.appBarHeader.setBackgroundResource(bgRes)
     }
 
     private fun startPrayerCountdownTicker() {
@@ -642,12 +669,37 @@ class MainActivity : AppCompatActivity() {
         countdownTimer = object : CountDownTimer(nextPrayer.remainingMillis, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 binding.tvNextPrayerCountdown.text = "বাকি " + PrayerTimeCalculator.formatCountdown(millisUntilFinished)
+                updateSahriIftarCountdown(schedule)
             }
 
             override fun onFinish() {
                 updatePrayerTimes()
             }
         }.start()
+
+        updateSahriIftarCountdown(schedule)
+    }
+
+    private fun updateSahriIftarCountdown(schedule: com.hafij.islamicalarm.prayertimes.PrayerSchedule) {
+        val nowMillis = Calendar.getInstance().timeInMillis
+
+        // Sahri countdown: time remaining until Sahri ends (Fajr - 5 min). If already past,
+        // count down to tomorrow's Sahri end instead.
+        val sahriEndMillis = if (nowMillis < schedule.sehriCal.timeInMillis) {
+            schedule.sehriCal.timeInMillis
+        } else {
+            (schedule.sehriCal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }.timeInMillis
+        }
+        binding.tvSahriCountdown.text = "শেষ হতে বাকি " + PrayerTimeCalculator.formatCountdown(sahriEndMillis - nowMillis)
+
+        // Iftar countdown: time remaining until Iftar starts (Maghrib). If already past,
+        // count down to tomorrow's Iftar instead.
+        val iftarStartMillis = if (nowMillis < schedule.maghribCal.timeInMillis) {
+            schedule.maghribCal.timeInMillis
+        } else {
+            (schedule.maghribCal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }.timeInMillis
+        }
+        binding.tvIftarCountdown.text = "শুরু হতে বাকি " + PrayerTimeCalculator.formatCountdown(iftarStartMillis - nowMillis)
     }
 
     private fun showQuickAlarmDialog(hour: Int, minute: Int, defaultLabel: String) {

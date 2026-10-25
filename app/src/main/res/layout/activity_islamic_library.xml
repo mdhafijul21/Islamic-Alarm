@@ -103,14 +103,77 @@
 
     </HorizontalScrollView>
 
-    <!-- RecyclerView for Books -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvBooks"
+    <!-- Local / Online Tab Toggle -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingTop="6dp"
-        android:paddingBottom="24dp"
-        tools:listitem="@layout/item_islamic_book" />
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:weightSum="2">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTabLocalBooks"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/secondary"
+            android:text="লোকাল বই"
+            android:textColor="@color/primary"
+            android:textSize="12sp"
+            app:cornerRadius="10dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTabOnlineLibrary"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/surface_container"
+            android:text="অনলাইন PDF লাইব্রেরি"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            app:cornerRadius="10dp" />
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- RecyclerView for Local Books -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvBooks"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="6dp"
+            android:paddingBottom="24dp"
+            tools:listitem="@layout/item_islamic_book" />
+
+        <!-- RecyclerView for Online Library (PDF) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvRemoteBooks"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="6dp"
+            android:paddingBottom="24dp"
+            android:visibility="gone"
+            tools:listitem="@layout/item_remote_library_book" />
+
+        <ProgressBar
+            android:id="@+id/pbRemoteBooksLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:indeterminateTint="@color/secondary"
+            android:visibility="gone" />
+
+    </FrameLayout>
 
 </LinearLayout>

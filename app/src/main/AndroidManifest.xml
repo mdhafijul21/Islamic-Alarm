@@ -137,6 +137,13 @@
             android:label="কিতাব পাঠ"
             android:theme="@style/Theme.IslamicAlarm" />
 
+        <!-- PDF Reader Activity (offline library books) -->
+        <activity
+            android:name="com.hafij.islamicalarm.books.PdfReaderActivity"
+            android:exported="false"
+            android:label="PDF পাঠ"
+            android:theme="@style/Theme.IslamicAlarm" />
+
         <!-- Audio Azan Activity -->
         <activity
             android:name="com.hafij.islamicalarm.audio.AzanAudioActivity"

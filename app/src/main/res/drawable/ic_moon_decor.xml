@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Soft glow -->
+    <path
+        android:fillColor="@color/header_moon_glow"
+        android:pathData="M60,60 m-58,0 a58,58 0 1,0 116,0 a58,58 0 1,0 -116,0" />
+
+    <!-- Moon disc -->
+    <path
+        android:fillColor="@color/header_moon"
+        android:pathData="M60,60 m-30,0 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0" />
+
+    <!-- Crater shading for a bit of texture -->
+    <path
+        android:fillColor="#14000000"
+        android:pathData="M48,46 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
+        android:fillColor="#14000000"
+        android:pathData="M70,68 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="#0D000000"
+        android:pathData="M58,75 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
+
+</vector>
