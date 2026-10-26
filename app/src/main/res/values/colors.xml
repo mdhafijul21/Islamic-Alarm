@@ -38,4 +38,10 @@
     <color name="header_maghrib_bottom">#D9643C</color>
     <color name="header_sun">#FFE08A</color>
     <color name="header_sun_glow">#40FFE08A</color>
+
+    <!-- Light "waqt list" card (matches the reference mockup's white prayer-times card) -->
+    <color name="waqt_card_bg">#F3F7F6</color>
+    <color name="waqt_text_dark">#122722</color>
+    <color name="waqt_text_dark_secondary">#3E5E56</color>
+    <color name="waqt_divider">#DDE6E3</color>
 </resources>
