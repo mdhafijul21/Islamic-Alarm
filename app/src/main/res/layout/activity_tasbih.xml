@@ -37,41 +37,39 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:padding="14dp">
 
             <!-- Zikr Selector Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/surface"
+                app:cardBackgroundColor="@color/waqt_card_bg"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
-                app:strokeColor="@color/card_border"
-                app:strokeWidth="1dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="14dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="জিকির নির্বাচন করুন"
                         android:textColor="@color/secondary"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvSelectedZikrArabic"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="7dp"
                         android:gravity="center"
                         android:text="سُبْحَانَ ٱللَّهِ"
-                        android:textColor="@color/secondary"
-                        android:textSize="26sp"
+                        android:textColor="@color/waqt_text_dark"
+                        android:textSize="25sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -81,8 +79,8 @@
                         android:layout_marginTop="4dp"
                         android:gravity="center"
                         android:text="সুবহানাল্লাহ (আল্লাহ পবিত্র)"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp" />
+                        android:textColor="@color/waqt_text_dark_secondary"
+                        android:textSize="15sp" />
 
                     <!-- Target Chips -->
                     <com.google.android.material.chip.ChipGroup
@@ -100,7 +98,7 @@
                             android:layout_height="wrap_content"
                             android:checked="true"
                             android:text="৩৩ বার"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/waqt_text_dark" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip100"
@@ -108,7 +106,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="১০০ বার"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/waqt_text_dark" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip1000"
@@ -116,7 +114,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="১০০০ বার"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/waqt_text_dark" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipUnlimited"
@@ -124,7 +122,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="অসীম"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/waqt_text_dark" />
 
                     </com.google.android.material.chip.ChipGroup>
 
@@ -134,9 +132,9 @@
 
             <!-- Big Round Tasbih Counter -->
             <FrameLayout
-                android:layout_width="220dp"
-                android:layout_height="220dp"
-                android:layout_marginTop="28dp">
+                android:layout_width="210dp"
+                android:layout_height="210dp"
+                android:layout_marginTop="18dp">
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/btnCountTap"
@@ -192,7 +190,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="16dp"
                 android:gravity="center"
                 android:orientation="horizontal">
 
@@ -230,7 +228,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="14dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
