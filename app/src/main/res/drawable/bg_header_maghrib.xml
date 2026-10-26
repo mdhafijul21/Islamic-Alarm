@@ -12,19 +12,28 @@
         </shape>
     </item>
 
+    <!-- Soft clouds catching the sunset light -->
+    <item
+        android:width="260dp"
+        android:height="60dp"
+        android:gravity="top|end"
+        android:drawable="@drawable/ic_clouds_decor"
+        android:top="26dp"
+        android:end="-10dp" />
+
     <!-- Sun, low near the horizon, large and warm -->
     <item
         android:width="80dp"
         android:height="80dp"
         android:gravity="bottom|end"
         android:drawable="@drawable/ic_sun_decor"
-        android:bottom="60dp"
+        android:bottom="66dp"
         android:end="30dp" />
 
-    <!-- Mosque skyline silhouette along the bottom edge -->
+    <!-- Detailed mosque skyline silhouette along the bottom edge -->
     <item
-        android:height="90dp"
+        android:height="100dp"
         android:gravity="bottom|fill_horizontal"
-        android:drawable="@drawable/ic_mosque_silhouette" />
+        android:drawable="@drawable/ic_mosque_silhouette_v2" />
 
 </layer-list>

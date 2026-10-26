@@ -12,6 +12,22 @@
         </shape>
     </item>
 
+    <!-- Soft clouds for depth -->
+    <item
+        android:width="260dp"
+        android:height="60dp"
+        android:gravity="top|start"
+        android:drawable="@drawable/ic_clouds_decor"
+        android:top="30dp"
+        android:start="-20dp" />
+    <item
+        android:width="200dp"
+        android:height="50dp"
+        android:gravity="top|end"
+        android:drawable="@drawable/ic_clouds_decor"
+        android:top="70dp"
+        android:end="-30dp" />
+
     <!-- Sun, high and bright -->
     <item
         android:width="92dp"
@@ -21,10 +37,10 @@
         android:top="18dp"
         android:end="18dp" />
 
-    <!-- Mosque skyline silhouette along the bottom edge -->
+    <!-- Detailed mosque skyline silhouette along the bottom edge -->
     <item
-        android:height="90dp"
+        android:height="100dp"
         android:gravity="bottom|fill_horizontal"
-        android:drawable="@drawable/ic_mosque_silhouette" />
+        android:drawable="@drawable/ic_mosque_silhouette_v2" />
 
 </layer-list>

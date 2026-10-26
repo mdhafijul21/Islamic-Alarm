@@ -12,19 +12,34 @@
         </shape>
     </item>
 
-    <!-- Sun, low and small, just appearing -->
-    <item
-        android:width="70dp"
-        android:height="70dp"
-        android:gravity="top|end"
-        android:drawable="@drawable/ic_sun_decor"
-        android:top="40dp"
-        android:end="24dp" />
-
-    <!-- Mosque skyline silhouette along the bottom edge -->
+    <!-- A few stars still visible in the upper, darker part of the sky -->
     <item
         android:height="90dp"
+        android:gravity="top|fill_horizontal"
+        android:drawable="@drawable/ic_stars_decor" />
+
+    <!-- Soft clouds for depth -->
+    <item
+        android:width="260dp"
+        android:height="60dp"
+        android:gravity="top|start"
+        android:drawable="@drawable/ic_clouds_decor"
+        android:top="34dp"
+        android:start="8dp" />
+
+    <!-- Sun, low and small, just appearing -->
+    <item
+        android:width="68dp"
+        android:height="68dp"
+        android:gravity="top|end"
+        android:drawable="@drawable/ic_sun_decor"
+        android:top="44dp"
+        android:end="24dp" />
+
+    <!-- Detailed mosque skyline silhouette along the bottom edge -->
+    <item
+        android:height="100dp"
         android:gravity="bottom|fill_horizontal"
-        android:drawable="@drawable/ic_mosque_silhouette" />
+        android:drawable="@drawable/ic_mosque_silhouette_v2" />
 
 </layer-list>

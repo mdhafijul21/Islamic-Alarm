@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="150dp"
+    android:viewportWidth="400"
+    android:viewportHeight="150">
+
+    <!-- Ground strip -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M0,132 L400,132 L400,150 L0,150 Z" />
+
+    <!-- Far-left small dome (depth) -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M18,118 A16,16 0 0,1 50,118 L50,134 L18,134 Z" />
+
+    <!-- Left minaret, tiered cap -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M58,48 A6,6 0 0,1 70,48 L70,56 L74,56 L74,62 L54,62 L54,56 L58,56 Z" />
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M58,62 L70,62 L70,142 L58,142 Z" />
+
+    <!-- Left medium dome with a small arched window -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M96,112 A32,32 0 0,1 160,112 L160,134 L96,134 Z" />
+    <path
+        android:fillColor="#1A0D0F0C"
+        android:pathData="M120,120 A8,8 0 0,1 136,120 L136,132 L120,132 Z" />
+
+    <!-- Center large dome with onion-top ridge detail -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M165,98 A45,45 0 0,1 255,98 L255,134 L165,134 Z" />
+    <path
+        android:fillColor="#1A0D0F0C"
+        android:pathData="M198,112 A12,12 0 0,1 222,112 L222,132 L198,132 Z" />
+
+    <!-- Finial on the center dome -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M207,78 L213,78 L213,95 L207,95 Z" />
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M210,76 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+
+    <!-- Right medium dome with a small arched window -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M260,112 A32,32 0 0,1 324,112 L324,134 L260,134 Z" />
+    <path
+        android:fillColor="#1A0D0F0C"
+        android:pathData="M284,120 A8,8 0 0,1 300,120 L300,132 L284,132 Z" />
+
+    <!-- Right minaret, tiered cap -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M330,48 A6,6 0 0,1 342,48 L342,56 L346,56 L346,62 L326,62 L326,56 L330,56 Z" />
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M330,62 L342,62 L342,142 L330,142 Z" />
+
+    <!-- Far-right small dome (depth) -->
+    <path
+        android:fillColor="@color/header_silhouette"
+        android:pathData="M352,118 A16,16 0 0,1 384,118 L384,134 L352,134 Z" />
+
+</vector>

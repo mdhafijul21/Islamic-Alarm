@@ -174,6 +174,21 @@
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    app:cardBackgroundColor="@color/waqt_card_bg"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp">
+
                 <!-- Fajr Row (no card, compact) -->
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -202,7 +217,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="ফজর (সাহরী শেষ)"
-                                android:textColor="@color/text_primary"
+                                android:textColor="@color/waqt_text_dark"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
@@ -210,7 +225,7 @@
                                 android:id="@+id/tvFajrTime"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="@color/waqt_text_dark_secondary"
                                 android:textSize="11sp"
                                 tools:text="ভোর ০৪:২৩ হতে ভোর ০৫:৩৮ পর্যন্ত" />
 
@@ -255,7 +270,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="যোহর সালাত"
-                                android:textColor="@color/text_primary"
+                                android:textColor="@color/waqt_text_dark"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
@@ -263,7 +278,7 @@
                                 android:id="@+id/tvDhuhrTime"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="@color/waqt_text_dark_secondary"
                                 android:textSize="11sp"
                                 tools:text="দুপুর ১২:০৪ হতে বিকাল ০৪:৩০ পর্যন্ত" />
 
@@ -308,7 +323,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="আসর সালাত"
-                                android:textColor="@color/text_primary"
+                                android:textColor="@color/waqt_text_dark"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
@@ -316,7 +331,7 @@
                                 android:id="@+id/tvAsrTime"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="@color/waqt_text_dark_secondary"
                                 android:textSize="11sp"
                                 tools:text="বিকাল ০৪:৩০ হতে সন্ধ্যা ০৬:৩০ পর্যন্ত" />
 
@@ -361,7 +376,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="মাগরিব (ইফতারের সময়)"
-                                android:textColor="@color/text_primary"
+                                android:textColor="@color/waqt_text_dark"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
@@ -369,7 +384,7 @@
                                 android:id="@+id/tvMaghribTime"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="@color/waqt_text_dark_secondary"
                                 android:textSize="11sp"
                                 tools:text="সন্ধ্যা ০৬:৩০ হতে রাত ০৭:৪৭ পর্যন্ত" />
 
@@ -414,7 +429,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="ইশা ও বিতর সালাত"
-                                android:textColor="@color/text_primary"
+                                android:textColor="@color/waqt_text_dark"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
 
@@ -422,7 +437,7 @@
                                 android:id="@+id/tvIshaTime"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="@color/waqt_text_dark_secondary"
                                 android:textSize="11sp"
                                 tools:text="রাত ০৭:৪৭ হতে ভোর ০৪:২৩ পর্যন্ত" />
 
@@ -438,6 +453,11 @@
                             android:textSize="10sp" />
 
                     </LinearLayout>
+
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
 
                 <!-- Sahri & Iftar Section -->
                 <LinearLayout
@@ -467,9 +487,18 @@
                             android:padding="8dp">
 
                             <TextView
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:background="@drawable/bg_badge_circle_gold"
+                                android:gravity="center"
+                                android:text="🌙"
+                                android:textSize="13sp" />
+
+                            <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="🌙 সাহরি"
+                                android:layout_marginTop="3dp"
+                                android:text="সাহরি"
                                 android:textColor="@color/secondary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
@@ -521,9 +550,18 @@
                             android:padding="8dp">
 
                             <TextView
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:background="@drawable/bg_badge_circle_purple"
+                                android:gravity="center"
+                                android:text="🌆"
+                                android:textSize="13sp" />
+
+                            <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="🌆 ইফতার"
+                                android:layout_marginTop="3dp"
+                                android:text="ইফতার"
                                 android:textColor="@color/secondary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
