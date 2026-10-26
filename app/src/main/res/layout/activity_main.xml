@@ -18,128 +18,11 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="110dp"
             app:title="@string/app_name"
             app:titleTextColor="@color/text_primary"
             app:subtitle="নামাজের সময় মোবাইল লক এলার্ম"
             app:subtitleTextColor="@color/secondary" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="13dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="10dp">
-
-                <!-- District & Hijri Date Bar -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <!-- District Selector Button -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSelectDistrict"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:backgroundTint="@color/surface"
-                        android:text="📍 ঢাকা"
-                        android:textColor="@color/secondary"
-                        android:textSize="11sp"
-                        app:cornerRadius="12dp"
-                        app:strokeColor="@color/border"
-                        app:strokeWidth="1dp" />
-
-                    <!-- Quick GPS Auto-Detect Button -->
-                    <ImageButton
-                        android:id="@+id/btnQuickGpsLocation"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="4dp"
-                        android:background="@drawable/bg_duration_chip"
-                        android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
-                        android:src="@android:drawable/ic_menu_mylocation"
-                        app:tint="@color/secondary" />
-
-                    <View
-                        android:layout_width="0dp"
-                        android:layout_height="1dp"
-                        android:layout_weight="1" />
-
-                    <!-- Hijri Date Badge -->
-                    <TextView
-                        android:id="@+id/tvMainHijriDate"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/bg_challenge_badge"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="6dp"
-                        android:textColor="@color/secondary"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        tools:text="২৯ সফর, ১৪৪৮ হিজরি" />
-
-                </LinearLayout>
-
-                <!-- Next Prayer Live Countdown Banner -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="9dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="18dp"
-                    app:cardElevation="3dp"
-                    app:strokeColor="@color/secondary"
-                    app:strokeWidth="1.5dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="9dp">
-
-                        <TextView
-                            android:id="@+id/tvCurrentWaqtStatus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="10sp"
-                            tools:text="যোহরের ওয়াক্ত চলছে" />
-
-                        <TextView
-                            android:id="@+id/tvNextPrayerTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:textColor="@color/secondary"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            tools:text="পরবর্তী নামাজ: আসর (০৪:৩৫)" />
-
-                        <TextView
-                            android:id="@+id/tvNextPrayerCountdown"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:background="@drawable/bg_challenge_badge"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
-                            android:textColor="@color/text_primary"
-                            android:textSize="10sp"
-                            android:textStyle="bold"
-                            tools:text="বাকি ১ ঘণ্টা ২৫ মিনিট ৩০ সেকেন্ড" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
-
-        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -163,6 +46,124 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="10dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="13dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="10dp">
+
+                        <!-- District & Hijri Date Bar -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <!-- District Selector Button -->
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSelectDistrict"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:backgroundTint="@color/surface"
+                                android:text="📍 ঢাকা"
+                                android:textColor="@color/secondary"
+                                android:textSize="11sp"
+                                app:cornerRadius="12dp"
+                                app:strokeColor="@color/border"
+                                app:strokeWidth="1dp" />
+
+                            <!-- Quick GPS Auto-Detect Button -->
+                            <ImageButton
+                                android:id="@+id/btnQuickGpsLocation"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:layout_marginStart="4dp"
+                                android:background="@drawable/bg_duration_chip"
+                                android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
+                                android:src="@android:drawable/ic_menu_mylocation"
+                                app:tint="@color/secondary" />
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="1dp"
+                                android:layout_weight="1" />
+
+                            <!-- Hijri Date Badge -->
+                            <TextView
+                                android:id="@+id/tvMainHijriDate"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_challenge_badge"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="6dp"
+                                android:textColor="@color/secondary"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                tools:text="২৯ সফর, ১৪৪৮ হিজরি" />
+
+                        </LinearLayout>
+
+                        <!-- Next Prayer Live Countdown Banner -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="9dp"
+                            android:layout_marginBottom="12dp"
+                            app:cardBackgroundColor="@color/surface"
+                            app:cardCornerRadius="18dp"
+                            app:cardElevation="3dp"
+                            app:strokeColor="@color/secondary"
+                            app:strokeWidth="1.5dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:orientation="vertical"
+                                android:padding="9dp">
+
+                                <TextView
+                                    android:id="@+id/tvCurrentWaqtStatus"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="10sp"
+                                    tools:text="যোহরের ওয়াক্ত চলছে" />
+
+                                <TextView
+                                    android:id="@+id/tvNextPrayerTitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:textColor="@color/secondary"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    tools:text="পরবর্তী নামাজ: আসর (০৪:৩৫)" />
+
+                                <TextView
+                                    android:id="@+id/tvNextPrayerCountdown"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:background="@drawable/bg_challenge_badge"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    tools:text="বাকি ১ ঘণ্টা ২৫ মিনিট ৩০ সেকেন্ড" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+
+                </LinearLayout>
+
 
                 <!-- 5 Waqt Prayer Times Grid/Cards -->
                 <TextView
