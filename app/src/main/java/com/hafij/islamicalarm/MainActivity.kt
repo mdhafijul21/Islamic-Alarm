@@ -655,7 +655,7 @@ class MainActivity : AppCompatActivity() {
             else ->
                 R.drawable.bg_header_night
         }
-        binding.appBarHeader.setBackgroundResource(bgRes)
+        binding.headerArtContainer.setBackgroundResource(bgRes)
     }
 
     private fun startPrayerCountdownTicker() {

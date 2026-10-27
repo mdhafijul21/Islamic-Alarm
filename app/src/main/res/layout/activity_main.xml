@@ -10,14 +10,16 @@
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarHeader"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:background="@null"
+        android:minHeight="0dp"
         app:elevation="0dp"
         app:liftOnScroll="false">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
+            android:layout_height="0dp"
             android:visibility="gone" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -44,6 +46,7 @@
                 android:padding="10dp">
 
                 <LinearLayout
+                    android:id="@+id/headerArtContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_header_night"
