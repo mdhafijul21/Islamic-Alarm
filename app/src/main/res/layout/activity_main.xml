@@ -11,18 +11,14 @@
         android:id="@+id/appBarHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_header_night"
         app:elevation="0dp"
         app:liftOnScroll="false">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
-            app:title="@string/app_name"
-            app:titleTextColor="@color/text_primary"
-            app:subtitle="নামাজের সময় মোবাইল লক এলার্ম"
-            app:subtitleTextColor="@color/secondary" />
+            android:layout_height="1dp"
+            android:visibility="gone" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -50,10 +46,30 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/bg_header_night"
                     android:orientation="vertical"
                     android:paddingHorizontal="13dp"
-                    android:paddingTop="6dp"
+                    android:paddingTop="14dp"
                     android:paddingBottom="10dp">
+
+                        <TextView
+                            android:id="@+id/tvHeaderTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="নামাজের সময়সূচী"
+                            android:textColor="@color/text_primary"
+                            android:textSize="21sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvHeaderLocation"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:layout_marginBottom="12dp"
+                            android:textColor="@color/secondary"
+                            android:textSize="13sp"
+                            tools:text="📍 ঢাকা জেলা" />
 
                         <!-- District & Hijri Date Bar -->
                         <LinearLayout
@@ -111,9 +127,9 @@
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="9dp"
+                            android:layout_marginTop="-6dp"
                             android:layout_marginBottom="12dp"
-                            app:cardBackgroundColor="#33000000"
+                            app:cardBackgroundColor="#4D000000"
                             app:cardCornerRadius="18dp"
                             app:cardElevation="0dp">
 

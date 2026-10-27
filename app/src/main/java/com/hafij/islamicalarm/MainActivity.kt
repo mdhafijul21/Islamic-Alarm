@@ -321,8 +321,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun showPrayerTimesScreen() {
         binding.layoutPrayerTimesContainer.visibility = View.VISIBLE
-        binding.toolbar.title = "নামাজের সময়সূচী"
-        binding.toolbar.subtitle = selectedDistrict.displayName
+        binding.tvHeaderTitle.text = "নামাজের সময়সূচী"
+        binding.tvHeaderLocation.text = "📍 ${selectedDistrict.displayName}"
         updatePrayerTimes()
         loadAlarms()
     }
@@ -612,7 +612,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSelectDistrict.text = "📍 ${selectedDistrict.nameBn}"
 
         if (binding.layoutPrayerTimesContainer.visibility == View.VISIBLE) {
-            binding.toolbar.subtitle = selectedDistrict.displayName
+            binding.tvHeaderLocation.text = "📍 ${selectedDistrict.displayName}"
         }
 
         // Hijri Date
