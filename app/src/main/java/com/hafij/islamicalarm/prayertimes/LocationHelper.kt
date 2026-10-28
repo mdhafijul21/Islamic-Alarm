@@ -124,8 +124,12 @@ object LocationHelper {
     }
 
     private fun isRecent(location: Location): Boolean {
-        // within 2 hours
-        return (System.currentTimeMillis() - location.time) < 2 * 60 * 60 * 1000
+        // within 2 hours AND reasonably precise (under 200m accuracy) — a stale or
+        // low-accuracy cached fix (e.g. WiFi-based) is often off by kilometers, which
+        // only resolves to district level on reverse-geocoding instead of a specific place.
+        val isFresh = (System.currentTimeMillis() - location.time) < 2 * 60 * 60 * 1000
+        val isAccurate = !location.hasAccuracy() || location.accuracy <= 200f
+        return isFresh && isAccurate
     }
 
     private fun requestFreshLocation(
@@ -244,11 +248,12 @@ object LocationHelper {
                         val address: Address = addresses[0]
                         val subLocality = address.subLocality // e.g. Thana or neighborhood
                         val locality = address.locality // e.g. City
+                        val thoroughfare = address.thoroughfare // e.g. Street/road name
                         val subAdmin = address.subAdminArea // e.g. District
                         val admin = address.adminArea // e.g. Division / State
                         countryName = address.countryName ?: ""
 
-                        placeNameBn = subLocality ?: locality ?: subAdmin ?: admin ?: ""
+                        placeNameBn = subLocality ?: locality ?: thoroughfare ?: subAdmin ?: admin ?: ""
                         parentAreaBn = subAdmin ?: admin ?: countryName
                         placeNameEn = address.featureName ?: ""
                     }
