@@ -34,11 +34,9 @@
             android:layout_marginHorizontal="14dp"
             android:layout_marginTop="2dp"
             android:layout_marginBottom="8dp"
-            app:cardBackgroundColor="@color/surface"
+            app:cardBackgroundColor="@color/waqt_card_bg"
             app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/card_border"
-            app:strokeWidth="1dp">
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -64,8 +62,8 @@
                     android:hint="সুরা বা পারার নাম লিখুন..."
                     android:imeOptions="actionSearch"
                     android:inputType="text"
-                    android:textColor="@color/text_primary"
-                    android:textColorHint="@color/text_secondary"
+                    android:textColor="@color/waqt_text_dark"
+                    android:textColorHint="@color/waqt_text_dark_secondary"
                     android:textSize="14sp" />
 
                 <ImageButton
@@ -130,7 +128,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/surface"
+                app:cardBackgroundColor="@color/waqt_card_bg"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="2dp"
                 app:strokeColor="@color/secondary"
@@ -170,7 +168,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/waqt_text_dark"
                             android:textSize="15sp"
                             android:textStyle="bold"
                             tools:text="সুরা আল-ফাতিহা (الفاتحة) • ৭ আয়াত" />
