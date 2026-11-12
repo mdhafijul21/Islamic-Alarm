@@ -125,6 +125,17 @@ class MainActivity : AppCompatActivity() {
         setupPrayerTimesHub()
         setupBottomNavigation()
 
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.layoutAlarmContainer.visibility == View.VISIBLE) {
+                    binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+
 
         binding.switchAutoSilent.isChecked =
             com.hafij.islamicalarm.silent.AutoSilentManager.isAutoSilentEnabled(this)
@@ -302,6 +313,10 @@ class MainActivity : AppCompatActivity() {
                     showPrayerTimesScreen()
                     true
                 }
+                R.id.nav_alarm -> {
+                    showAlarmScreen()
+                    true
+                }
                 R.id.nav_quran -> {
                     openQuranActivity()
                     false
@@ -319,7 +334,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showAlarmScreen() {
+        binding.layoutPrayerTimesContainer.visibility = View.GONE
+        binding.layoutAlarmContainer.visibility = View.VISIBLE
+        updatePrayerTimes()
+        loadAlarms()
+    }
+
     private fun showPrayerTimesScreen() {
+        binding.layoutAlarmContainer.visibility = View.GONE
         binding.layoutPrayerTimesContainer.visibility = View.VISIBLE
         binding.tvHeaderTitle.text = "নামাজের সময়সূচী"
         binding.tvHeaderLocation.text = "📍 ${selectedDistrict.displayName}"
@@ -625,6 +648,13 @@ class MainActivity : AppCompatActivity() {
         binding.tvAsrTime.text = "শুরু: বিকাল ${schedule.asr} — সূর্যাস্ত: সন্ধ্যা ${schedule.sunset}"
         binding.tvMaghribTime.text = "শুরু: সন্ধ্যা ${schedule.maghrib} (ইফতার) — ইশা শুরু পর্যন্ত"
         binding.tvIshaTime.text = "শুরু: রাত ${schedule.isha} — ফজর শুরু পর্যন্ত"
+
+        // Alarm screen times
+        binding.tvAlarmFajrTime.text = "শুরু: ভোর ${schedule.fajr}"
+        binding.tvAlarmDhuhrTime.text = "শুরু: দুপুর ${schedule.dhuhr}"
+        binding.tvAlarmAsrTime.text = "শুরু: বিকাল ${schedule.asr}"
+        binding.tvAlarmMaghribTime.text = "শুরু: সন্ধ্যা ${schedule.maghrib}"
+        binding.tvAlarmIshaTime.text = "শুরু: রাত ${schedule.isha}"
 
         // Sahri: starts at midnight (last part of the night), ends 5 minutes before Fajr
         binding.tvSahriTimes.text = "শুরু: ${schedule.midnight} — শেষ: ${schedule.sehriEnd}"
