@@ -795,7 +795,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddOrEditAlarmDialog(existingAlarm: AlarmItem?) {
-        val isEditing = existingAlarm != null
+        // existingAlarm can also be an unsaved template (quick waqt alarm buttons).
+        // Only treat it as "editing" if it is really already stored; otherwise it must be ADDED,
+        // or updateAlarm() silently saves nothing and the alarm never fires.
+        val isEditing = existingAlarm != null && alarmStore.getAlarm(existingAlarm.id) != null
         val dialogBinding = DialogAddAlarmBinding.inflate(LayoutInflater.from(this))
 
         val calendar = Calendar.getInstance()
@@ -815,7 +818,7 @@ class MainActivity : AppCompatActivity() {
             dialogBinding.timePicker.currentMinute = selectedMinute
         }
 
-        if (isEditing) {
+        if (existingAlarm != null) {
             dialogBinding.etAlarmLabel.setText(existingAlarm.label)
             dialogBinding.etLockDuration.setText(existingAlarm.lockDurationMinutes.toString())
             if (existingAlarm.isRepeatDaily) {
