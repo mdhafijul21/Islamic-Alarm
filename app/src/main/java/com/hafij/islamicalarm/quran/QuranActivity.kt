@@ -81,6 +81,8 @@ class QuranActivity : AppCompatActivity() {
         binding = ActivityQuranBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        com.hafij.islamicalarm.BottomNavHelper.setup(this, binding.bottomNavigation, com.hafij.islamicalarm.R.id.nav_quran)
+
         setSupportActionBar(binding.toolbarQuran)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbarQuran.setNavigationOnClickListener {

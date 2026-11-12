@@ -23,6 +23,8 @@ class DuasActivity : AppCompatActivity() {
         binding = ActivityDuasBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        com.hafij.islamicalarm.BottomNavHelper.setup(this, binding.bottomNavigation, R.id.nav_duas)
+
         binding.toolbarDuas.setNavigationOnClickListener {
             if (binding.rvDuas.visibility == android.view.View.VISIBLE) {
                 selectedCategory = DuaData.CATEGORY_ALL

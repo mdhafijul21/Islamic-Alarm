@@ -44,6 +44,8 @@ class TasbihActivity : AppCompatActivity() {
         binding = ActivityTasbihBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        com.hafij.islamicalarm.BottomNavHelper.setup(this, binding.bottomNavigation, R.id.nav_tasbih)
+
         binding.toolbarTasbih.setNavigationOnClickListener {
             finish()
         }

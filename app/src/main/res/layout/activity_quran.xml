@@ -110,6 +110,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginBottom="65dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <!-- TAB 1: SURAH LIST VIEW -->
@@ -237,7 +238,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_margin="12dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="77dp"
         android:visibility="gone"
         app:cardBackgroundColor="@color/surface"
         app:cardCornerRadius="16dp"
@@ -322,5 +326,19 @@
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
+
+
+    <!-- Bottom Navigation Bar (same as Home page) -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/surface"
+        app:elevation="8dp"
+        app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/secondary"
+        app:itemTextColor="@color/text_primary"
+        app:menu="@menu/bottom_nav_menu" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

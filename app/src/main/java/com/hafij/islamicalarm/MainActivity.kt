@@ -124,6 +124,7 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupPrayerTimesHub()
         setupBottomNavigation()
+        handleOpenTabIntent(intent)
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -151,6 +152,21 @@ class MainActivity : AppCompatActivity() {
 
         // Check & request runtime permissions on launch (Location, Overlay, Exact Alarm, Battery, Autostart, Phone)
         checkAndRequestPermissions()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOpenTabIntent(intent)
+    }
+
+    // Quran / Tasbih / Duas pages send the user back here with the tab to show
+    private fun handleOpenTabIntent(intent: Intent?) {
+        when (intent?.getStringExtra(BottomNavHelper.EXTRA_OPEN_TAB)) {
+            BottomNavHelper.TAB_HOME -> binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
+            BottomNavHelper.TAB_ALARM -> binding.bottomNavigation.selectedItemId = R.id.nav_alarm
+        }
+        intent?.removeExtra(BottomNavHelper.EXTRA_OPEN_TAB)
     }
 
     override fun onResume() {
