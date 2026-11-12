@@ -37,18 +37,23 @@ object BottomNavHelper {
 
     private fun goMain(activity: Activity, tab: String) {
         val intent = Intent(activity, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                Intent.FLAG_ACTIVITY_NO_ANIMATION
             putExtra(EXTRA_OPEN_TAB, tab)
         }
+        // CLEAR_TOP already removes the current page, no finish() needed
         activity.startActivity(intent)
-        activity.finish()
         @Suppress("DEPRECATION")
         activity.overridePendingTransition(0, 0)
     }
 
     private fun switchTo(activity: Activity, target: Class<out Activity>) {
-        activity.startActivity(Intent(activity, target))
-        activity.finish()
+        val intent = Intent(activity, target).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        }
+        activity.startActivity(intent)
+        // Keep the old page visible until the new one is drawn on top (prevents flicker)
+        activity.window.decorView.postDelayed({ activity.finish() }, 350)
         @Suppress("DEPRECATION")
         activity.overridePendingTransition(0, 0)
     }
