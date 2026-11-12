@@ -44,4 +44,18 @@
     <color name="waqt_text_dark">#122722</color>
     <color name="waqt_text_dark_secondary">#3E5E56</color>
     <color name="waqt_divider">#DDE6E3</color>
+
+    <!-- Dedicated light palette for the Dua library -->
+    <color name="dua_background">#F5F3EA</color>
+    <color name="dua_surface">#FFFFFF</color>
+    <color name="dua_primary">#145B48</color>
+    <color name="dua_primary_dark">#0D4436</color>
+    <color name="dua_accent">#C69B43</color>
+    <color name="dua_text">#183B32</color>
+    <color name="dua_muted">#64766F</color>
+    <color name="dua_border">#E4E9E2</color>
+    <color name="dua_soft_green">#E8F1EB</color>
+    <color name="dua_soft_gold">#F7F0DD</color>
+    <color name="dua_soft_pink">#F8EAE5</color>
+    <color name="dua_soft_lavender">#EEEAF7</color>
 </resources>

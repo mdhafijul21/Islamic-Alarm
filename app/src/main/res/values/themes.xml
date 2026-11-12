@@ -15,4 +15,16 @@
         <item name="android:windowTranslucentNavigation">true</item>
         <item name="android:windowFullscreen">true</item>
     </style>
+
+    <!-- Light appearance is intentionally scoped to the Dua section only. -->
+    <style name="Theme.IslamicAlarm.Duas" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/dua_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/dua_accent</item>
+        <item name="android:statusBarColor">@color/dua_background</item>
+        <item name="android:navigationBarColor">@color/dua_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">@color/dua_background</item>
+    </style>
 </resources>

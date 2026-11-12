@@ -5,9 +5,13 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="14dp"
     android:layout_marginVertical="7dp"
-    app:cardBackgroundColor="@color/waqt_card_bg"
-    app:cardCornerRadius="18dp"
-    app:cardElevation="3dp">
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="@color/dua_surface"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/dua_border"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,7 +22,7 @@
         <ImageView
             android:id="@+id/ivDuaIllustration"
             android:layout_width="match_parent"
-            android:layout_height="132dp"
+            android:layout_height="92dp"
             android:contentDescription="ইসলামিক বিষয়ভিত্তিক ছবি"
             android:scaleType="centerCrop"
             android:src="@drawable/dua_cat_mosque" />
@@ -35,122 +39,67 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="দোআ শিরোনাম"
-                android:textColor="@color/secondary"
-                android:textSize="18sp"
+                android:text="দোয়ার শিরোনাম"
+                android:textColor="@color/dua_primary"
+                android:textSize="17sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvDuaCategoryTag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_label_chip"
+                android:background="@drawable/bg_dua_count"
                 android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp"
+                android:paddingVertical="5dp"
                 android:text="ক্যাটাগরি"
-                android:textColor="@color/secondary"
-                android:textSize="11sp" />
+                android:textColor="@color/dua_primary_dark"
+                android:textSize="10sp" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/tvDuaArabic"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:gravity="end"
-            android:lineSpacingExtra="5dp"
-            android:text="الْقُرْآنُ الْكَرِيمُ"
-            android:textColor="@color/secondary"
-            android:textSize="23sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvDuaTransliteration"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="উচ্চারণ:"
-            android:textColor="@color/waqt_text_dark"
-            android:textSize="14sp"
-            android:textStyle="italic" />
+            android:ellipsize="end"
+            android:gravity="end"
+            android:lineSpacingExtra="4dp"
+            android:maxLines="3"
+            android:text="الْقُرْآنُ الْكَرِيمُ"
+            android:textColor="#A17B2E"
+            android:textSize="22sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvDuaTranslation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="9dp"
-            android:lineSpacingExtra="3dp"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:maxLines="2"
             android:text="অর্থ:"
-            android:textColor="@color/waqt_text_dark"
-            android:textSize="14sp" />
+            android:textColor="@color/dua_muted"
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/tvDuaWhen"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="@color/waqt_text_dark"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/tvDuaCount"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:textColor="@color/waqt_text_dark"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/tvDuaVirtue"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:lineSpacingExtra="2dp"
-            android:textColor="@color/waqt_text_dark"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/tvDuaGrade"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:textColor="@color/waqt_text_dark_secondary"
+            android:layout_marginTop="7dp"
+            android:textColor="@color/dua_muted"
             android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/tvDuaReference"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpenDuaDetail"
+            style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="7dp"
-            android:textColor="@color/waqt_text_dark_secondary"
-            android:textSize="12sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:gravity="end"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCopyDua"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="কপি"
-                android:textColor="@color/secondary"
-                app:icon="@android:drawable/ic_menu_save"
-                app:iconTint="@color/secondary" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnShareDua"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="শেয়ার"
-                android:textColor="@color/secondary"
-                app:icon="@android:drawable/ic_menu_share"
-                app:iconTint="@color/secondary" />
-        </LinearLayout>
+            android:text="বিস্তারিত পড়ুন"
+            android:textColor="@color/dua_primary"
+            app:backgroundTint="@color/dua_soft_green"
+            app:cornerRadius="12dp"
+            app:icon="@android:drawable/ic_menu_view"
+            app:iconTint="@color/dua_primary" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -1,18 +1,13 @@
 package com.hafij.islamicalarm.duas
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ItemDuaBinding
 
-class DuaAdapter(private val context: Context) : RecyclerView.Adapter<DuaAdapter.DuaViewHolder>() {
+class DuaAdapter : RecyclerView.Adapter<DuaAdapter.DuaViewHolder>() {
     private var items: List<DuaItem> = emptyList()
 
     fun submitList(newList: List<DuaItem>) {
@@ -25,60 +20,61 @@ class DuaAdapter(private val context: Context) : RecyclerView.Adapter<DuaAdapter
         return DuaViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: DuaViewHolder, position: Int) = holder.bind(items[position])
+    override fun onBindViewHolder(holder: DuaViewHolder, position: Int) {
+        holder.bind(items[position])
+    }
+
     override fun getItemCount(): Int = items.size
 
-    inner class DuaViewHolder(private val binding: ItemDuaBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class DuaViewHolder(private val binding: ItemDuaBinding) :
+        RecyclerView.ViewHolder(binding.root) {
+
         fun bind(dua: DuaItem) {
             binding.tvDuaTitle.text = dua.title
             binding.tvDuaCategoryTag.text = dua.category
             binding.ivDuaIllustration.setImageResource(imageForCategory(dua.category))
             binding.ivDuaIllustration.contentDescription = dua.category
 
-            setOptional(binding.tvDuaArabic, dua.arabic)
-            setOptional(binding.tvDuaTransliteration, if (dua.transliteration.isBlank()) "" else "উচ্চারণ: ${dua.transliteration}")
-            setOptional(binding.tvDuaTranslation, if (dua.translation.isBlank()) "" else "অর্থ / বিস্তারিত: ${dua.translation}")
-            setOptional(binding.tvDuaWhen, if (dua.whenToRead.isBlank()) "" else "কখন: ${dua.whenToRead}")
-            setOptional(binding.tvDuaCount, if (dua.repeatCount.isBlank()) "" else "সংখ্যা / পদ্ধতি: ${dua.repeatCount}")
-            setOptional(binding.tvDuaVirtue, if (dua.virtue.isBlank()) "" else "ফজিলত / নোট: ${dua.virtue}")
-            setOptional(binding.tvDuaGrade, if (dua.grade.isBlank()) "" else "মান: ${dua.grade}")
-            setOptional(binding.tvDuaReference, if (dua.reference.isBlank()) "" else "সূত্র: ${dua.reference}")
-
-            val fullContent = buildString {
-                append(dua.title).append("\n\n")
-                if (dua.arabic.isNotBlank()) append(dua.arabic).append("\n\n")
-                if (dua.transliteration.isNotBlank()) append("উচ্চারণ: ").append(dua.transliteration).append("\n")
-                if (dua.translation.isNotBlank()) append("অর্থ / বিস্তারিত: ").append(dua.translation).append("\n")
-                if (dua.whenToRead.isNotBlank()) append("কখন: ").append(dua.whenToRead).append("\n")
-                if (dua.repeatCount.isNotBlank()) append("সংখ্যা / পদ্ধতি: ").append(dua.repeatCount).append("\n")
-                if (dua.virtue.isNotBlank()) append("ফজিলত / নোট: ").append(dua.virtue).append("\n")
-                if (dua.grade.isNotBlank()) append("মান: ").append(dua.grade).append("\n")
-                if (dua.reference.isNotBlank()) append("সূত্র: ").append(dua.reference).append("\n")
-                if (dua.sourceUrl.isNotBlank()) append("আরও দেখুন: ").append(dua.sourceUrl).append("\n")
-                append("\n- Islamic Alarm App")
-            }
-
-            binding.btnCopyDua.setOnClickListener {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Dua", fullContent))
-                Toast.makeText(context, "কপি করা হয়েছে", Toast.LENGTH_SHORT).show()
-            }
-            binding.btnShareDua.setOnClickListener {
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, fullContent)
-                }
-                context.startActivity(Intent.createChooser(shareIntent, "শেয়ার করুন"))
-            }
-        }
-
-        private fun setOptional(view: View, value: String) {
-            if (value.isBlank()) {
-                view.visibility = View.GONE
+            if (dua.arabic.isBlank()) {
+                binding.tvDuaArabic.visibility = android.view.View.GONE
             } else {
-                view.visibility = View.VISIBLE
-                (view as? android.widget.TextView)?.text = value
+                binding.tvDuaArabic.visibility = android.view.View.VISIBLE
+                binding.tvDuaArabic.text = dua.arabic
             }
+
+            if (dua.translation.isBlank()) {
+                binding.tvDuaTranslation.visibility = android.view.View.GONE
+            } else {
+                binding.tvDuaTranslation.visibility = android.view.View.VISIBLE
+                binding.tvDuaTranslation.text = "অর্থ: ${dua.translation}"
+            }
+
+            binding.tvDuaWhen.visibility =
+                if (dua.whenToRead.isBlank()) android.view.View.GONE else android.view.View.VISIBLE
+            binding.tvDuaWhen.text =
+                if (dua.whenToRead.isBlank()) "" else "সময়: ${dua.whenToRead}"
+
+            val openDetail = {
+                val context = binding.root.context
+                val intent = Intent(context, DuaDetailActivity::class.java).apply {
+                    putExtra(DuaDetailActivity.EXTRA_ID, dua.id)
+                    putExtra(DuaDetailActivity.EXTRA_TITLE, dua.title)
+                    putExtra(DuaDetailActivity.EXTRA_CATEGORY, dua.category)
+                    putExtra(DuaDetailActivity.EXTRA_ARABIC, dua.arabic)
+                    putExtra(DuaDetailActivity.EXTRA_TRANSLITERATION, dua.transliteration)
+                    putExtra(DuaDetailActivity.EXTRA_TRANSLATION, dua.translation)
+                    putExtra(DuaDetailActivity.EXTRA_REFERENCE, dua.reference)
+                    putExtra(DuaDetailActivity.EXTRA_WHEN, dua.whenToRead)
+                    putExtra(DuaDetailActivity.EXTRA_COUNT, dua.repeatCount)
+                    putExtra(DuaDetailActivity.EXTRA_VIRTUE, dua.virtue)
+                    putExtra(DuaDetailActivity.EXTRA_GRADE, dua.grade)
+                    putExtra(DuaDetailActivity.EXTRA_TYPE, dua.contentType)
+                    putExtra(DuaDetailActivity.EXTRA_URL, dua.sourceUrl)
+                }
+                context.startActivity(intent)
+            }
+            binding.btnOpenDuaDetail.setOnClickListener { openDetail() }
+            binding.root.setOnClickListener { openDetail() }
         }
 
         private fun imageForCategory(category: String): Int = when (category) {
@@ -87,7 +83,8 @@ class DuaAdapter(private val context: Context) : RecyclerView.Adapter<DuaAdapter
             DuaData.CATEGORY_RABBANA, DuaData.CATEGORY_PROPHETS,
             DuaData.CATEGORY_TAWBAH, DuaData.CATEGORY_HADITH -> R.drawable.dua_cat_quran
             DuaData.CATEGORY_SLEEP, DuaData.CATEGORY_NAFL,
-            DuaData.CATEGORY_TAHAJJUD, DuaData.CATEGORY_ISTIKHARA -> R.drawable.dua_cat_prayer
+            DuaData.CATEGORY_TAHAJJUD, DuaData.CATEGORY_ISTIKHARA,
+            DuaData.CATEGORY_IN_PRAYER -> R.drawable.dua_cat_prayer
             DuaData.CATEGORY_FASTING, DuaData.CATEGORY_RAMADAN,
             DuaData.CATEGORY_HAJJ, DuaData.CATEGORY_CHARITY -> R.drawable.dua_cat_ramadan
             else -> R.drawable.dua_cat_mosque

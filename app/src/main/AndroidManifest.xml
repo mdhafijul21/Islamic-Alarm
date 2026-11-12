@@ -86,7 +86,13 @@
             android:name="com.hafij.islamicalarm.duas.DuasActivity"
             android:exported="false"
             android:label="মাসনুন দোআ ও হাদিস"
-            android:theme="@style/Theme.IslamicAlarm" />
+            android:theme="@style/Theme.IslamicAlarm.Duas" />
+
+        <activity
+            android:name="com.hafij.islamicalarm.duas.DuaDetailActivity"
+            android:exported="false"
+            android:label="দোয়ার বিস্তারিত"
+            android:theme="@style/Theme.IslamicAlarm.Duas" />
 
         <!-- Ramadan & Fasting Activity -->
         <activity
