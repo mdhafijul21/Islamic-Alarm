@@ -27,7 +27,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="65dp"
+        android:layout_marginBottom="68dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <!-- OPTION 1: Prayer Times Hub Screen -->
@@ -1353,16 +1353,12 @@
     </FrameLayout>
 
     <!-- Bottom Navigation Bar for main sections -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
+    <com.hafij.islamicalarm.MainBottomBar
         android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="68dp"
         android:layout_gravity="bottom"
         android:background="@color/surface"
-        app:elevation="8dp"
-        app:labelVisibilityMode="labeled"
-        app:itemIconTint="@color/secondary"
-        app:itemTextColor="@color/text_primary"
-        app:menu="@menu/bottom_nav_menu" />
+        android:elevation="8dp" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

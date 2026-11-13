@@ -1,17 +1,20 @@
 package com.hafij.islamicalarm.settings
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
+import com.hafij.islamicalarm.MainActivity
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivitySettingsBinding
 import com.hafij.islamicalarm.permissions.PermStep
@@ -22,10 +25,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class SettingsActivity : AppCompatActivity() {
+/** Settings tab: permission checklist, usage guide and report form. */
+class SettingsFragment : Fragment() {
 
-    private lateinit var binding: ActivitySettingsBinding
-    private lateinit var reportStore: ReportStore
+    private var _binding: ActivitySettingsBinding? = null
+    private val binding get() = _binding!!
+    private var reportStore: ReportStore? = null
 
     private val notificationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -39,20 +44,27 @@ class SettingsActivity : AppCompatActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { refreshPermissions() }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivitySettingsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = ActivitySettingsBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        binding.toolbarSettings.setNavigationOnClickListener { finish() }
-
-        reportStore = ReportStore(this)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        binding.toolbarSettings.setNavigationOnClickListener {
+            (activity as? MainActivity)?.goHome()
+        }
+        reportStore = ReportStore(requireContext())
 
         setupGuide()
         setupReport()
         refreshPermissions()
         refreshReports()
-        binding.tvAppVersion.text = "সংস্করণ ${appVersion()}"
+        binding.tvAppVersion.text = "সংস্করণ " + appVersion()
     }
 
     override fun onResume() {
@@ -61,20 +73,34 @@ class SettingsActivity : AppCompatActivity() {
         refreshPermissions()
     }
 
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) {
+            refreshPermissions()
+            refreshReports()
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     // ---------------------------------------------------------------- permissions
 
     private fun refreshPermissions() {
-        val container = binding.layoutPermRows
-        container.removeAllViews()
+        val b = _binding ?: return
+        val ctx = context ?: return
+        b.layoutPermRows.removeAllViews()
 
-        val steps = PermissionHelper.applicableSteps(this)
+        val steps = PermissionHelper.applicableSteps(ctx)
         var detectable = 0
         var granted = 0
 
         for (step in steps) {
             if (PermissionHelper.isDetectable(step.id)) {
                 detectable++
-                val ok = PermissionHelper.isGranted(this, step.id)
+                val ok = PermissionHelper.isGranted(ctx, step.id)
                 if (ok) granted++
                 addPermissionRow(step, ok)
             } else {
@@ -83,12 +109,13 @@ class SettingsActivity : AppCompatActivity() {
         }
         addPermissionRow(PermissionHelper.screenPinStep, null)
 
-        binding.tvPermSummary.text = "$granted/$detectable টি অনুমতি চালু আছে"
+        b.tvPermSummary.text = "$granted/$detectable টি অনুমতি চালু আছে"
     }
 
     private fun addPermissionRow(step: PermStep, granted: Boolean?) {
-        val row = LayoutInflater.from(this)
-            .inflate(R.layout.item_permission_row, binding.layoutPermRows, false)
+        val b = _binding ?: return
+        val row = LayoutInflater.from(requireContext())
+            .inflate(R.layout.item_permission_row, b.layoutPermRows, false)
         val tvStatus = row.findViewById<TextView>(R.id.tvPermStatus)
         val tvTitle = row.findViewById<TextView>(R.id.tvPermTitle)
         val tvDesc = row.findViewById<TextView>(R.id.tvPermDesc)
@@ -109,16 +136,17 @@ class SettingsActivity : AppCompatActivity() {
             btn.text = if (granted == null) "সেটিংস খুলুন" else "চালু করুন"
             btn.setOnClickListener { requestPermission(step.id) }
         }
-        binding.layoutPermRows.addView(row)
+        b.layoutPermRows.addView(row)
     }
 
     private fun requestPermission(id: String) {
+        val act = activity ?: return
         when (id) {
             PermissionHelper.ID_LOCATION -> askRuntime(
                 id,
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
                 { locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
-                { PermissionHelper.openAppDetails(this) }
+                { PermissionHelper.openAppDetails(act) }
             )
             PermissionHelper.ID_NOTIFICATIONS -> {
                 if (Build.VERSION.SDK_INT >= 33) {
@@ -126,23 +154,23 @@ class SettingsActivity : AppCompatActivity() {
                         id,
                         arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                         { notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
-                        { PermissionHelper.openSettings(this, PermissionHelper.ID_NOTIFICATIONS) }
+                        { PermissionHelper.openSettings(act, PermissionHelper.ID_NOTIFICATIONS) }
                     )
                 } else {
-                    PermissionHelper.openSettings(this, id)
+                    PermissionHelper.openSettings(act, id)
                 }
             }
             PermissionHelper.ID_PHONE -> askRuntime(
                 id,
                 arrayOf(Manifest.permission.READ_PHONE_STATE),
                 { phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE) },
-                { PermissionHelper.openAppDetails(this) }
+                { PermissionHelper.openAppDetails(act) }
             )
             PermissionHelper.ID_AUTOSTART -> {
-                PermissionHelper.markAutostartDone(this)
-                PermissionHelper.openSettings(this, id)
+                PermissionHelper.markAutostartDone(act)
+                PermissionHelper.openSettings(act, id)
             }
-            else -> PermissionHelper.openSettings(this, id)
+            else -> PermissionHelper.openSettings(act, id)
         }
     }
 
@@ -156,9 +184,10 @@ class SettingsActivity : AppCompatActivity() {
         launch: () -> Unit,
         fallback: () -> Unit
     ) {
-        val prefs = getSharedPreferences("settings_perm_asked", MODE_PRIVATE)
+        val act = activity ?: return
+        val prefs = act.getSharedPreferences("settings_perm_asked", Context.MODE_PRIVATE)
         val askedBefore = prefs.getBoolean(id, false)
-        val canAskAgain = perms.any { ActivityCompat.shouldShowRequestPermissionRationale(this, it) }
+        val canAskAgain = perms.any { ActivityCompat.shouldShowRequestPermissionRationale(act, it) }
         if (askedBefore && !canAskAgain) {
             fallback()
         } else {
@@ -170,9 +199,10 @@ class SettingsActivity : AppCompatActivity() {
     // ---------------------------------------------------------------- guide
 
     private fun setupGuide() {
-        val inflater = LayoutInflater.from(this)
+        val b = _binding ?: return
+        val inflater = LayoutInflater.from(requireContext())
         GuideData.sections.forEachIndexed { index, section ->
-            val item = inflater.inflate(R.layout.item_guide_section, binding.layoutGuide, false)
+            val item = inflater.inflate(R.layout.item_guide_section, b.layoutGuide, false)
             val tvTitle = item.findViewById<TextView>(R.id.tvGuideTitle)
             val tvBody = item.findViewById<TextView>(R.id.tvGuideBody)
             tvBody.text = section.second
@@ -187,7 +217,7 @@ class SettingsActivity : AppCompatActivity() {
                 expanded = !expanded
                 render()
             }
-            binding.layoutGuide.addView(item)
+            b.layoutGuide.addView(item)
         }
     }
 
@@ -195,33 +225,36 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupReport() {
         binding.btnSendReport.setOnClickListener {
-            val message = binding.etReportMessage.text.toString().trim()
+            val b = _binding ?: return@setOnClickListener
+            val store = reportStore ?: return@setOnClickListener
+            val message = b.etReportMessage.text.toString().trim()
             if (message.length < 5) {
-                binding.etReportMessage.error = "কমপক্ষে ৫ অক্ষর লিখুন"
+                b.etReportMessage.error = "কমপক্ষে ৫ অক্ষর লিখুন"
                 return@setOnClickListener
             }
-            val type = if (binding.rbSuggestion.isChecked) {
+            val type = if (b.rbSuggestion.isChecked) {
                 ReportStore.TYPE_SUGGESTION
             } else {
                 ReportStore.TYPE_PROBLEM
             }
-            reportStore.add(type, message, deviceInfo(), appVersion())
-            binding.etReportMessage.setText("")
-            Toast.makeText(this, "রিপোর্ট সংরক্ষণ করা হয়েছে", Toast.LENGTH_SHORT).show()
+            store.add(type, message, deviceInfo(), appVersion())
+            b.etReportMessage.setText("")
+            Toast.makeText(requireContext(), "রিপোর্ট সংরক্ষণ করা হয়েছে", Toast.LENGTH_SHORT).show()
             refreshReports()
         }
     }
 
     private fun refreshReports() {
-        val container = binding.layoutReports
-        container.removeAllViews()
-        val reports = reportStore.getAll()
-        binding.tvReportsEmpty.visibility = if (reports.isEmpty()) View.VISIBLE else View.GONE
+        val b = _binding ?: return
+        val store = reportStore ?: return
+        b.layoutReports.removeAllViews()
+        val reports = store.getAll()
+        b.tvReportsEmpty.visibility = if (reports.isEmpty()) View.VISIBLE else View.GONE
 
-        val inflater = LayoutInflater.from(this)
+        val inflater = LayoutInflater.from(requireContext())
         val dateFormat = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.ENGLISH)
         for (report in reports) {
-            val row = inflater.inflate(R.layout.item_report_row, container, false)
+            val row = inflater.inflate(R.layout.item_report_row, b.layoutReports, false)
             val typeText = if (report.type == ReportStore.TYPE_SUGGESTION) "💡 পরামর্শ" else "⚠️ সমস্যা"
             val statusText = if (report.synced) "পাঠানো হয়েছে" else "ফোনে সংরক্ষিত"
             row.findViewById<TextView>(R.id.tvReportMeta).text =
@@ -231,10 +264,10 @@ class SettingsActivity : AppCompatActivity() {
                 shareReport(report)
             }
             row.findViewById<MaterialButton>(R.id.btnReportDelete).setOnClickListener {
-                reportStore.delete(report.id)
+                store.delete(report.id)
                 refreshReports()
             }
-            container.addView(row)
+            b.layoutReports.addView(row)
         }
     }
 
@@ -258,7 +291,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun appVersion(): String {
         return try {
-            packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+            val ctx = requireContext()
+            ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"
         } catch (e: Exception) {
             "?"
         }

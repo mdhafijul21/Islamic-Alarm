@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.hafij.islamicalarm.permissions.PermissionHelper
 import com.hafij.islamicalarm.amal.AmalTrackerActivity
 import com.hafij.islamicalarm.data.AlarmItem
 import com.hafij.islamicalarm.data.AlarmStore
@@ -56,6 +57,15 @@ class MainActivity : AppCompatActivity() {
     private var currentSchedule: PrayerSchedule? = null
     private var countdownTimer: CountDownTimer? = null
     private var pendingPermissionChainNext: (() -> Unit)? = null
+
+    // Start-up permission wizard (asks one permission at a time)
+    private val skippedPermSteps = mutableSetOf<String>()
+    private var permDialog: androidx.appcompat.app.AlertDialog? = null
+    private var autoDetectTried = false
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* the wizard moves on in onResume */ }
 
     private val phoneStatePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -91,6 +101,7 @@ class MainActivity : AppCompatActivity() {
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
         if (fineGranted || coarseGranted) {
+            autoDetectTried = true
             Toast.makeText(this, "📡 লোকেশন অনুমতি পাওয়া গেছে। GPS চেক করা হচ্ছে...", Toast.LENGTH_SHORT).show()
             promptTurnOnGpsAndDetect(showToast = true)
         } else {
@@ -157,7 +168,6 @@ class MainActivity : AppCompatActivity() {
         loadAlarms()
 
         // Check & request runtime permissions on launch (Location, Overlay, Exact Alarm, Battery, Autostart, Phone)
-        checkAndRequestPermissions()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -174,12 +184,14 @@ class MainActivity : AppCompatActivity() {
             "quran" -> binding.bottomNavigation.selectedItemId = R.id.nav_quran
             "tasbih" -> binding.bottomNavigation.selectedItemId = R.id.nav_tasbih
             "duas" -> binding.bottomNavigation.selectedItemId = R.id.nav_duas
+            "settings" -> binding.bottomNavigation.selectedItemId = R.id.nav_settings
         }
         intent?.removeExtra(BottomNavHelper.EXTRA_OPEN_TAB)
     }
 
     override fun onResume() {
         super.onResume()
+        runPermissionWizard()
         updatePrayerTimes()
         loadAlarms()
     }
@@ -354,12 +366,16 @@ class MainActivity : AppCompatActivity() {
                     showFragmentScreen("duas")
                     true
                 }
+                R.id.nav_settings -> {
+                    showFragmentScreen("settings")
+                    true
+                }
                 else -> false
             }
         }
     }
 
-    private val fragmentScreenTags = listOf("quran", "tasbih", "duas")
+    private val fragmentScreenTags = listOf("quran", "tasbih", "duas", "settings")
 
     /** Shows Quran / Tasbih / Dua inside this Activity (no new window = no flicker). */
     private fun showFragmentScreen(tag: String) {
@@ -374,6 +390,7 @@ class MainActivity : AppCompatActivity() {
             target = when (tag) {
                 "quran" -> com.hafij.islamicalarm.quran.QuranFragment()
                 "tasbih" -> com.hafij.islamicalarm.tasbih.TasbihFragment()
+                "settings" -> com.hafij.islamicalarm.settings.SettingsFragment()
                 else -> com.hafij.islamicalarm.duas.DuasFragment()
             }
             tx.add(R.id.fragmentContainer, target, tag)
@@ -978,6 +995,76 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    // ------------------------------------------------------------------
+    // Start-up permission wizard: asks every permission one by one.
+    // ------------------------------------------------------------------
+
+    private fun maybeAutoDetectLocation() {
+        if (autoDetectTried) return
+        autoDetectTried = true
+        if (prefs.getString("selected_district_bn", null) == null) {
+            if (LocationHelper.isLocationEnabled(this)) {
+                autoDetectLocationAndSetPrayerTimes(showToast = false)
+            } else {
+                promptTurnOnGpsAndDetect(showToast = false)
+            }
+        }
+    }
+
+    private fun runPermissionWizard() {
+        if (isFinishing || isDestroyed) return
+        if (permDialog?.isShowing == true) return
+
+        val steps = PermissionHelper.applicableSteps(this)
+
+        if (PermissionHelper.isGranted(this, PermissionHelper.ID_LOCATION)) {
+            maybeAutoDetectLocation()
+        }
+
+        val next = steps.firstOrNull {
+            it.id !in skippedPermSteps && !PermissionHelper.isGranted(this, it.id)
+        } ?: return
+
+        val number = steps.indexOf(next) + 1
+        permDialog = MaterialAlertDialogBuilder(this)
+            .setTitle("অনুমতি " + number + "/" + steps.size + ": " + next.title)
+            .setMessage(next.why + "\n\n" + next.howTo)
+            .setPositiveButton("অনুমতি দিন") { _, _ ->
+                // Remember it so we never loop on the same step in this session.
+                skippedPermSteps.add(next.id)
+                if (next.id == PermissionHelper.ID_AUTOSTART) {
+                    PermissionHelper.markAutostartDone(this)
+                }
+                requestPermissionStep(next.id)
+            }
+            .setNegativeButton("পরে করবো") { _, _ ->
+                skippedPermSteps.add(next.id)
+                if (next.id == PermissionHelper.ID_AUTOSTART) {
+                    PermissionHelper.markAutostartDone(this)
+                }
+                // Post so the current dialog is fully dismissed before the next one.
+                binding.root.post { runPermissionWizard() }
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun requestPermissionStep(id: String) {
+        when (id) {
+            PermissionHelper.ID_LOCATION -> requestLocationPermissionDirect()
+            PermissionHelper.ID_NOTIFICATIONS -> {
+                if (Build.VERSION.SDK_INT >= 33) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    PermissionHelper.openSettings(this, id)
+                }
+            }
+            PermissionHelper.ID_PHONE ->
+                phoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
+            else -> PermissionHelper.openSettings(this, id)
+        }
     }
 
     private fun checkAndRequestPermissions() {
