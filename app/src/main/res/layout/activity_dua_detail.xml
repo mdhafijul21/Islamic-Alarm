@@ -21,6 +21,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false"
+        android:fillViewport="false"
         android:paddingBottom="24dp">
 
         <LinearLayout
@@ -33,6 +34,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
                 app:cardBackgroundColor="@color/dua_surface"
                 app:cardCornerRadius="22dp"
                 app:cardElevation="2dp"
@@ -74,16 +76,29 @@
                         android:background="@color/dua_accent" />
 
                     <TextView
+                        android:id="@+id/tvDetailArabicLabel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:text="আরবি পাঠ"
+                        android:textColor="@color/dua_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
                         android:id="@+id/tvDetailArabic"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="22dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_arabic_verse"
                         android:gravity="end"
-                        android:lineSpacingExtra="9dp"
+                        android:lineSpacingExtra="10dp"
+                        android:padding="18dp"
                         android:text="الْقُرْآنُ الْكَرِيمُ"
-                        android:textColor="#A17B2E"
+                        android:textColor="@color/dua_primary_dark"
+                        android:textDirection="rtl"
                         android:textSize="28sp"
-                        android:textStyle="bold" />
+                        android:fontFamily="serif" />
 
                     <TextView
                         android:id="@+id/tvDetailTransliteration"
@@ -165,7 +180,7 @@
                         android:layout_marginTop="18dp"
                         android:text="পছন্দের তালিকায় রাখুন"
                         android:textColor="@color/dua_primary"
-                        app:backgroundTint="@color/dua_soft_lavender"
+                        app:backgroundTint="@color/dua_soft_green"
                         app:cornerRadius="12dp"
                         app:icon="@android:drawable/btn_star_big_on"
                         app:iconTint="@color/dua_accent" />

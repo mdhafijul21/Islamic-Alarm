@@ -8,7 +8,7 @@ import com.hafij.islamicalarm.databinding.ItemDuaCategoryBinding
 data class DuaCategory(
     val title: String,
     val count: Int,
-    val imageRes: Int
+    val icon: String
 )
 
 class DuaCategoryAdapter(
@@ -41,7 +41,8 @@ class DuaCategoryAdapter(
         fun bind(item: DuaCategory) {
             binding.tvCategoryName.text = item.title
             binding.tvCategoryCount.text = "${item.count}টি এন্ট্রি"
-            binding.ivCategoryImage.setImageResource(item.imageRes)
+            binding.tvCategoryIcon.text = item.icon
+            binding.tvCategoryIcon.contentDescription = item.title
             binding.root.setOnClickListener { onCategoryClick(item.title) }
         }
     }

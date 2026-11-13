@@ -19,20 +19,17 @@
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="104dp">
+            android:layout_height="104dp"
+            android:background="@color/dua_soft_green">
 
-            <ImageView
-                android:id="@+id/ivCategoryImage"
+            <TextView
+                android:id="@+id/tvCategoryIcon"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:contentDescription="ক্যাটাগরির ছবি"
-                android:scaleType="centerCrop"
-                android:src="@drawable/dua_cat_mosque" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="#260D4436" />
+                android:gravity="center"
+                android:text="📿"
+                android:textSize="43sp"
+                android:importantForAccessibility="yes" />
 
             <TextView
                 android:id="@+id/tvCategoryCount"
@@ -43,7 +40,7 @@
                 android:background="@drawable/bg_dua_count"
                 android:paddingHorizontal="9dp"
                 android:paddingVertical="4dp"
-                android:text="০ দোয়া"
+                android:text="০ এন্ট্রি"
                 android:textColor="@color/dua_primary_dark"
                 android:textSize="10sp"
                 android:textStyle="bold" />

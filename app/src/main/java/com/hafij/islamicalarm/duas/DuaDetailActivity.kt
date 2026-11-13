@@ -50,27 +50,41 @@ class DuaDetailActivity : AppCompatActivity() {
         val contentType = intent.getStringExtra(EXTRA_TYPE).orEmpty()
         val url = intent.getStringExtra(EXTRA_URL).orEmpty()
 
-        binding.toolbarDuaDetail.title =
-            if (contentType == "HADITH") "হাদিসের বিস্তারিত" else "দোয়ার বিস্তারিত"
+        binding.toolbarDuaDetail.title = when (contentType) {
+            "HADITH" -> "হাদিসের বিস্তারিত"
+            "GUIDE" -> "আমল নির্দেশিকা"
+            else -> "দোয়ার বিস্তারিত"
+        }
+
         binding.tvDetailTitle.text = title
         binding.tvDetailCategory.text = category
+        setOptional(binding.tvDetailArabicLabel, if (arabic.isBlank()) "" else "আরবি পাঠ")
         setOptional(binding.tvDetailArabic, arabic)
-        setOptional(binding.tvDetailTransliteration, if (transliteration.isBlank()) "" else "উচ্চারণ\n$transliteration")
-        setOptional(binding.tvDetailTranslation, if (translation.isBlank()) "" else "অর্থ / বিস্তারিত\n$translation")
-        setOptional(binding.tvDetailWhen, if (whenToRead.isBlank()) "" else "কখন পড়বেন: $whenToRead")
+        setOptional(
+            binding.tvDetailTransliteration,
+            if (transliteration.isBlank()) "" else "বাংলা উচ্চারণ\n$transliteration"
+        )
+        setOptional(
+            binding.tvDetailTranslation,
+            if (translation.isBlank()) "" else "বাংলা অর্থ / ব্যাখ্যা\n$translation"
+        )
+        setOptional(binding.tvDetailWhen, if (whenToRead.isBlank()) "" else "কখন করবেন: $whenToRead")
         setOptional(binding.tvDetailCount, if (count.isBlank()) "" else "সংখ্যা / পদ্ধতি: $count")
         setOptional(binding.tvDetailVirtue, if (virtue.isBlank()) "" else "ফজিলত / নোট\n$virtue")
         setOptional(binding.tvDetailGrade, if (grade.isBlank()) "" else "বর্ণনার মান: $grade")
-        setOptional(binding.tvDetailReference, if (reference.isBlank()) "" else "রেফারেন্স: $reference")
+        setOptional(binding.tvDetailReference, if (reference.isBlank()) "" else "সূত্র: $reference")
         setOptional(binding.tvDetailUrl, url)
 
         val duaId = intent.getIntExtra(EXTRA_ID, -1)
         val favoritePrefs = getSharedPreferences("dua_favorites", MODE_PRIVATE)
         val savedIds = favoritePrefs.getStringSet("ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+
         fun refreshFavoriteLabel() {
             binding.btnDetailFavorite.text =
-                if (duaId.toString() in savedIds) "পছন্দের তালিকা থেকে সরান" else "পছন্দের তালিকায় রাখুন"
+                if (duaId.toString() in savedIds) "পছন্দের তালিকা থেকে সরান"
+                else "পছন্দের তালিকায় রাখুন"
         }
+
         refreshFavoriteLabel()
         binding.btnDetailFavorite.setOnClickListener {
             if (duaId >= 0) {
@@ -80,7 +94,8 @@ class DuaDetailActivity : AppCompatActivity() {
                 refreshFavoriteLabel()
                 Toast.makeText(
                     this,
-                    if (duaId.toString() in savedIds) "পছন্দের তালিকায় যোগ হয়েছে" else "পছন্দের তালিকা থেকে সরানো হয়েছে",
+                    if (duaId.toString() in savedIds) "পছন্দের তালিকায় যোগ হয়েছে"
+                    else "পছন্দের তালিকা থেকে সরানো হয়েছে",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -88,14 +103,14 @@ class DuaDetailActivity : AppCompatActivity() {
 
         val shareText = buildString {
             append(title).append("\n").append(category).append("\n\n")
-            if (arabic.isNotBlank()) append(arabic).append("\n\n")
+            if (arabic.isNotBlank()) append("আরবি: ").append(arabic).append("\n\n")
             if (transliteration.isNotBlank()) append("উচ্চারণ: ").append(transliteration).append("\n")
             if (translation.isNotBlank()) append("অর্থ: ").append(translation).append("\n")
             if (whenToRead.isNotBlank()) append("কখন: ").append(whenToRead).append("\n")
             if (count.isNotBlank()) append("সংখ্যা / পদ্ধতি: ").append(count).append("\n")
-            if (virtue.isNotBlank()) append("ফজিলত: ").append(virtue).append("\n")
-            if (grade.isNotBlank()) append("মান: ").append(grade).append("\n")
-            if (reference.isNotBlank()) append("রেফারেন্স: ").append(reference).append("\n")
+            if (virtue.isNotBlank()) append("ফজিলত / নোট: ").append(virtue).append("\n")
+            if (grade.isNotBlank()) append("বর্ণনার মান: ").append(grade).append("\n")
+            if (reference.isNotBlank()) append("সূত্র: ").append(reference).append("\n")
             if (url.isNotBlank()) append(url).append("\n")
             append("\n— Islamic Alarm")
         }
@@ -105,6 +120,7 @@ class DuaDetailActivity : AppCompatActivity() {
             clipboard.setPrimaryClip(ClipData.newPlainText("Dua", shareText))
             Toast.makeText(this, "কপি করা হয়েছে", Toast.LENGTH_SHORT).show()
         }
+
         binding.btnDetailShare.setOnClickListener {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"

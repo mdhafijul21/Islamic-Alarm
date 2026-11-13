@@ -2,12 +2,12 @@ package com.hafij.islamicalarm.duas
 
 import android.content.Context
 import android.os.Bundle
-import android.view.View
 import android.text.Editable
 import android.text.TextWatcher
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.hafij.islamicalarm.R
@@ -27,7 +27,6 @@ class DuasFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Dua page uses its own light theme
         val themed = inflater.cloneInContext(
             android.view.ContextThemeWrapper(requireContext(), R.style.Theme_IslamicAlarm_Duas)
         )
@@ -35,12 +34,22 @@ class DuasFragment : Fragment() {
         return binding.root
     }
 
-    /** Returns true if the back press was used inside the Dua page (list -> categories). */
+    /**
+     * Back hierarchy:
+     * detail Activity -> previous dua list (handled by Android finish),
+     * dua list -> category grid,
+     * category grid -> app home (handled by MainActivity).
+     */
     fun handleBack(): Boolean {
+        if (!::binding.isInitialized) return false
         if (binding.rvDuas.visibility == View.VISIBLE) {
             selectedCategory = DuaData.CATEGORY_ALL
-            if (binding.etSearchDua.text.isNotEmpty()) binding.etSearchDua.setText("")
-            showCategories()
+            searchQuery = ""
+            if (binding.etSearchDua.text.isNotEmpty()) {
+                binding.etSearchDua.setText("")
+            } else {
+                showCategories()
+            }
             return true
         }
         return false
@@ -48,6 +57,7 @@ class DuasFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         binding.toolbarDuas.setNavigationOnClickListener {
             if (!handleBack()) {
                 (activity as? com.hafij.islamicalarm.MainActivity)?.goHome()
@@ -62,12 +72,18 @@ class DuasFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (::categoryAdapter.isInitialized) setupCategories()
+        if (::categoryAdapter.isInitialized) {
+            setupCategories()
+            if (binding.rvDuas.visibility == View.VISIBLE) filterList()
+        }
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
-        if (!hidden && ::categoryAdapter.isInitialized) setupCategories()
+        if (!hidden && ::categoryAdapter.isInitialized) {
+            setupCategories()
+            if (binding.rvDuas.visibility == View.VISIBLE) filterList()
+        }
     }
 
     private fun setupRecyclerViews() {
@@ -92,14 +108,20 @@ class DuasFragment : Fragment() {
             } else {
                 allDuas.count { it.category == category }
             }
-            DuaCategory(category, count, imageForCategory(category))
+            DuaCategory(category, count, DuaCategoryArtwork.iconFor(category))
         }.toMutableList()
 
-        val favoriteIds = requireContext().getSharedPreferences("dua_favorites", Context.MODE_PRIVATE)
+        val favoriteIds = requireContext()
+            .getSharedPreferences("dua_favorites", Context.MODE_PRIVATE)
             .getStringSet("ids", emptySet()) ?: emptySet()
+
         categories.add(
             1,
-            DuaCategory(favoritesCategory, favoriteIds.size, R.drawable.dua_cat_quran)
+            DuaCategory(
+                favoritesCategory,
+                favoriteIds.count { id -> allDuas.any { it.id.toString() == id } },
+                DuaCategoryArtwork.iconFor(favoritesCategory)
+            )
         )
         categoryAdapter.submitList(categories)
     }
@@ -110,15 +132,14 @@ class DuasFragment : Fragment() {
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 searchQuery = s?.toString()?.trim().orEmpty()
-                if (searchQuery.isNotEmpty() && binding.rvDuas.visibility != android.view.View.VISIBLE) {
+                if (searchQuery.isNotEmpty() && binding.rvDuas.visibility != View.VISIBLE) {
                     selectedCategory = DuaData.CATEGORY_ALL
                     showDuaList()
-                    filterList()
                 } else if (searchQuery.isEmpty() && selectedCategory == DuaData.CATEGORY_ALL) {
                     showCategories()
-                } else {
-                    filterList()
+                    return
                 }
+                filterList()
             }
 
             override fun afterTextChanged(s: Editable?) = Unit
@@ -126,31 +147,33 @@ class DuasFragment : Fragment() {
     }
 
     private fun showCategories() {
-        binding.rvDuaCategories.visibility = android.view.View.VISIBLE
-        binding.rvDuas.visibility = android.view.View.GONE
-        binding.tvDuaEmpty.visibility = android.view.View.GONE
-        binding.tvDuaSectionTitle.text = "বিষয় অনুযায়ী দোয়া"
+        binding.rvDuaCategories.visibility = View.VISIBLE
+        binding.rvDuas.visibility = View.GONE
+        binding.tvDuaEmpty.visibility = View.GONE
+        binding.tvDuaSectionTitle.text = "বিষয় অনুযায়ী দোয়া ও আমল"
         binding.tvDuaSectionSubtitle.text = "আপনার প্রয়োজনীয় বিভাগটি বেছে নিন"
-        binding.toolbarDuas.title = "মাসনুন দোয়া ও হাদিস"
-        binding.etSearchDua.setHint("দোয়া বা বিষয় খুঁজুন...")
+        binding.toolbarDuas.title = "মাসনুন দোয়া ও আমল"
+        binding.etSearchDua.hint = "দোয়া বা বিষয় খুঁজুন..."
         binding.duaHomeScroll.smoothScrollTo(0, 0)
     }
 
     private fun showDuaList() {
-        binding.rvDuaCategories.visibility = android.view.View.GONE
-        binding.rvDuas.visibility = android.view.View.VISIBLE
-        binding.tvDuaEmpty.visibility = android.view.View.GONE
+        binding.rvDuaCategories.visibility = View.GONE
+        binding.rvDuas.visibility = View.VISIBLE
+        binding.tvDuaEmpty.visibility = View.GONE
         binding.tvDuaSectionTitle.text =
-            if (selectedCategory == DuaData.CATEGORY_ALL) "সব দোয়া ও হাদিস" else selectedCategory
+            if (selectedCategory == DuaData.CATEGORY_ALL) "সব দোয়া ও আমল" else selectedCategory
         binding.tvDuaSectionSubtitle.text = "যেকোনো এন্ট্রিতে চাপ দিয়ে বিস্তারিত পড়ুন"
         binding.toolbarDuas.title =
-            if (selectedCategory == DuaData.CATEGORY_ALL) "সব দোয়া ও হাদিস" else selectedCategory
+            if (selectedCategory == DuaData.CATEGORY_ALL) "সব দোয়া ও আমল" else selectedCategory
         binding.duaHomeScroll.smoothScrollTo(0, 0)
     }
 
     private fun filterList() {
-        val favoriteIds = requireContext().getSharedPreferences("dua_favorites", Context.MODE_PRIVATE)
+        val favoriteIds = requireContext()
+            .getSharedPreferences("dua_favorites", Context.MODE_PRIVATE)
             .getStringSet("ids", emptySet()) ?: emptySet()
+
         val filtered = DuaData.getDuasAndHadiths.filter { item ->
             val matchesCategory = when (selectedCategory) {
                 DuaData.CATEGORY_ALL -> true
@@ -166,32 +189,13 @@ class DuasFragment : Fragment() {
                 item.reference.contains(searchQuery, ignoreCase = true)
             matchesCategory && matchesSearch
         }
+
         duaAdapter.submitList(filtered)
-        binding.tvDuaEmpty.visibility =
-            if (filtered.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        binding.tvDuaEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
         binding.tvDuaEmpty.text = when {
             selectedCategory == favoritesCategory && filtered.isEmpty() ->
                 "এখনো কোনো দোয়া পছন্দের তালিকায় যোগ করা হয়নি।"
             else -> "কোনো দোয়া পাওয়া যায়নি। অন্য শব্দ দিয়ে খুঁজে দেখুন।"
         }
-    }
-
-    private fun imageForCategory(category: String): Int = when (category) {
-        DuaData.CATEGORY_ALL,
-        DuaData.CATEGORY_MORNING_EVENING, DuaData.CATEGORY_AFTER_FARD,
-        DuaData.CATEGORY_MOSQUE, DuaData.CATEGORY_FRIDAY -> R.drawable.dua_cat_mosque
-
-        DuaData.CATEGORY_RABBANA, DuaData.CATEGORY_PROPHETS,
-        DuaData.CATEGORY_TAWBAH, DuaData.CATEGORY_HADITH,
-        DuaData.CATEGORY_PARENTS, DuaData.CATEGORY_FAMILY -> R.drawable.dua_cat_quran
-
-        DuaData.CATEGORY_SLEEP, DuaData.CATEGORY_NAFL,
-        DuaData.CATEGORY_TAHAJJUD, DuaData.CATEGORY_ISTIKHARA,
-        DuaData.CATEGORY_IN_PRAYER, DuaData.CATEGORY_WUDU -> R.drawable.dua_cat_prayer
-
-        DuaData.CATEGORY_FASTING, DuaData.CATEGORY_RAMADAN,
-        DuaData.CATEGORY_HAJJ, DuaData.CATEGORY_CHARITY -> R.drawable.dua_cat_ramadan
-
-        else -> R.drawable.dua_cat_prayer
     }
 }
