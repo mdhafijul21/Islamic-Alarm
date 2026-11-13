@@ -90,8 +90,17 @@ class QuranFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.toolbarQuran.setNavigationOnClickListener {
-            (activity as? com.hafij.islamicalarm.MainActivity)?.goHome()
+            showDashboard()
         }
+
+        binding.cardDashboardSurah.setOnClickListener { showBrowser(0) }
+        binding.cardDashboardPara.setOnClickListener { showBrowser(1) }
+        binding.cardDashboardSearch.setOnClickListener {
+            showBrowser(0)
+            binding.etSearchSurah.requestFocus()
+        }
+        binding.cardDashboardLatest.setOnClickListener { openLastRead() }
+        binding.btnDashboardContinue.setOnClickListener { openLastRead() }
 
         initTts()
 
@@ -120,16 +129,31 @@ class QuranFragment : Fragment() {
 
     private fun setupBookmarkCard() {
         updateLastReadCard()
-        val openLastRead: () -> Unit = {
-            val prefs = requireContext().getSharedPreferences("IslamicAlarmQuranPrefs", Context.MODE_PRIVATE)
-            val lastSurahId = prefs.getInt("last_read_surah_id", 1)
-            val intent = Intent(requireContext(), SurahDetailActivity::class.java).apply {
-                putExtra("EXTRA_SURAH_ID", lastSurahId)
-            }
-            startActivity(intent)
-        }
         binding.btnContinueLastRead.setOnClickListener { openLastRead() }
         binding.cardLastRead.setOnClickListener { openLastRead() }
+    }
+
+    private fun openLastRead() {
+        val prefs = requireContext().getSharedPreferences("IslamicAlarmQuranPrefs", Context.MODE_PRIVATE)
+        val lastSurahId = prefs.getInt("last_read_surah_id", 1)
+        val intent = Intent(requireContext(), SurahDetailActivity::class.java).apply {
+            putExtra("EXTRA_SURAH_ID", lastSurahId)
+        }
+        startActivity(intent)
+    }
+
+    private fun showDashboard() {
+        binding.layoutQuranDashboard.visibility = View.VISIBLE
+        binding.appBarLayout.visibility = View.GONE
+        binding.layoutQuranBrowser.visibility = View.GONE
+        updateLastReadCard()
+    }
+
+    private fun showBrowser(tabIndex: Int) {
+        binding.layoutQuranDashboard.visibility = View.GONE
+        binding.appBarLayout.visibility = View.VISIBLE
+        binding.layoutQuranBrowser.visibility = View.VISIBLE
+        binding.tabLayout.getTabAt(tabIndex)?.select()
     }
 
     private fun updateLastReadCard() {
@@ -137,6 +161,14 @@ class QuranFragment : Fragment() {
         val lastSurahId = prefs.getInt("last_read_surah_id", 1)
         val surah = QuranRepository.surahList.find { it.id == lastSurahId } ?: QuranRepository.surahList.first()
         binding.tvLastReadTitle.text = "সুরা ${surah.nameBangla} (${surah.nameArabic}) • ${toBengaliNumber(surah.totalAyahs)} আয়াত • ${surah.revelationType}"
+        binding.tvDashboardLastReadTitle.text = "সুরা ${surah.nameBangla}"
+        val lastPage = prefs.getInt("last_read_page", surah.startPage).coerceIn(1, 604)
+        val juz = QuranRepository.getJuzForPage(lastPage)
+        binding.tvDashboardLastReadMeta.text =
+            "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(lastPage)}"
+        binding.pbQuranProgress.progress = surah.id
+        binding.tvQuranProgressPercent.text =
+            "${toBengaliNumber((surah.id * 100 / 114).coerceAtLeast(1))}%"
     }
 
     private fun setupSurahRecyclerView() {
