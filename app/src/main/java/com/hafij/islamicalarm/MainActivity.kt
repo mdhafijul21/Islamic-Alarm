@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingPermissionChainNext: (() -> Unit)? = null
 
     // Start-up permission wizard (asks one permission at a time)
+    private lateinit var restrictController: com.hafij.islamicalarm.restrict.RestrictModeController
     private val skippedPermSteps = mutableSetOf<String>()
     private var permDialog: androidx.appcompat.app.AlertDialog? = null
     private var autoDetectTried = false
@@ -135,6 +136,8 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupPrayerTimesHub()
         setupBottomNavigation()
+        restrictController = com.hafij.islamicalarm.restrict.RestrictModeController(this, binding)
+        restrictController.setup()
         handleOpenTabIntent(intent)
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
@@ -192,6 +195,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         runPermissionWizard()
+        if (::restrictController.isInitialized) restrictController.onScreenShown()
         updatePrayerTimes()
         loadAlarms()
     }
@@ -421,6 +425,7 @@ class MainActivity : AppCompatActivity() {
         binding.layoutAlarmContainer.visibility = View.VISIBLE
         updatePrayerTimes()
         loadAlarms()
+        if (::restrictController.isInitialized) restrictController.onScreenShown()
     }
 
     private fun showPrayerTimesScreen() {

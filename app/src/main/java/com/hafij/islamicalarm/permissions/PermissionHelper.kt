@@ -14,6 +14,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.hafij.islamicalarm.restrict.RestrictAccessibilityService
 import java.util.Locale
 
 data class PermStep(
@@ -38,6 +39,7 @@ object PermissionHelper {
     const val ID_BATTERY = "battery"
     const val ID_DND = "dnd"
     const val ID_PHONE = "phone"
+    const val ID_ACCESSIBILITY = "accessibility"
     const val ID_AUTOSTART = "autostart"
     const val ID_SCREEN_PIN = "screen_pin"
 
@@ -90,6 +92,12 @@ object PermissionHelper {
             "ডু নট ডিস্টার্ব অ্যাক্সেস",
             "এলার্মের সময় ফোন পুরো সাইলেন্ট করা ও পরে আগের অবস্থায় ফেরানোর (অটো সাইলেন্ট) জন্য। না দিলে ফোন শুধু ভাইব্রেট মোডে যাবে।",
             "সেটিংসে অ্যাপ খুঁজে সুইচ চালু করুন, তারপর ব্যাক চেপে অ্যাপে ফিরুন।"
+        ),
+        PermStep(
+            ID_ACCESSIBILITY,
+            "অ্যাক্সেসিবিলিটি সার্ভিস (রেস্ট্রিক্ট মোড)",
+            "রেস্ট্রিক্ট মোডে বাছাই করা অ্যাপ বা ব্রাউজার খোলা হলে সেটা ধরে বিরতির স্ক্রিন দেখানোর জন্য। এটি স্ক্রিনের লেখা বা পাসওয়ার্ড পড়ে না, শুধু কোন অ্যাপ সামনে এসেছে তার নাম দেখে।",
+            "খোলা পেজে Islamic Alarm বেছে সুইচ চালু করুন ও সতর্কবার্তায় অনুমতি দিন। সুইচ ধূসর হলে: Settings > Apps > Islamic Alarm > উপরের ⋮ মেনু > 'Allow restricted settings' দিয়ে আবার চেষ্টা করুন।"
         ),
         PermStep(
             ID_PHONE,
@@ -154,10 +162,25 @@ object PermissionHelper {
             (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .isNotificationPolicyAccessGranted
         ID_PHONE -> hasPerm(ctx, Manifest.permission.READ_PHONE_STATE)
+        ID_ACCESSIBILITY -> isAccessibilityEnabled(ctx)
         // Cannot be detected: treated as "done" once the user was shown the screen.
         ID_AUTOSTART ->
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_AUTOSTART_DONE, false)
         else -> true
+    }
+
+    /** True when the restrict-mode accessibility service is switched on in system settings. */
+    fun isAccessibilityEnabled(ctx: Context): Boolean {
+        return try {
+            val enabled = Settings.Secure.getString(
+                ctx.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            val me = ComponentName(ctx, RestrictAccessibilityService::class.java)
+            enabled.split(':').any { ComponentName.unflattenFromString(it) == me }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun markAutostartDone(ctx: Context) {
@@ -210,6 +233,7 @@ object PermissionHelper {
                 intents.add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             }
             ID_DND -> intents.add(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+            ID_ACCESSIBILITY -> intents.add(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             ID_AUTOSTART -> intents.addAll(autostartIntents())
             ID_SCREEN_PIN -> intents.add(Intent(Settings.ACTION_SECURITY_SETTINGS))
             else -> {}

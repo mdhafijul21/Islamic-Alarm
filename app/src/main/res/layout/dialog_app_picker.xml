@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="8dp">
+
+    <EditText
+        android:id="@+id/etAppSearch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="অ্যাপ খুঁজুন..."
+        android:inputType="text"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/tvAppsLoading"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="অ্যাপের তালিকা লোড হচ্ছে..." />
+
+    <ListView
+        android:id="@+id/lvApps"
+        android:layout_width="match_parent"
+        android:layout_height="360dp" />
+
+</LinearLayout>
