@@ -23,7 +23,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.hafij.islamicalarm.permissions.PermissionHelper
 import com.hafij.islamicalarm.amal.AmalTrackerActivity
 import com.hafij.islamicalarm.data.AlarmItem
 import com.hafij.islamicalarm.data.AlarmStore
@@ -57,18 +56,6 @@ class MainActivity : AppCompatActivity() {
     private var currentSchedule: PrayerSchedule? = null
     private var countdownTimer: CountDownTimer? = null
     private var pendingPermissionChainNext: (() -> Unit)? = null
-
-    // Permission wizard state (asks one permission at a time)
-    private val skippedPermSteps = mutableSetOf<String>()
-    private var permDialog: androidx.appcompat.app.AlertDialog? = null
-    private var autoDetectTried = false
-
-    private class NavTab(val pill: View, val label: android.widget.TextView)
-    private lateinit var navTabs: Map<String, NavTab>
-
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { /* the wizard moves on in onResume */ }
 
     private val phoneStatePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -104,7 +91,6 @@ class MainActivity : AppCompatActivity() {
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
         if (fineGranted || coarseGranted) {
-            autoDetectTried = true
             Toast.makeText(this, "📡 লোকেশন অনুমতি পাওয়া গেছে। GPS চেক করা হচ্ছে...", Toast.LENGTH_SHORT).show()
             promptTurnOnGpsAndDetect(showToast = true)
         } else {
@@ -138,12 +124,18 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupPrayerTimesHub()
         setupBottomNavigation()
+        handleOpenTabIntent(intent)
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (binding.layoutAlarmContainer.visibility == View.VISIBLE) {
-                    selectNavTab("home")
-                    showPrayerTimesScreen()
+                if (binding.fragmentContainer.visibility == View.VISIBLE) {
+                    val duas = supportFragmentManager.findFragmentByTag("duas")
+                            as? com.hafij.islamicalarm.duas.DuasFragment
+                    if (duas == null || duas.isHidden || !duas.handleBack()) {
+                        binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
+                    }
+                } else if (binding.layoutAlarmContainer.visibility == View.VISIBLE) {
+                    binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
                 } else {
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
@@ -165,11 +157,29 @@ class MainActivity : AppCompatActivity() {
         loadAlarms()
 
         // Check & request runtime permissions on launch (Location, Overlay, Exact Alarm, Battery, Autostart, Phone)
+        checkAndRequestPermissions()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOpenTabIntent(intent)
+    }
+
+    // Quran / Tasbih / Duas pages send the user back here with the tab to show
+    private fun handleOpenTabIntent(intent: Intent?) {
+        when (intent?.getStringExtra(BottomNavHelper.EXTRA_OPEN_TAB)) {
+            BottomNavHelper.TAB_HOME -> binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
+            BottomNavHelper.TAB_ALARM -> binding.bottomNavigation.selectedItemId = R.id.nav_alarm
+            "quran" -> binding.bottomNavigation.selectedItemId = R.id.nav_quran
+            "tasbih" -> binding.bottomNavigation.selectedItemId = R.id.nav_tasbih
+            "duas" -> binding.bottomNavigation.selectedItemId = R.id.nav_duas
+        }
+        intent?.removeExtra(BottomNavHelper.EXTRA_OPEN_TAB)
     }
 
     override fun onResume() {
         super.onResume()
-        runPermissionWizard()
         updatePrayerTimes()
         loadAlarms()
     }
@@ -318,44 +328,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupBottomNavigation() {
-        navTabs = mapOf(
-            "home" to NavTab(binding.navPillHome, binding.navLabelHome),
-            "alarm" to NavTab(binding.navPillAlarm, binding.navLabelAlarm),
-            "quran" to NavTab(binding.navPillQuran, binding.navLabelQuran),
-            "tasbih" to NavTab(binding.navPillTasbih, binding.navLabelTasbih),
-            "duas" to NavTab(binding.navPillDuas, binding.navLabelDuas),
-            "settings" to NavTab(binding.navPillSettings, binding.navLabelSettings)
-        )
-
-        binding.navItemHome.setOnClickListener {
-            selectNavTab("home")
-            showPrayerTimesScreen()
-        }
-        binding.navItemAlarm.setOnClickListener {
-            selectNavTab("alarm")
-            showAlarmScreen()
-        }
-        binding.navItemQuran.setOnClickListener { openQuranActivity() }
-        binding.navItemTasbih.setOnClickListener { openTasbihActivity() }
-        binding.navItemDuas.setOnClickListener { openDuasActivity() }
-        binding.navItemSettings.setOnClickListener { openSettingsActivity() }
-
-        selectNavTab("home")
+        // Set default selection to Home: Prayer Times & Alarms
+        binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
         showPrayerTimesScreen()
+
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_prayer_times -> {
+                    showPrayerTimesScreen()
+                    true
+                }
+                R.id.nav_alarm -> {
+                    showAlarmScreen()
+                    true
+                }
+                R.id.nav_quran -> {
+                    showFragmentScreen("quran")
+                    true
+                }
+                R.id.nav_tasbih -> {
+                    showFragmentScreen("tasbih")
+                    true
+                }
+                R.id.nav_duas -> {
+                    showFragmentScreen("duas")
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
-    private fun selectNavTab(key: String) {
-        for ((tabKey, tab) in navTabs) {
-            val selected = tabKey == key
-            tab.pill.setBackgroundResource(if (selected) R.drawable.bg_nav_pill else 0)
-            tab.label.setTypeface(
-                null,
-                if (selected) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
-            )
+    private val fragmentScreenTags = listOf("quran", "tasbih", "duas")
+
+    /** Shows Quran / Tasbih / Dua inside this Activity (no new window = no flicker). */
+    private fun showFragmentScreen(tag: String) {
+        binding.layoutPrayerTimesContainer.visibility = View.GONE
+        binding.layoutAlarmContainer.visibility = View.GONE
+        binding.fragmentContainer.visibility = View.VISIBLE
+
+        val fm = supportFragmentManager
+        val tx = fm.beginTransaction().setReorderingAllowed(true)
+        var target = fm.findFragmentByTag(tag)
+        if (target == null) {
+            target = when (tag) {
+                "quran" -> com.hafij.islamicalarm.quran.QuranFragment()
+                "tasbih" -> com.hafij.islamicalarm.tasbih.TasbihFragment()
+                else -> com.hafij.islamicalarm.duas.DuasFragment()
+            }
+            tx.add(R.id.fragmentContainer, target, tag)
         }
+        for (t in fragmentScreenTags) {
+            if (t != tag) fm.findFragmentByTag(t)?.let { tx.hide(it) }
+        }
+        tx.show(target)
+        tx.commitAllowingStateLoss()
+    }
+
+    private fun hideFragmentScreens() {
+        binding.fragmentContainer.visibility = View.GONE
+        val fm = supportFragmentManager
+        val tx = fm.beginTransaction().setReorderingAllowed(true)
+        for (t in fragmentScreenTags) fm.findFragmentByTag(t)?.let { tx.hide(it) }
+        tx.commitAllowingStateLoss()
+    }
+
+    /** Called by the Quran / Tasbih / Dua pages' back arrow. */
+    fun goHome() {
+        binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
     }
 
     private fun showAlarmScreen() {
+        hideFragmentScreens()
         binding.layoutPrayerTimesContainer.visibility = View.GONE
         binding.layoutAlarmContainer.visibility = View.VISIBLE
         updatePrayerTimes()
@@ -363,6 +407,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPrayerTimesScreen() {
+        hideFragmentScreens()
         binding.layoutAlarmContainer.visibility = View.GONE
         binding.layoutPrayerTimesContainer.visibility = View.VISIBLE
         binding.tvHeaderTitle.text = "নামাজের সময়সূচী"
@@ -1152,96 +1197,6 @@ class MainActivity : AppCompatActivity() {
         ) {
             phoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
         }
-    }
-
-    // ------------------------------------------------------------------
-    // Start-up permission wizard: asks every permission one by one.
-    // ------------------------------------------------------------------
-
-    private fun maybeAutoDetectLocation() {
-        if (autoDetectTried) return
-        autoDetectTried = true
-        if (prefs.getString("selected_district_bn", null) == null) {
-            if (LocationHelper.isLocationEnabled(this)) {
-                autoDetectLocationAndSetPrayerTimes(showToast = false)
-            } else {
-                promptTurnOnGpsAndDetect(showToast = false)
-            }
-        }
-    }
-
-    private fun runPermissionWizard() {
-        if (isFinishing || isDestroyed) return
-        if (permDialog?.isShowing == true) return
-
-        val steps = PermissionHelper.applicableSteps(this)
-
-        if (PermissionHelper.isGranted(this, PermissionHelper.ID_LOCATION)) {
-            maybeAutoDetectLocation()
-        }
-
-        val next = steps.firstOrNull {
-            it.id !in skippedPermSteps && !PermissionHelper.isGranted(this, it.id)
-        } ?: return
-
-        val number = steps.indexOf(next) + 1
-        permDialog = MaterialAlertDialogBuilder(this)
-            .setTitle("অনুমতি " + number + "/" + steps.size + ": " + next.title)
-            .setMessage(next.why + "\n\n" + next.howTo)
-            .setPositiveButton("অনুমতি দিন") { _, _ ->
-                // Remember it so we never loop on the same step in this session.
-                skippedPermSteps.add(next.id)
-                if (next.id == PermissionHelper.ID_AUTOSTART) {
-                    PermissionHelper.markAutostartDone(this)
-                }
-                requestPermissionStep(next.id)
-            }
-            .setNegativeButton("পরে করবো") { _, _ ->
-                skippedPermSteps.add(next.id)
-                if (next.id == PermissionHelper.ID_AUTOSTART) {
-                    PermissionHelper.markAutostartDone(this)
-                }
-                // Post so the current dialog is fully dismissed before the next one.
-                binding.root.post { runPermissionWizard() }
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun requestPermissionStep(id: String) {
-        when (id) {
-            PermissionHelper.ID_LOCATION -> requestLocationPermissionDirect()
-            PermissionHelper.ID_NOTIFICATIONS -> {
-                if (Build.VERSION.SDK_INT >= 33) {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    PermissionHelper.openSettings(this, id)
-                }
-            }
-            PermissionHelper.ID_PHONE ->
-                phoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
-            else -> PermissionHelper.openSettings(this, id)
-        }
-    }
-
-    private fun openSettingsActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.settings.SettingsActivity::class.java)
-        startActivity(intent)
-    }
-
-    private fun openQuranActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.quran.QuranActivity::class.java)
-        startActivity(intent)
-    }
-
-    private fun openTasbihActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.tasbih.TasbihActivity::class.java)
-        startActivity(intent)
-    }
-
-    private fun openDuasActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.duas.DuasActivity::class.java)
-        startActivity(intent)
     }
 
     private fun openLibraryActivity() {
