@@ -327,7 +327,8 @@ object DuaData {
         val fixed = DuaFixes.items
         val fixedIds = fixed.map { it.id }.toSet()
         (baseDuas.filter { it.id !in fixedIds } + fixed +
-            DuaMore1.items + DuaMore2.items + DuaMore3.items)
+            DuaMore1.items + DuaMore2.items + DuaMore3.items +
+            DuaMore4.items + DuaMore5.items)
             .sortedWith(compareBy({ getCategories.indexOf(it.category) }, { it.id }))
     }
 }
