@@ -70,13 +70,6 @@ class LockScreenActivity : AppCompatActivity() {
         // 2. Hide Status Bar and Navigation Bar (Immersive Sticky Mode)
         hideSystemUI()
 
-        // Enable Screen Pinning / Lock Task mode if supported/available
-        try {
-            startLockTask()
-        } catch (e: Exception) {
-            // Non-kiosk or standard mode fallback
-        }
-
         // 3. Disable Back Button Completely (Strict Hard Lock)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -88,6 +81,18 @@ class LockScreenActivity : AppCompatActivity() {
 
         // 4. Initialize or Resume Timer and Verify Alarm Validity
         initOrResumeLockTimer(intent)
+
+        // A stale relaunch with no active session has nothing to lock: it already finished itself.
+        if (remainingTimeMillis <= 0L) {
+            return
+        }
+
+        // Enable Screen Pinning / Lock Task mode if supported/available
+        try {
+            startLockTask()
+        } catch (e: Exception) {
+            // Non-kiosk or standard mode fallback
+        }
 
         // 5. Acquire WakeLock
         acquireWakeLock()
@@ -125,10 +130,11 @@ class LockScreenActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
         val savedAlarmId = prefs.getString("active_alarm_id", null)
         val intentAlarmId = intent.getStringExtra("ALARM_ID")
-        val currentAlarmId = intentAlarmId ?: savedAlarmId ?: ""
 
         val now = System.currentTimeMillis()
-        var endTime = prefs.getLong("active_end_time", 0L)
+        val savedEnd = prefs.getLong("active_end_time", 0L)
+        val hasActiveSession = !savedAlarmId.isNullOrEmpty() && savedEnd > now
+
         val label = intent.getStringExtra("LABEL")
             ?: prefs.getString("active_label", null)
             ?: ""
@@ -140,17 +146,25 @@ class LockScreenActivity : AppCompatActivity() {
             binding.tvLockAlarmLabel.visibility = View.GONE
         }
 
-        if (endTime > now && savedAlarmId == currentAlarmId) {
-            // Continuation of active timer
-            remainingTimeMillis = endTime - now
-        } else {
-            // New lock screen session
-            val durationMinutes = intent.getIntExtra("LOCK_DURATION_MINUTES", 15)
+        if (hasActiveSession && (intentAlarmId == null || intentAlarmId == savedAlarmId)) {
+            // Continuation of the running session (relaunch / resume): never changes the end time.
+            remainingTimeMillis = savedEnd - now
+        } else if (intentAlarmId != null) {
+            // Explicit request to start a session (real alarm or test button).
+            val fromAlarm = intent.getBooleanExtra("FROM_ALARM", false)
+            if (fromAlarm && wasRecentlyFinished(intentAlarmId, now)) {
+                // Late duplicate delivery (e.g. the full-screen notification) of a session that already ended.
+                remainingTimeMillis = 0L
+                finish()
+                return
+            }
+
+            val durationMinutes = intent.getIntExtra("LOCK_DURATION_MINUTES", 15).coerceAtLeast(1)
             remainingTimeMillis = durationMinutes * 60 * 1000L
-            endTime = now + remainingTimeMillis
+            val endTime = now + remainingTimeMillis
 
             prefs.edit()
-                .putString("active_alarm_id", currentAlarmId)
+                .putString("active_alarm_id", intentAlarmId)
                 .putLong("active_end_time", endTime)
                 .putString("active_label", label)
                 .apply()
@@ -162,6 +176,12 @@ class LockScreenActivity : AppCompatActivity() {
             if (textToSpeech == null) {
                 initTextToSpeech(label)
             }
+        } else {
+            // A relaunch without any extras and no active session. It must not start a new lock
+            // (this used to create an extra 15 minute lock after the real one had ended).
+            remainingTimeMillis = 0L
+            finish()
+            return
         }
 
         if (remainingTimeMillis <= 0) {
@@ -170,6 +190,12 @@ class LockScreenActivity : AppCompatActivity() {
         }
 
         startCountdown(remainingTimeMillis)
+    }
+
+    private fun wasRecentlyFinished(alarmId: String, now: Long): Boolean {
+        val history = getSharedPreferences("IslamicAlarmLockHistory", Context.MODE_PRIVATE)
+        return history.getString("last_id", null) == alarmId &&
+            now - history.getLong("last_finish", 0L) < 120_000L
     }
 
     private fun playAlarmSound() {
@@ -258,23 +284,7 @@ class LockScreenActivity : AppCompatActivity() {
                     "নামাজের সময় হয়েছে, নামাজে যান।"
                 }
 
-                textToSpeech?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {}
-                    override fun onDone(utteranceId: String?) {
-                        if (remainingTimeMillis > 0 && !isFinishing) {
-                            handler.postDelayed({
-                                try {
-                                    textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_FLUSH, null, "IslamicAlarmTTS_Loop")
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }, 1500)
-                        }
-                    }
-                    override fun onError(utteranceId: String?) {}
-                })
-
-                textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_FLUSH, null, "IslamicAlarmTTS_Loop")
+                textToSpeech?.speak(speechMsg, TextToSpeech.QUEUE_FLUSH, null, "IslamicAlarmTTS_Once")
             }
         }
     }
@@ -428,6 +438,13 @@ class LockScreenActivity : AppCompatActivity() {
     private fun releaseLockAndFinish() {
         remainingTimeMillis = 0L
         val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
+        val endedId = prefs.getString("active_alarm_id", null)
+        if (!endedId.isNullOrEmpty()) {
+            getSharedPreferences("IslamicAlarmLockHistory", Context.MODE_PRIVATE).edit()
+                .putString("last_id", endedId)
+                .putLong("last_finish", System.currentTimeMillis())
+                .apply()
+        }
         prefs.edit().clear().apply()
 
         try {

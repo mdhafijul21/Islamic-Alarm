@@ -44,6 +44,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 putExtra("ALARM_ID", alarm.id)
                 putExtra("LOCK_DURATION_MINUTES", alarm.lockDurationMinutes)
                 putExtra("LABEL", alarm.label)
+                putExtra("FROM_ALARM", true)
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
                             Intent.FLAG_ACTIVITY_CLEAR_TASK or
