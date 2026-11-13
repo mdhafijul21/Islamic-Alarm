@@ -61,6 +61,11 @@
             android:theme="@style/Theme.IslamicAlarm.LockScreen" />
 
         <!-- Quran Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.quran.QuranActivity"
+            android:exported="false"
+            android:label="আল-কুরআন"
+            android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- Surah Detail Activity -->
         <activity
@@ -70,14 +75,25 @@
             android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- Tasbih Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.tasbih.TasbihActivity"
+            android:exported="false"
+            android:label="ডিজিটাল তাসবিহ"
+            android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- Masnoon Duas Activity -->
-
         <activity
-            android:name="com.hafij.islamicalarm.duas.DuaDetailActivity"
+            android:name="com.hafij.islamicalarm.duas.DuasActivity"
             android:exported="false"
-            android:label="দোয়ার বিস্তারিত"
-            android:theme="@style/Theme.IslamicAlarm.Duas" />
+            android:label="মাসনুন দোআ ও হাদিস"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Settings Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.settings.SettingsActivity"
+            android:exported="false"
+            android:label="সেটিংস"
+            android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- Ramadan & Fasting Activity -->
         <activity

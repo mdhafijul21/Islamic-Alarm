@@ -27,7 +27,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="65dp"
+        android:layout_marginBottom="68dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <!-- OPTION 1: Prayer Times Hub Screen -->
@@ -1341,28 +1341,246 @@
 
         </androidx.core.widget.NestedScrollView>
 
-
-        <!-- Hosts Quran / Tasbih / Dua pages so the bottom bar never reloads -->
-        <FrameLayout
-            android:id="@+id/fragmentContainer"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/background"
-            android:visibility="gone" />
-
     </FrameLayout>
 
-    <!-- Bottom Navigation Bar for main sections -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigation"
+    <!-- Bottom Navigation Bar for main sections (custom: BottomNavigationView allows only 5 items) -->
+    <LinearLayout
+        android:id="@+id/bottomNavBar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="68dp"
         android:layout_gravity="bottom"
         android:background="@color/surface"
-        app:elevation="8dp"
-        app:labelVisibilityMode="labeled"
-        app:itemIconTint="@color/secondary"
-        app:itemTextColor="@color/text_primary"
-        app:menu="@menu/bottom_nav_menu" />
+        android:elevation="8dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/navItemHome"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/navPillHome"
+                android:layout_width="52dp"
+                android:layout_height="30dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_home"
+                    android:tint="@color/secondary" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/navLabelHome"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:text="হোম"
+                android:textColor="@color/text_primary"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navItemAlarm"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/navPillAlarm"
+                android:layout_width="52dp"
+                android:layout_height="30dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_alarm"
+                    android:tint="@color/secondary" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/navLabelAlarm"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:text="এলার্ম"
+                android:textColor="@color/text_primary"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navItemQuran"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/navPillQuran"
+                android:layout_width="52dp"
+                android:layout_height="30dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_quran"
+                    android:tint="@color/secondary" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/navLabelQuran"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:text="কুরআন"
+                android:textColor="@color/text_primary"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navItemTasbih"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/navPillTasbih"
+                android:layout_width="52dp"
+                android:layout_height="30dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_tasbih"
+                    android:tint="@color/secondary" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/navLabelTasbih"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:text="তাসবিহ"
+                android:textColor="@color/text_primary"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navItemDuas"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/navPillDuas"
+                android:layout_width="52dp"
+                android:layout_height="30dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_dua"
+                    android:tint="@color/secondary" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/navLabelDuas"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:text="দোয়া"
+                android:textColor="@color/text_primary"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navItemSettings"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/navPillSettings"
+                android:layout_width="52dp"
+                android:layout_height="30dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_nav_settings"
+                    android:tint="@color/secondary" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/navLabelSettings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:text="সেটিংস"
+                android:textColor="@color/text_primary"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
