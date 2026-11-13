@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivityAudioQuranBinding
-import com.hafij.islamicalarm.quran.QuranActivity
 import com.hafij.islamicalarm.quran.QuranRepository
 import com.hafij.islamicalarm.quran.Surah
 import kotlinx.coroutines.Dispatchers
@@ -123,8 +122,9 @@ class AudioQuranActivity : AppCompatActivity() {
                 downloadSurahOffline(surah)
             },
             onReadClick = { surah ->
-                val intent = Intent(this, QuranActivity::class.java).apply {
-                    putExtra("START_PAGE", surah.startPage)
+                val intent = Intent(this, com.hafij.islamicalarm.MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    putExtra(com.hafij.islamicalarm.BottomNavHelper.EXTRA_OPEN_TAB, "quran")
                 }
                 startActivity(intent)
             }
@@ -193,8 +193,9 @@ class AudioQuranActivity : AppCompatActivity() {
 
         binding.btnPlayerMushaf.setOnClickListener {
             currentPlayingSurah?.let { surah ->
-                val intent = Intent(this, QuranActivity::class.java).apply {
-                    putExtra("START_PAGE", surah.startPage)
+                val intent = Intent(this, com.hafij.islamicalarm.MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    putExtra(com.hafij.islamicalarm.BottomNavHelper.EXTRA_OPEN_TAB, "quran")
                 }
                 startActivity(intent)
             }

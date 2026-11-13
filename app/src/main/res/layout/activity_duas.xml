@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/dua_background"
     android:orientation="vertical"
-    tools:context="com.hafij.islamicalarm.duas.DuasActivity">
+    tools:context="com.hafij.islamicalarm.duas.DuasFragment">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbarDuas"
@@ -203,17 +203,4 @@
                 android:textSize="11sp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
-    <!-- Bottom Navigation Bar (same as Home page) -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/surface"
-        app:elevation="8dp"
-        app:labelVisibilityMode="labeled"
-        app:itemIconTint="@color/secondary"
-        app:itemTextColor="@color/text_primary"
-        app:menu="@menu/bottom_nav_menu" />
-
 </LinearLayout>

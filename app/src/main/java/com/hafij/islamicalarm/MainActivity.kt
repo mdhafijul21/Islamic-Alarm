@@ -128,7 +128,13 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (binding.layoutAlarmContainer.visibility == View.VISIBLE) {
+                if (binding.fragmentContainer.visibility == View.VISIBLE) {
+                    val duas = supportFragmentManager.findFragmentByTag("duas")
+                            as? com.hafij.islamicalarm.duas.DuasFragment
+                    if (duas == null || duas.isHidden || !duas.handleBack()) {
+                        binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
+                    }
+                } else if (binding.layoutAlarmContainer.visibility == View.VISIBLE) {
                     binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
                 } else {
                     isEnabled = false
@@ -165,6 +171,9 @@ class MainActivity : AppCompatActivity() {
         when (intent?.getStringExtra(BottomNavHelper.EXTRA_OPEN_TAB)) {
             BottomNavHelper.TAB_HOME -> binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
             BottomNavHelper.TAB_ALARM -> binding.bottomNavigation.selectedItemId = R.id.nav_alarm
+            "quran" -> binding.bottomNavigation.selectedItemId = R.id.nav_quran
+            "tasbih" -> binding.bottomNavigation.selectedItemId = R.id.nav_tasbih
+            "duas" -> binding.bottomNavigation.selectedItemId = R.id.nav_duas
         }
         intent?.removeExtra(BottomNavHelper.EXTRA_OPEN_TAB)
     }
@@ -334,23 +343,63 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_quran -> {
-                    openQuranActivity()
-                    false
+                    showFragmentScreen("quran")
+                    true
                 }
                 R.id.nav_tasbih -> {
-                    openTasbihActivity()
-                    false
+                    showFragmentScreen("tasbih")
+                    true
                 }
                 R.id.nav_duas -> {
-                    openDuasActivity()
-                    false
+                    showFragmentScreen("duas")
+                    true
                 }
                 else -> false
             }
         }
     }
 
+    private val fragmentScreenTags = listOf("quran", "tasbih", "duas")
+
+    /** Shows Quran / Tasbih / Dua inside this Activity (no new window = no flicker). */
+    private fun showFragmentScreen(tag: String) {
+        binding.layoutPrayerTimesContainer.visibility = View.GONE
+        binding.layoutAlarmContainer.visibility = View.GONE
+        binding.fragmentContainer.visibility = View.VISIBLE
+
+        val fm = supportFragmentManager
+        val tx = fm.beginTransaction().setReorderingAllowed(true)
+        var target = fm.findFragmentByTag(tag)
+        if (target == null) {
+            target = when (tag) {
+                "quran" -> com.hafij.islamicalarm.quran.QuranFragment()
+                "tasbih" -> com.hafij.islamicalarm.tasbih.TasbihFragment()
+                else -> com.hafij.islamicalarm.duas.DuasFragment()
+            }
+            tx.add(R.id.fragmentContainer, target, tag)
+        }
+        for (t in fragmentScreenTags) {
+            if (t != tag) fm.findFragmentByTag(t)?.let { tx.hide(it) }
+        }
+        tx.show(target)
+        tx.commitAllowingStateLoss()
+    }
+
+    private fun hideFragmentScreens() {
+        binding.fragmentContainer.visibility = View.GONE
+        val fm = supportFragmentManager
+        val tx = fm.beginTransaction().setReorderingAllowed(true)
+        for (t in fragmentScreenTags) fm.findFragmentByTag(t)?.let { tx.hide(it) }
+        tx.commitAllowingStateLoss()
+    }
+
+    /** Called by the Quran / Tasbih / Dua pages' back arrow. */
+    fun goHome() {
+        binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
+    }
+
     private fun showAlarmScreen() {
+        hideFragmentScreens()
         binding.layoutPrayerTimesContainer.visibility = View.GONE
         binding.layoutAlarmContainer.visibility = View.VISIBLE
         updatePrayerTimes()
@@ -358,6 +407,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPrayerTimesScreen() {
+        hideFragmentScreens()
         binding.layoutAlarmContainer.visibility = View.GONE
         binding.layoutPrayerTimesContainer.visibility = View.VISIBLE
         binding.tvHeaderTitle.text = "নামাজের সময়সূচী"
@@ -1147,21 +1197,6 @@ class MainActivity : AppCompatActivity() {
         ) {
             phoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
         }
-    }
-
-    private fun openQuranActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.quran.QuranActivity::class.java)
-        startActivity(intent)
-    }
-
-    private fun openTasbihActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.tasbih.TasbihActivity::class.java)
-        startActivity(intent)
-    }
-
-    private fun openDuasActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.duas.DuasActivity::class.java)
-        startActivity(intent)
     }
 
     private fun openLibraryActivity() {

@@ -1341,6 +1341,15 @@
 
         </androidx.core.widget.NestedScrollView>
 
+
+        <!-- Hosts Quran / Tasbih / Dua pages so the bottom bar never reloads -->
+        <FrameLayout
+            android:id="@+id/fragmentContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/background"
+            android:visibility="gone" />
+
     </FrameLayout>
 
     <!-- Bottom Navigation Bar for main sections -->

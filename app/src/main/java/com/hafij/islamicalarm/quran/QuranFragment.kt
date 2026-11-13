@@ -13,14 +13,16 @@ import android.text.TextWatcher
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import com.hafij.islamicalarm.databinding.ActivityQuranBinding
 import java.io.File
 import java.util.Locale
 
-class QuranActivity : AppCompatActivity() {
+class QuranFragment : Fragment() {
 
     private lateinit var binding: ActivityQuranBinding
     private lateinit var surahAdapter: SurahAdapter
@@ -76,17 +78,19 @@ class QuranActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityQuranBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        binding = ActivityQuranBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        com.hafij.islamicalarm.BottomNavHelper.setup(this, binding.bottomNavigation, com.hafij.islamicalarm.R.id.nav_quran)
-
-        setSupportActionBar(binding.toolbarQuran)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         binding.toolbarQuran.setNavigationOnClickListener {
-            onBackPressedDispatcher.onBackPressed()
+            (activity as? com.hafij.islamicalarm.MainActivity)?.goHome()
         }
 
         initTts()
@@ -101,6 +105,15 @@ class QuranActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (!isHidden) refreshScreen()
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) refreshScreen()
+    }
+
+    private fun refreshScreen() {
         updateLastReadCard()
         updatePlayerUiState()
     }
@@ -108,9 +121,9 @@ class QuranActivity : AppCompatActivity() {
     private fun setupBookmarkCard() {
         updateLastReadCard()
         val openLastRead: () -> Unit = {
-            val prefs = getSharedPreferences("IslamicAlarmQuranPrefs", Context.MODE_PRIVATE)
+            val prefs = requireContext().getSharedPreferences("IslamicAlarmQuranPrefs", Context.MODE_PRIVATE)
             val lastSurahId = prefs.getInt("last_read_surah_id", 1)
-            val intent = Intent(this, SurahDetailActivity::class.java).apply {
+            val intent = Intent(requireContext(), SurahDetailActivity::class.java).apply {
                 putExtra("EXTRA_SURAH_ID", lastSurahId)
             }
             startActivity(intent)
@@ -120,7 +133,7 @@ class QuranActivity : AppCompatActivity() {
     }
 
     private fun updateLastReadCard() {
-        val prefs = getSharedPreferences("IslamicAlarmQuranPrefs", Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences("IslamicAlarmQuranPrefs", Context.MODE_PRIVATE)
         val lastSurahId = prefs.getInt("last_read_surah_id", 1)
         val surah = QuranRepository.surahList.find { it.id == lastSurahId } ?: QuranRepository.surahList.first()
         binding.tvLastReadTitle.text = "সুরা ${surah.nameBangla} (${surah.nameArabic}) • ${toBengaliNumber(surah.totalAyahs)} আয়াত • ${surah.revelationType}"
@@ -133,14 +146,14 @@ class QuranActivity : AppCompatActivity() {
                 togglePlayAudio(surah)
             },
             onReadPage = { surah ->
-                val intent = Intent(this, SurahDetailActivity::class.java).apply {
+                val intent = Intent(requireContext(), SurahDetailActivity::class.java).apply {
                     putExtra("EXTRA_SURAH_ID", surah.id)
                 }
                 startActivity(intent)
             }
         )
 
-        binding.rvSurahList.layoutManager = LinearLayoutManager(this)
+        binding.rvSurahList.layoutManager = LinearLayoutManager(requireContext())
         binding.rvSurahList.adapter = surahAdapter
     }
 
@@ -149,14 +162,14 @@ class QuranActivity : AppCompatActivity() {
             paraList = QuranRepository.paraList,
             onParaClick = { para ->
                 val surah = QuranRepository.getSurahForPage(para.startPage)
-                val intent = Intent(this, SurahDetailActivity::class.java).apply {
+                val intent = Intent(requireContext(), SurahDetailActivity::class.java).apply {
                     putExtra("EXTRA_SURAH_ID", surah.id)
                 }
                 startActivity(intent)
             }
         )
 
-        binding.rvParaList.layoutManager = LinearLayoutManager(this)
+        binding.rvParaList.layoutManager = LinearLayoutManager(requireContext())
         binding.rvParaList.adapter = paraAdapter
     }
 
@@ -248,8 +261,8 @@ class QuranActivity : AppCompatActivity() {
     }
 
     private fun hideKeyboard() {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        currentFocus?.let {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        activity?.currentFocus?.let {
             imm?.hideSoftInputFromWindow(it.windowToken, 0)
         }
     }
@@ -309,7 +322,7 @@ class QuranActivity : AppCompatActivity() {
 
     private fun initTts() {
         if (quranTts == null) {
-            quranTts = TextToSpeech(applicationContext) { status ->
+            quranTts = TextToSpeech(requireContext().applicationContext) { status ->
                 if (status == TextToSpeech.SUCCESS) {
                     val result = quranTts?.setLanguage(Locale("ar"))
                     if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
@@ -321,7 +334,7 @@ class QuranActivity : AppCompatActivity() {
     }
 
     private fun getAudioFile(surahId: Int): File {
-        val dir = File(filesDir, "quran_audio")
+        val dir = File(requireContext().filesDir, "quran_audio")
         if (!dir.exists()) {
             dir.mkdirs()
         }

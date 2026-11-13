@@ -1,15 +1,19 @@
 package com.hafij.islamicalarm.duas
 
+import android.content.Context
 import android.os.Bundle
+import android.view.View
 import android.text.Editable
 import android.text.TextWatcher
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivityDuasBinding
 
-class DuasActivity : AppCompatActivity() {
+class DuasFragment : Fragment() {
 
     private lateinit var binding: ActivityDuasBinding
     private lateinit var duaAdapter: DuaAdapter
@@ -18,20 +22,35 @@ class DuasActivity : AppCompatActivity() {
     private var searchQuery = ""
     private val favoritesCategory = "পছন্দের দোয়া"
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityDuasBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Dua page uses its own light theme
+        val themed = inflater.cloneInContext(
+            android.view.ContextThemeWrapper(requireContext(), R.style.Theme_IslamicAlarm_Duas)
+        )
+        binding = ActivityDuasBinding.inflate(themed, container, false)
+        return binding.root
+    }
 
-        com.hafij.islamicalarm.BottomNavHelper.setup(this, binding.bottomNavigation, R.id.nav_duas)
+    /** Returns true if the back press was used inside the Dua page (list -> categories). */
+    fun handleBack(): Boolean {
+        if (binding.rvDuas.visibility == View.VISIBLE) {
+            selectedCategory = DuaData.CATEGORY_ALL
+            if (binding.etSearchDua.text.isNotEmpty()) binding.etSearchDua.setText("")
+            showCategories()
+            return true
+        }
+        return false
+    }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         binding.toolbarDuas.setNavigationOnClickListener {
-            if (binding.rvDuas.visibility == android.view.View.VISIBLE) {
-                selectedCategory = DuaData.CATEGORY_ALL
-                if (binding.etSearchDua.text.isNotEmpty()) binding.etSearchDua.setText("")
-                showCategories()
-            } else {
-                finish()
+            if (!handleBack()) {
+                (activity as? com.hafij.islamicalarm.MainActivity)?.goHome()
             }
         }
 
@@ -46,9 +65,14 @@ class DuasActivity : AppCompatActivity() {
         if (::categoryAdapter.isInitialized) setupCategories()
     }
 
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden && ::categoryAdapter.isInitialized) setupCategories()
+    }
+
     private fun setupRecyclerViews() {
         duaAdapter = DuaAdapter()
-        binding.rvDuas.layoutManager = LinearLayoutManager(this)
+        binding.rvDuas.layoutManager = LinearLayoutManager(requireContext())
         binding.rvDuas.adapter = duaAdapter
 
         categoryAdapter = DuaCategoryAdapter { category ->
@@ -56,7 +80,7 @@ class DuasActivity : AppCompatActivity() {
             showDuaList()
             filterList()
         }
-        binding.rvDuaCategories.layoutManager = GridLayoutManager(this, 2)
+        binding.rvDuaCategories.layoutManager = GridLayoutManager(requireContext(), 2)
         binding.rvDuaCategories.adapter = categoryAdapter
     }
 
@@ -71,7 +95,7 @@ class DuasActivity : AppCompatActivity() {
             DuaCategory(category, count, imageForCategory(category))
         }.toMutableList()
 
-        val favoriteIds = getSharedPreferences("dua_favorites", MODE_PRIVATE)
+        val favoriteIds = requireContext().getSharedPreferences("dua_favorites", Context.MODE_PRIVATE)
             .getStringSet("ids", emptySet()) ?: emptySet()
         categories.add(
             1,
@@ -125,7 +149,7 @@ class DuasActivity : AppCompatActivity() {
     }
 
     private fun filterList() {
-        val favoriteIds = getSharedPreferences("dua_favorites", MODE_PRIVATE)
+        val favoriteIds = requireContext().getSharedPreferences("dua_favorites", Context.MODE_PRIVATE)
             .getStringSet("ids", emptySet()) ?: emptySet()
         val filtered = DuaData.getDuasAndHadiths.filter { item ->
             val matchesCategory = when (selectedCategory) {
