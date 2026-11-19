@@ -93,12 +93,15 @@ class QuranFragment : Fragment() {
             showDashboard()
         }
 
-        binding.cardDashboardSurah.setOnClickListener { showBrowser(0) }
-        binding.cardDashboardPara.setOnClickListener { showBrowser(1) }
-        binding.cardDashboardSearch.setOnClickListener {
-            showBrowser(0)
-            binding.etSearchSurah.requestFocus()
+        // "অর্থ সহ" holds the current Quran (surah/para lists with Arabic + Bengali meaning)
+        binding.cardCatMeaning.setOnClickListener { showBrowser(0) }
+        val comingSoon = View.OnClickListener {
+            Toast.makeText(requireContext(), "এই অপশনটি এখনো খালি, শীঘ্রই আসছে", Toast.LENGTH_SHORT).show()
         }
+        binding.cardCatSurah.setOnClickListener(comingSoon)
+        binding.cardCatPara.setOnClickListener(comingSoon)
+        binding.cardCatSearch.setOnClickListener(comingSoon)
+        binding.cardCatLatest.setOnClickListener(comingSoon)
         binding.cardDashboardLatest.setOnClickListener { openLastRead() }
         binding.btnDashboardContinue.setOnClickListener { openLastRead() }
 
@@ -167,6 +170,7 @@ class QuranFragment : Fragment() {
         binding.tvDashboardLastReadMeta.text =
             "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(lastPage)}"
         binding.pbQuranProgress.progress = surah.id
+        binding.tvDashboardCount.text = "${toBengaliNumber(surah.id)} / ${toBengaliNumber(114)}"
         binding.tvQuranProgressPercent.text =
             "${toBengaliNumber((surah.id * 100 / 114).coerceAtLeast(1))}%"
     }
