@@ -31,7 +31,7 @@
             app:navigationIconTint="@color/text_primary"
             app:subtitle="উসমানী লিপি ও বিশুদ্ধ বাংলা অনুবাদ"
             app:subtitleTextColor="@color/text_secondary"
-            app:title="আল-কুরআন"
+            app:title="অর্থ সহ কুরআন"
             app:titleTextColor="@color/text_primary" />
 
         <!-- Search Bar at the very start / top -->
@@ -43,7 +43,8 @@
             android:layout_marginBottom="8dp"
             app:cardBackgroundColor="@color/waqt_card_bg"
             app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            app:cardElevation="0dp"
+            android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -90,6 +91,7 @@
         <!-- Tab Bar: Surah and Para -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
+        android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/surface"
@@ -133,6 +135,7 @@
             <!-- Last Read Bookmark Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardLastRead"
+                android:visibility="gone"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
