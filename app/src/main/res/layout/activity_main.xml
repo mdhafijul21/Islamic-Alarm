@@ -60,7 +60,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="নামাজের সময়সূচী"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/art_text"
                             android:textSize="21sp"
                             android:textStyle="bold" />
 
@@ -70,7 +70,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:layout_marginBottom="12dp"
-                            android:textColor="@color/secondary"
+                            android:textColor="@color/art_gold"
                             android:textSize="13sp"
                             tools:text="📍 ঢাকা জেলা" />
 
@@ -87,12 +87,12 @@
                                 style="@style/Widget.Material3.Button.TonalButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:backgroundTint="@color/surface"
+                                android:backgroundTint="@color/art_surface"
                                 android:text="📍 ঢাকা"
-                                android:textColor="@color/secondary"
+                                android:textColor="@color/art_gold"
                                 android:textSize="11sp"
                                 app:cornerRadius="12dp"
-                                app:strokeColor="@color/border"
+                                app:strokeColor="@color/art_border"
                                 app:strokeWidth="1dp" />
 
                             <!-- Quick GPS Auto-Detect Button -->
@@ -101,10 +101,10 @@
                                 android:layout_width="40dp"
                                 android:layout_height="40dp"
                                 android:layout_marginStart="4dp"
-                                android:background="@drawable/bg_duration_chip"
+                                android:background="@drawable/bg_duration_chip_night"
                                 android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
                                 android:src="@android:drawable/ic_menu_mylocation"
-                                app:tint="@color/secondary" />
+                                app:tint="@color/art_gold" />
 
                             <View
                                 android:layout_width="0dp"
@@ -116,10 +116,10 @@
                                 android:id="@+id/tvMainHijriDate"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:background="@drawable/bg_challenge_badge"
+                                android:background="@drawable/bg_challenge_badge_night"
                                 android:paddingHorizontal="8dp"
                                 android:paddingVertical="6dp"
-                                android:textColor="@color/secondary"
+                                android:textColor="@color/art_gold"
                                 android:textSize="10sp"
                                 android:textStyle="bold"
                                 tools:text="২৯ সফর, ১৪৪৮ হিজরি" />
@@ -147,7 +147,7 @@
                                     android:id="@+id/tvCurrentWaqtStatus"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:textColor="@color/text_secondary"
+                                    android:textColor="@color/art_text_secondary"
                                     android:textSize="10sp"
                                     tools:text="যোহরের ওয়াক্ত চলছে" />
 
@@ -156,7 +156,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
-                                    android:textColor="@color/secondary"
+                                    android:textColor="@color/art_gold"
                                     android:textSize="15sp"
                                     android:textStyle="bold"
                                     tools:text="পরবর্তী নামাজ: আসর (০৪:৩৫)" />
@@ -166,10 +166,10 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
-                                    android:background="@drawable/bg_challenge_badge"
+                                    android:background="@drawable/bg_challenge_badge_night"
                                     android:paddingHorizontal="8dp"
                                     android:paddingVertical="3dp"
-                                    android:textColor="@color/text_primary"
+                                    android:textColor="@color/art_text"
                                     android:textSize="10sp"
                                     android:textStyle="bold"
                                     tools:text="বাকি ১ ঘণ্টা ২৫ মিনিট ৩০ সেকেন্ড" />
@@ -627,7 +627,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             app:thumbTint="@color/secondary"
-                            app:trackTint="@color/primary" />
+                            app:trackTint="@color/switch_track" />
 
                     </LinearLayout>
 

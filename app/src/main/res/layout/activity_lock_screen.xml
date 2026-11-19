@@ -30,7 +30,7 @@
                 android:layout_marginBottom="12dp"
                 android:contentDescription="Islamic Star"
                 android:src="@drawable/ic_islamic_star_badge"
-                app:tint="@color/gold_accent" />
+                app:tint="@color/art_gold" />
 
             <!-- Main Heading: "এখন নামাজের সময়" -->
             <TextView
@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="@string/now_prayer_time"
-                android:textColor="@color/gold_accent"
+                android:textColor="@color/art_gold"
                 android:textSize="28sp"
                 android:textStyle="bold" />
 
@@ -49,10 +49,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:background="@drawable/bg_label_chip"
+                android:background="@drawable/bg_label_chip_night"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="4dp"
-                android:textColor="@color/gold_accent"
+                android:textColor="@color/art_gold"
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:visibility="gone"
@@ -120,7 +120,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
                 android:gravity="center"
-                android:background="@drawable/bg_challenge_badge"
+                android:background="@drawable/bg_challenge_badge_night"
                 android:paddingHorizontal="16dp"
                 android:paddingVertical="8dp"
                 android:text="🔒 হার্ড লক সক্রিয় (নামাজের জন্য মোবাইল সম্পূর্ণ লক)"
