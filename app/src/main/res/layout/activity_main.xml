@@ -1014,7 +1014,7 @@
                 android:orientation="vertical"
                 android:padding="10dp">
 
-                <!-- Mode tabs: Alarm | Restrict mode -->
+                <!-- Mode tabs: Alarm | Restrict mode | Safe mode -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -1029,9 +1029,13 @@
                         android:layout_width="0dp"
                         android:layout_height="38dp"
                         android:layout_weight="1"
+                        android:autoSizeMaxTextSize="13sp"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeTextType="uniform"
                         android:gravity="center"
+                        android:maxLines="1"
+                        android:paddingHorizontal="4dp"
                         android:text="⏰ এলার্ম"
-                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -1039,9 +1043,27 @@
                         android:layout_width="0dp"
                         android:layout_height="38dp"
                         android:layout_weight="1"
+                        android:autoSizeMaxTextSize="13sp"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeTextType="uniform"
                         android:gravity="center"
+                        android:maxLines="1"
+                        android:paddingHorizontal="4dp"
                         android:text="⛔ রেস্ট্রিক্ট মোড"
-                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tabSafeMode"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1"
+                        android:autoSizeMaxTextSize="13sp"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeTextType="uniform"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:paddingHorizontal="4dp"
+                        android:text="🛡️ সেফ মোড"
                         android:textStyle="bold" />
 
                 </LinearLayout>
@@ -1453,6 +1475,138 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
+
+                </LinearLayout>
+
+                <!-- Safe mode content -->
+                <LinearLayout
+                    android:id="@+id/layoutSafeModeContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="2dp"
+                        android:text="🛡️ সেফ মোড"
+                        android:textColor="@color/secondary"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="চালু থাকলে অ্যাপ বা ব্রাউজারে পর্নোগ্রাফি সার্চ আটকাবে"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="সেফ মোড চালু করুন"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchSafeMode"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    app:trackTint="@color/switch_track" />
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvSafeStatus"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSafeEnableService"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="সার্ভিস চালু করুন"
+                                android:textColor="@color/primary"
+                                app:backgroundTint="@color/secondary" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:id="@+id/tvSafeWordsCount"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSafeWords"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="নিজের শব্দ যোগ করুন"
+                                android:textColor="@color/secondary" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:lineSpacingExtra="2dp"
+                        android:text="কীভাবে কাজ করে: সার্চ বক্স ও ঠিকানা বারের লেখা দেখে নিষিদ্ধ শব্দ পেলে লেখাটি মুছে সেফ মোড স্ক্রিন দেখায়। VPN বা যেকোনো ব্রাউজারে কাজ করে।\n\nসীমা: ছবি বা ভিডিও চেনে না, সরাসরি লিংকে বা ফিডে আসা কনটেন্ট আটকায় না, শব্দের তালিকা সম্পূর্ণ নয়। সেটিংসে সার্ভিস বন্ধ করলে সুরক্ষা থাকে না।"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
 
                 </LinearLayout>
 

@@ -29,29 +29,38 @@ class RestrictModeController(
 ) {
 
     private val store = RestrictStore(activity)
-    private var restrictTabSelected = false
+    private val safe = SafeModeController(activity, binding)
+    private var currentTab = TAB_ALARM
 
     fun setup() {
-        binding.tabAlarmMode.setOnClickListener { selectTab(false) }
-        binding.tabRestrictMode.setOnClickListener { selectTab(true) }
+        binding.tabAlarmMode.setOnClickListener { selectTab(TAB_ALARM) }
+        binding.tabRestrictMode.setOnClickListener { selectTab(TAB_RESTRICT) }
+        binding.tabSafeMode.setOnClickListener { selectTab(TAB_SAFE) }
         binding.btnRestrictEnableService.setOnClickListener {
             PermissionHelper.openSettings(activity, PermissionHelper.ID_ACCESSIBILITY)
         }
-        selectTab(false)
+        safe.setup()
+        selectTab(TAB_ALARM)
     }
 
     /** Call whenever the alarm screen becomes visible or the app resumes. */
     fun onScreenShown() {
-        if (restrictTabSelected) refresh()
+        when (currentTab) {
+            TAB_RESTRICT -> refresh()
+            TAB_SAFE -> safe.refresh()
+        }
     }
 
-    private fun selectTab(restrict: Boolean) {
-        restrictTabSelected = restrict
-        binding.layoutAlarmModeContent.visibility = if (restrict) View.GONE else View.VISIBLE
-        binding.layoutRestrictModeContent.visibility = if (restrict) View.VISIBLE else View.GONE
-        styleTab(binding.tabAlarmMode, !restrict)
-        styleTab(binding.tabRestrictMode, restrict)
-        if (restrict) refresh()
+    private fun selectTab(tab: Int) {
+        currentTab = tab
+        binding.layoutAlarmModeContent.visibility = if (tab == TAB_ALARM) View.VISIBLE else View.GONE
+        binding.layoutRestrictModeContent.visibility = if (tab == TAB_RESTRICT) View.VISIBLE else View.GONE
+        binding.layoutSafeModeContent.visibility = if (tab == TAB_SAFE) View.VISIBLE else View.GONE
+        styleTab(binding.tabAlarmMode, tab == TAB_ALARM)
+        styleTab(binding.tabRestrictMode, tab == TAB_RESTRICT)
+        styleTab(binding.tabSafeMode, tab == TAB_SAFE)
+        if (tab == TAB_RESTRICT) refresh()
+        if (tab == TAB_SAFE) safe.refresh()
     }
 
     private fun styleTab(tab: TextView, selected: Boolean) {
@@ -207,5 +216,11 @@ class RestrictModeController(
                 ).show()
             }
         }
+    }
+
+    companion object {
+        private const val TAB_ALARM = 0
+        private const val TAB_RESTRICT = 1
+        private const val TAB_SAFE = 2
     }
 }

@@ -212,6 +212,14 @@
             android:taskAffinity=""
             android:theme="@style/Theme.IslamicAlarm" />
 
+        <activity
+            android:name="com.hafij.islamicalarm.restrict.SafeBlockActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@style/Theme.IslamicAlarm" />
+
         <service
             android:name="com.hafij.islamicalarm.restrict.RestrictAccessibilityService"
             android:exported="false"
