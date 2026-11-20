@@ -145,7 +145,11 @@ class MainActivity : AppCompatActivity() {
                 if (binding.fragmentContainer.visibility == View.VISIBLE) {
                     val duas = supportFragmentManager.findFragmentByTag("duas")
                             as? com.hafij.islamicalarm.duas.DuasFragment
-                    if (duas == null || duas.isHidden || !duas.handleBack()) {
+                    val quran = supportFragmentManager.findFragmentByTag("quran")
+                            as? com.hafij.islamicalarm.quran.QuranFragment
+                    val handledByDuas = duas != null && !duas.isHidden && duas.handleBack()
+                    val handledByQuran = quran != null && !quran.isHidden && quran.handleBack()
+                    if (!handledByDuas && !handledByQuran) {
                         binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
                     }
                 } else if (binding.layoutAlarmContainer.visibility == View.VISIBLE) {

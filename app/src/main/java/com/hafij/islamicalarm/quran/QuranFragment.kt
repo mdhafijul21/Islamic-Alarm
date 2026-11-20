@@ -93,15 +93,32 @@ class QuranFragment : Fragment() {
             showDashboard()
         }
 
-        // "অর্থ সহ" holds the current Quran (surah/para lists with Arabic + Bengali meaning)
+        // "অর্থ সহ" holds the Quran with Arabic + Bengali meaning
         binding.cardCatMeaning.setOnClickListener { showBrowser(0) }
-        val comingSoon = View.OnClickListener {
-            Toast.makeText(requireContext(), "এই অপশনটি এখনো খালি, শীঘ্রই আসছে", Toast.LENGTH_SHORT).show()
+        binding.cardCatSurah.setOnClickListener {
+            openOfflineArabicQuran(
+                initialTab = OfflineArabicQuranActivity.TAB_SURAH,
+                singleCategory = true
+            )
         }
-        binding.cardCatSurah.setOnClickListener(comingSoon)
-        binding.cardCatPara.setOnClickListener(comingSoon)
-        binding.cardCatSearch.setOnClickListener(comingSoon)
-        binding.cardCatLatest.setOnClickListener(comingSoon)
+        binding.cardCatPara.setOnClickListener {
+            openOfflineArabicQuran(
+                initialTab = OfflineArabicQuranActivity.TAB_PARA,
+                singleCategory = true
+            )
+        }
+        binding.cardCatSearch.setOnClickListener {
+            openOfflineArabicQuran(
+                initialTab = OfflineArabicQuranActivity.TAB_PAGE,
+                singleCategory = true
+            )
+        }
+        binding.cardCatLatest.setOnClickListener {
+            openOfflineArabicQuran(
+                openLastPage = true,
+                singleCategory = false
+            )
+        }
         binding.cardDashboardLatest.setOnClickListener { openLastRead() }
         binding.btnDashboardContinue.setOnClickListener { openLastRead() }
 
@@ -145,6 +162,28 @@ class QuranFragment : Fragment() {
         startActivity(intent)
     }
 
+    private fun openOfflineArabicQuran(
+        initialTab: Int = OfflineArabicQuranActivity.TAB_SURAH,
+        openLastPage: Boolean = false,
+        singleCategory: Boolean = false
+    ) {
+        val intent = Intent(requireContext(), OfflineArabicQuranActivity::class.java).apply {
+            putExtra(OfflineArabicQuranActivity.EXTRA_INITIAL_TAB, initialTab)
+            putExtra(OfflineArabicQuranActivity.EXTRA_OPEN_LAST_PAGE, openLastPage)
+            putExtra(OfflineArabicQuranActivity.EXTRA_SINGLE_CATEGORY, singleCategory)
+        }
+        startActivity(intent)
+    }
+
+    fun handleBack(): Boolean {
+        if (!::binding.isInitialized) return false
+        if (binding.layoutQuranBrowser.visibility == View.VISIBLE) {
+            showDashboard()
+            return true
+        }
+        return false
+    }
+
     private fun showDashboard() {
         binding.layoutQuranDashboard.visibility = View.VISIBLE
         binding.appBarLayout.visibility = View.GONE
@@ -165,8 +204,9 @@ class QuranFragment : Fragment() {
         val surah = QuranRepository.surahList.find { it.id == lastSurahId } ?: QuranRepository.surahList.first()
         binding.tvLastReadTitle.text = "সুরা ${surah.nameBangla} (${surah.nameArabic}) • ${toBengaliNumber(surah.totalAyahs)} আয়াত • ${surah.revelationType}"
         binding.tvDashboardLastReadTitle.text = "সুরা ${surah.nameBangla}"
-        val lastPage = prefs.getInt("last_read_page", surah.startPage).coerceIn(1, 604)
-        val juz = QuranRepository.getJuzForPage(lastPage)
+        val lastPage = prefs.getInt("last_read_page", QuranRepository.getHafeziStartPageForSurah(surah.id))
+            .coerceIn(1, QuranRepository.HAFEZI_TOTAL_PAGES)
+        val juz = QuranRepository.getHafeziJuzForPage(lastPage)
         binding.tvDashboardLastReadMeta.text =
             "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(lastPage)}"
         binding.pbQuranProgress.progress = surah.id

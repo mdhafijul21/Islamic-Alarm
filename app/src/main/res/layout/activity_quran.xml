@@ -486,8 +486,7 @@
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
                         android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp"
-                    android:alpha="0.6">
+                        android:paddingVertical="14dp">
 
                         <FrameLayout
                             android:layout_width="52dp"
@@ -518,7 +517,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:gravity="center"
-                            android:text="শীঘ্রই আসছে"
+                            android:text="১৫ লাইন হাফেজী (আরবি)"
                             android:textColor="@color/dua_muted"
                             android:textSize="11sp" />
                     </LinearLayout>
@@ -543,8 +542,7 @@
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
                         android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp"
-                    android:alpha="0.6">
+                        android:paddingVertical="14dp">
 
                         <FrameLayout
                             android:layout_width="52dp"
@@ -575,7 +573,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:gravity="center"
-                            android:text="শীঘ্রই আসছে"
+                            android:text="৩০ পারা (অফলাইন)"
                             android:textColor="@color/dua_muted"
                             android:textSize="11sp" />
                     </LinearLayout>
@@ -608,8 +606,7 @@
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
                         android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp"
-                    android:alpha="0.6">
+                        android:paddingVertical="14dp">
 
                         <FrameLayout
                             android:layout_width="52dp"
@@ -640,7 +637,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:gravity="center"
-                            android:text="শীঘ্রই আসছে"
+                            android:text="৬১০ পৃষ্ঠা খুঁজুন"
                             android:textColor="@color/dua_muted"
                             android:textSize="11sp" />
                     </LinearLayout>
@@ -665,8 +662,7 @@
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
                         android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp"
-                    android:alpha="0.6">
+                        android:paddingVertical="14dp">
 
                         <FrameLayout
                             android:layout_width="52dp"
@@ -697,7 +693,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:gravity="center"
-                            android:text="শীঘ্রই আসছে"
+                            android:text="শেষ পঠিত পৃষ্ঠা"
                             android:textColor="@color/dua_muted"
                             android:textSize="11sp" />
                     </LinearLayout>

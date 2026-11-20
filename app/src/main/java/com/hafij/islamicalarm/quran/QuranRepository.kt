@@ -160,11 +160,11 @@ object QuranRepository {
         Para(30, "عَمَّ يَتَسَاءَلُونَ", "আম্মা ইয়াতাসাআলূন", "তারা কিসের বিষয়ে প্রশ্ন করছে", 582)
     )
 
-    // Mapping Para 1..30 to start pages in Hafezi Quran
+    // Mapping Para 1..30 to exact start pages in Madani 604-page Mushaf
     val paraStartPages = mapOf(
         1 to 1, 2 to 22, 3 to 42, 4 to 62, 5 to 82,
-        6 to 102, 7 to 122, 8 to 142, 9 to 162, 10 to 182,
-        11 to 202, 12 to 222, 13 to 242, 14 to 262, 15 to 282,
+        6 to 102, 7 to 121, 8 to 142, 9 to 162, 10 to 182,
+        11 to 201, 12 to 222, 13 to 242, 14 to 262, 15 to 282,
         16 to 302, 17 to 322, 18 to 342, 19 to 362, 20 to 382,
         21 to 402, 22 to 422, 23 to 442, 24 to 462, 25 to 482,
         26 to 502, 27 to 522, 28 to 542, 29 to 562, 30 to 582
@@ -484,22 +484,32 @@ object QuranRepository {
                 AyahItem(114, 6, "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ ﴿٦﴾", "জ্বিনের মধ্য থেকে এবং মানুষের মধ্য থেকে।", 604, 30)
             )
             else -> {
-                val surah = surahList.find { it.id == surahNumber } ?: surahList.first()
-                List(surah.totalAyahs) { i ->
-                    AyahItem(
-                        surahNumber = surahNumber,
-                        numberInSurah = i + 1,
-                        textArabic = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ﴿${toArabicNumber(i + 1)}﴾",
-                        textBangla = "আয়াত ${i + 1} লোড করতে ইন্টারনেট সংযোগ চালু রাখুন।",
-                        page = surah.startPage,
-                        juz = surah.paraNumber
-                    )
+                val cachedOffline = offlineSurahsCache?.get(surahNumber)
+                if (!cachedOffline.isNullOrEmpty()) {
+                    cachedOffline.map { item ->
+                        item.copy(
+                            textArabic = "${item.textArabic} ﴿${toArabicNumber(item.numberInSurah)}﴾",
+                            textBangla = "বাংলা অনুবাদ লোড করতে ইন্টারনেট সংযোগ চালু রাখুন।"
+                        )
+                    }
+                } else {
+                    val surah = surahList.find { it.id == surahNumber } ?: surahList.first()
+                    List(surah.totalAyahs) { i ->
+                        AyahItem(
+                            surahNumber = surahNumber,
+                            numberInSurah = i + 1,
+                            textArabic = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ﴿${toArabicNumber(i + 1)}﴾",
+                            textBangla = "আয়াত ${i + 1} লোড করতে ইন্টারনেট সংযোগ চালু রাখুন।",
+                            page = surah.startPage,
+                            juz = surah.paraNumber
+                        )
+                    }
                 }
             }
         }
     }
 
-    private fun toArabicNumber(num: Int): String {
+    fun toArabicNumber(num: Int): String {
         val arabicDigits = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
         val str = num.toString()
         val sb = StringBuilder()
@@ -512,4 +522,311 @@ object QuranRepository {
         }
         return sb.toString()
     }
+
+    // ------------------------------------------------------------------
+    // 100% Offline Complete Arabic Quran (114 Surahs, 30 Paras, 604 Pages)
+    // Loaded from assets/quran_uthmani.json
+    // ------------------------------------------------------------------
+
+    data class OfflineMushafPage(
+        val pageNumber: Int,
+        val juzNumber: Int,
+        val surahsOnPage: List<Surah>,
+        val ayahs: List<AyahItem>
+    )
+
+    data class OfflinePageSummary(
+        val pageNumber: Int,
+        val juzNumber: Int,
+        val firstSurah: Surah
+    )
+
+    @Volatile
+    private var offlineSurahsCache: Map<Int, List<AyahItem>>? = null
+
+    @Volatile
+    private var offlinePagesCache: Map<Int, OfflineMushafPage>? = null
+
+    @Volatile
+    private var offlinePageSummariesCache: List<OfflinePageSummary>? = null
+
+    @Synchronized
+    fun ensureOfflineArabicLoaded(context: Context) {
+        if (offlineSurahsCache != null && offlinePagesCache != null) return
+
+        val appCtx = context.applicationContext
+        val surahMap = HashMap<Int, List<AyahItem>>(114)
+        val pageAyahsMap = HashMap<Int, MutableList<AyahItem>>(604)
+
+        try {
+            appCtx.assets.open("quran_uthmani.json").bufferedReader(Charsets.UTF_8).use { reader ->
+                val jsonStr = reader.readText()
+                val rootArray = JSONArray(jsonStr)
+                for (i in 0 until rootArray.length()) {
+                    val surahObj = rootArray.getJSONObject(i)
+                    val surahNum = surahObj.getInt("s")
+                    val ayahsJson = surahObj.getJSONArray("a")
+                    val surahAyahs = ArrayList<AyahItem>(ayahsJson.length())
+
+                    for (j in 0 until ayahsJson.length()) {
+                        val tuple = ayahsJson.getJSONArray(j)
+                        val numInSurah = tuple.getInt(0)
+                        val rawText = tuple.getString(1)
+                        val juz = tuple.getInt(2)
+                        val page = tuple.getInt(3).coerceIn(1, 604)
+
+                        val item = AyahItem(
+                            surahNumber = surahNum,
+                            numberInSurah = numInSurah,
+                            textArabic = rawText,
+                            textBangla = "",
+                            page = page,
+                            juz = juz
+                        )
+                        surahAyahs.add(item)
+                        pageAyahsMap.getOrPut(page) { ArrayList() }.add(item)
+                    }
+                    surahMap[surahNum] = surahAyahs
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        val pagesMap = HashMap<Int, OfflineMushafPage>(604)
+        val summaries = ArrayList<OfflinePageSummary>(604)
+
+        for (page in 1..604) {
+            val pageAyahs = pageAyahsMap[page].orEmpty()
+            val juz = pageAyahs.firstOrNull()?.juz ?: getJuzForPage(page)
+            val surahIds = LinkedHashSet<Int>()
+            for (ayah in pageAyahs) {
+                surahIds.add(ayah.surahNumber)
+            }
+            val surahsOnPage = surahIds.mapNotNull { id -> surahList.find { it.id == id } }
+                .ifEmpty { listOf(getSurahForPage(page)) }
+
+            pagesMap[page] = OfflineMushafPage(
+                pageNumber = page,
+                juzNumber = juz,
+                surahsOnPage = surahsOnPage,
+                ayahs = pageAyahs
+            )
+            summaries.add(
+                OfflinePageSummary(
+                    pageNumber = page,
+                    juzNumber = juz,
+                    firstSurah = surahsOnPage.first()
+                )
+            )
+        }
+
+        offlineSurahsCache = surahMap
+        offlinePagesCache = pagesMap
+        offlinePageSummariesCache = summaries
+    }
+
+    suspend fun getOfflineArabicSurahAyahs(context: Context, surahNumber: Int): List<AyahItem> =
+        withContext(Dispatchers.IO) {
+            ensureOfflineArabicLoaded(context)
+            offlineSurahsCache?.get(surahNumber).orEmpty()
+        }
+
+    suspend fun getOfflineMushafPage(context: Context, pageNumber: Int): OfflineMushafPage =
+        withContext(Dispatchers.IO) {
+            ensureOfflineArabicLoaded(context)
+            val safePage = pageNumber.coerceIn(1, 604)
+            offlinePagesCache?.get(safePage) ?: OfflineMushafPage(
+                pageNumber = safePage,
+                juzNumber = getJuzForPage(safePage),
+                surahsOnPage = listOf(getSurahForPage(safePage)),
+                ayahs = emptyList()
+            )
+        }
+
+    suspend fun getAllOfflinePageSummaries(context: Context): List<OfflinePageSummary> =
+        withContext(Dispatchers.IO) {
+            ensureOfflineArabicLoaded(context)
+            offlinePageSummariesCache.orEmpty()
+        }
+
+    fun getStartPageForPara(paraNumber: Int): Int {
+        return paraStartPages[paraNumber.coerceIn(1, 30)] ?: 1
+    }
+
+    fun getStartPageForSurah(surahNumber: Int): Int {
+        return surahList.find { it.id == surahNumber }?.startPage ?: 1
+    }
+
+    // ------------------------------------------------------------------
+    // 15-Line Bangladeshi Hafezi Quran (Emdadia Layout: 610 Pages)
+    // Loaded offline from assets/hafezi_15line.json
+    // ------------------------------------------------------------------
+
+    const val HAFEZI_TOTAL_PAGES = 610
+
+    val hafeziJuzStartPages = mapOf(
+        1 to 1, 2 to 22, 3 to 42, 4 to 63, 5 to 82,
+        6 to 102, 7 to 122, 8 to 142, 9 to 162, 10 to 182,
+        11 to 202, 12 to 222, 13 to 242, 14 to 262, 15 to 282,
+        16 to 302, 17 to 322, 18 to 342, 19 to 362, 20 to 382,
+        21 to 403, 22 to 422, 23 to 443, 24 to 462, 25 to 482,
+        26 to 502, 27 to 522, 28 to 542, 29 to 562, 30 to 586
+    )
+
+    // Verified start page (1..610) for each Surah 1..114 in Emdadia 15-Line Hafezi Quran
+    val hafeziSurahStartPages = intArrayOf(
+        1, 2, 50, 77, 106, 128, 151, 177, 187, 208,
+        221, 235, 249, 255, 261, 267, 282, 293, 305, 312,
+        322, 331, 342, 350, 359, 366, 376, 385, 396, 404,
+        411, 415, 418, 428, 434, 440, 445, 452, 458, 467,
+        477, 483, 489, 495, 498, 502, 506, 511, 515, 518,
+        520, 523, 526, 528, 531, 534, 537, 542, 545, 549,
+        551, 553, 554, 556, 558, 560, 562, 564, 567, 569,
+        571, 573, 576, 578, 580, 582, 584, 586, 587, 589,
+        590, 591, 592, 594, 595, 596, 597, 597, 598, 600,
+        600, 601, 602, 602, 603, 603, 604, 604, 605, 605,
+        606, 606, 607, 607, 607, 608, 608, 608, 608, 609,
+        609, 609, 610, 610
+    )
+
+    sealed class HafeziLine {
+        data class SurahHeader(val surahId: Int, val totalAyahs: Int, val rukuCount: Int) : HafeziLine()
+        data object Bismillah : HafeziLine()
+        data class VerseLine(val textWithTokens: String, val isCentered: Boolean, val marginMark: String?) : HafeziLine()
+        data object BlankLine : HafeziLine()
+    }
+
+    data class HafeziMushafPage(
+        val pageNumber: Int,
+        val juzNumber: Int,
+        val primarySurah: Surah,
+        val manzilNumber: Int,
+        val lines: List<HafeziLine>
+    )
+
+    @Volatile
+    private var hafeziPagesCache: Map<Int, HafeziMushafPage>? = null
+
+    @Volatile
+    private var hafeziPageSummariesCache: List<OfflinePageSummary>? = null
+
+    fun getHafeziJuzForPage(page: Int): Int {
+        var juz = 1
+        for (i in 1..30) {
+            val startP = hafeziJuzStartPages[i] ?: 1
+            if (page >= startP) {
+                juz = i
+            }
+        }
+        return juz
+    }
+
+    fun getHafeziSurahForPage(page: Int): Surah {
+        var surahId = 1
+        for (idx in hafeziSurahStartPages.indices) {
+            if (page >= hafeziSurahStartPages[idx]) {
+                surahId = idx + 1
+            } else {
+                break
+            }
+        }
+        return surahList.find { it.id == surahId } ?: surahList.first()
+    }
+
+    fun getHafeziStartPageForSurah(surahNumber: Int): Int {
+        val idx = (surahNumber - 1).coerceIn(0, hafeziSurahStartPages.lastIndex)
+        return hafeziSurahStartPages[idx]
+    }
+
+    fun getHafeziStartPageForPara(paraNumber: Int): Int {
+        return hafeziJuzStartPages[paraNumber.coerceIn(1, 30)] ?: 1
+    }
+
+    @Synchronized
+    fun ensureHafeziLoaded(context: Context) {
+        if (hafeziPagesCache != null && hafeziPageSummariesCache != null) return
+
+        val appCtx = context.applicationContext
+        val pagesMap = HashMap<Int, HafeziMushafPage>(HAFEZI_TOTAL_PAGES)
+        val summaries = ArrayList<OfflinePageSummary>(HAFEZI_TOTAL_PAGES)
+
+        try {
+            appCtx.assets.open("hafezi_15line.json").bufferedReader(Charsets.UTF_8).use { reader ->
+                val root = JSONObject(reader.readText())
+                val pagesArr = root.getJSONArray("pages")
+                for (i in 0 until pagesArr.length()) {
+                    val pObj = pagesArr.getJSONObject(i)
+                    val pNum = pObj.getInt("p")
+                    val jNum = pObj.getInt("j")
+                    val sId = pObj.getInt("s")
+                    val mNum = pObj.optInt("m", 1)
+                    val linesArr = pObj.getJSONArray("l")
+
+                    val lines = ArrayList<HafeziLine>(linesArr.length())
+                    for (k in 0 until linesArr.length()) {
+                        val lObj = linesArr.getJSONObject(k)
+                        when (lObj.getString("t")) {
+                            "s" -> lines.add(
+                                HafeziLine.SurahHeader(
+                                    surahId = lObj.getInt("s"),
+                                    totalAyahs = lObj.optInt("ay", 0),
+                                    rukuCount = lObj.optInt("ru", 1)
+                                )
+                            )
+                            "b" -> lines.add(HafeziLine.Bismillah)
+                            "x" -> lines.add(HafeziLine.BlankLine)
+                            else -> lines.add(
+                                HafeziLine.VerseLine(
+                                    textWithTokens = lObj.getString("tx"),
+                                    isCentered = lObj.optInt("c", 0) == 1,
+                                    marginMark = lObj.optString("mk", "").ifBlank { null }
+                                )
+                            )
+                        }
+                    }
+
+                    val primarySurah = surahList.find { it.id == sId } ?: getHafeziSurahForPage(pNum)
+                    pagesMap[pNum] = HafeziMushafPage(
+                        pageNumber = pNum,
+                        juzNumber = jNum,
+                        primarySurah = primarySurah,
+                        manzilNumber = mNum,
+                        lines = lines
+                    )
+                    summaries.add(
+                        OfflinePageSummary(
+                            pageNumber = pNum,
+                            juzNumber = jNum,
+                            firstSurah = primarySurah
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        hafeziPagesCache = pagesMap
+        hafeziPageSummariesCache = summaries
+    }
+
+    suspend fun getHafeziMushafPage(context: Context, pageNumber: Int): HafeziMushafPage =
+        withContext(Dispatchers.IO) {
+            ensureHafeziLoaded(context)
+            val safePage = pageNumber.coerceIn(1, HAFEZI_TOTAL_PAGES)
+            hafeziPagesCache?.get(safePage) ?: HafeziMushafPage(
+                pageNumber = safePage,
+                juzNumber = getHafeziJuzForPage(safePage),
+                primarySurah = getHafeziSurahForPage(safePage),
+                manzilNumber = 1,
+                lines = emptyList()
+            )
+        }
+
+    suspend fun getAllHafeziPageSummaries(context: Context): List<OfflinePageSummary> =
+        withContext(Dispatchers.IO) {
+            ensureHafeziLoaded(context)
+            hafeziPageSummariesCache.orEmpty()
+        }
 }

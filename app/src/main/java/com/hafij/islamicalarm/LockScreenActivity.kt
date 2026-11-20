@@ -127,6 +127,11 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun initOrResumeLockTimer(intent: Intent) {
+        if (PrayerLockOverlayService.isOverlayShowing) {
+            remainingTimeMillis = 0L
+            finish()
+            return
+        }
         val prefs = getSharedPreferences("IslamicAlarmLockPrefs", Context.MODE_PRIVATE)
         val savedAlarmId = prefs.getString("active_alarm_id", null)
         val intentAlarmId = intent.getStringExtra("ALARM_ID")
@@ -499,7 +504,9 @@ class LockScreenActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        com.hafij.islamicalarm.silent.AutoSilentManager.restoreRingerMode(this)
+        if (!PrayerLockOverlayService.isOverlayShowing) {
+            com.hafij.islamicalarm.silent.AutoSilentManager.restoreRingerMode(this)
+        }
         stopAlarmSound()
         countDownTimer?.cancel()
         releaseWakeLock()

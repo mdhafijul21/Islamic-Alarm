@@ -18,6 +18,8 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <queries>
         <intent>
@@ -79,6 +81,13 @@
             android:name="com.hafij.islamicalarm.quran.SurahDetailActivity"
             android:exported="false"
             android:label="সূরা"
+            android:theme="@style/Theme.IslamicAlarm" />
+
+        <!-- Complete Offline Arabic Quran Activity (114 Surahs, 30 Paras, 604 Pages) -->
+        <activity
+            android:name="com.hafij.islamicalarm.quran.OfflineArabicQuranActivity"
+            android:exported="false"
+            android:label="আল-কুরআন (আরবি)"
             android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- Tasbih Activity -->
@@ -231,6 +240,16 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/restrict_accessibility_config" />
+        </service>
+
+        <service
+            android:name="com.hafij.islamicalarm.PrayerLockOverlayService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Displays a full-screen prayer-time restriction overlay and countdown timer during user-configured prayer alarms." />
         </service>
 
     </application>

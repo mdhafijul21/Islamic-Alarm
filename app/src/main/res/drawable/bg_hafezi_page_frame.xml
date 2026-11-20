@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer deep border -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFDF7" />
+            <stroke
+                android:width="2.5dp"
+                android:color="@color/dua_primary_dark" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <!-- Inner golden Mushaf border -->
+    <item
+        android:bottom="4dp"
+        android:left="4dp"
+        android:right="4dp"
+        android:top="4dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFDF7" />
+            <stroke
+                android:width="1.2dp"
+                android:color="@color/dua_accent" />
+            <corners android:radius="7dp" />
+        </shape>
+    </item>
+</layer-list>
