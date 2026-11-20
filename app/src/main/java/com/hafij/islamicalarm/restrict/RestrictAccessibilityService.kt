@@ -26,6 +26,9 @@ class RestrictAccessibilityService : AccessibilityService() {
     private var lastBlockAt = 0L
     private var lastScanAt = 0L
     private var lastSafeAt = 0L
+    private var navigationWatchUntil = 0L
+    private var navigationPackage: String? = null
+    private var pendingPageScan = false
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -50,7 +53,7 @@ class RestrictAccessibilityService : AccessibilityService() {
                 lastPackage = pkg
                 checkNow()
             }
-            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> handleTextChanged(event)
+            AccessibilityEvent.TYPE_VIEW_CLICKED -> handleViewClicked(event)
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> handleContentChanged(event)
         }
     }
@@ -103,37 +106,55 @@ class RestrictAccessibilityService : AccessibilityService() {
     }
 
     // ------------------------------------------------------------------
-    // Safe mode: stops adult searches. Only text fields (search boxes, address bars)
-    // are checked; password fields are skipped; nothing is stored or sent anywhere.
+    // Safe mode: typing alone never triggers the block screen. A click starts
+    // a short navigation-watch window; after the page changes, visible page
+    // text is inspected. Passwords and editable fields are never inspected.
     // ------------------------------------------------------------------
 
-    private fun handleTextChanged(event: AccessibilityEvent) {
+    private fun handleViewClicked(event: AccessibilityEvent) {
         if (!safeStore.isEnabled) return
-        if (event.packageName?.toString() == packageName) return
-        if (event.isPassword) return
-        val text = event.text?.joinToString(" ") { it?.toString() ?: "" } ?: return
-        if (SafeWords.matches(text, safeStore.getCustomWords())) {
-            onSafeViolation(event.source)
-        }
+        val pkg = event.packageName?.toString() ?: return
+        if (pkg == packageName || pkg in ignored) return
+
+        // Start watching the page after a user click (typically a search result).
+        // Do not inspect the text field that was used to type the search.
+        navigationPackage = pkg
+        navigationWatchUntil = SystemClock.elapsedRealtime() + NAVIGATION_WATCH_MS
+        schedulePageScan(pkg, PAGE_SCAN_DELAY_MS)
     }
 
     private fun handleContentChanged(event: AccessibilityEvent) {
         if (!safeStore.isEnabled) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg == packageName || pkg in ignored) return
-
-        val tick = SystemClock.elapsedRealtime()
-        if (tick - lastScanAt < 800L) return
-        lastScanAt = tick
-
-        val root = rootInActiveWindow ?: return
-        val hit = findBlockedField(root)
-        if (hit != null) {
-            onSafeViolation(hit)
+        if (pkg != navigationPackage) return
+        if (SystemClock.elapsedRealtime() > navigationWatchUntil) {
+            navigationPackage = null
+            pendingPageScan = false
+            return
         }
+
+        // Browser pages often populate asynchronously after the result is tapped.
+        schedulePageScan(pkg, PAGE_SCAN_DELAY_MS)
     }
 
-    private fun findBlockedField(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+    private fun schedulePageScan(pkg: String, delayMs: Long) {
+        if (pendingPageScan) return
+        pendingPageScan = true
+        handler.postDelayed({
+            pendingPageScan = false
+            if (!safeStore.isEnabled) return@postDelayed
+            if (pkg != navigationPackage) return@postDelayed
+            if (SystemClock.elapsedRealtime() > navigationWatchUntil) return@postDelayed
+            if (pkg == packageName || pkg in ignored) return@postDelayed
+
+            val root = rootInActiveWindow ?: return@postDelayed
+            if (root.packageName?.toString() != pkg) return@postDelayed
+            if (pageContainsBlockedContent(root)) onSafeViolation()
+        }, delayMs)
+    }
+
+    private fun pageContainsBlockedContent(root: AccessibilityNodeInfo): Boolean {
         val custom = safeStore.getCustomWords()
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         queue.add(root)
@@ -141,43 +162,33 @@ class RestrictAccessibilityService : AccessibilityService() {
         while (queue.isNotEmpty() && visited < MAX_SCAN_NODES) {
             val node = queue.removeFirst()
             visited++
-            if (!node.isPassword && isTextField(node)) {
-                val text = node.text?.toString()
-                if (!text.isNullOrEmpty() && SafeWords.matches(text, custom)) {
-                    return node
+
+            // Ignore password and editable nodes: searching/typing must not itself
+            // activate Safe Mode. Only rendered page content is considered.
+            if (!node.isPassword && !node.isEditable) {
+                val text = node.text?.toString().orEmpty()
+                val description = node.contentDescription?.toString().orEmpty()
+                if ((text.isNotBlank() && SafeWords.matches(text, custom)) ||
+                    (description.isNotBlank() && SafeWords.matches(description, custom))) {
+                    return true
                 }
             }
+
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i)
                 if (child != null) queue.add(child)
             }
         }
-        return null
+        return false
     }
 
-    private fun isTextField(node: AccessibilityNodeInfo): Boolean {
-        if (node.isEditable) return true
-        val cls = node.className?.toString() ?: ""
-        if (cls.contains("EditText")) return true
-        val id = node.viewIdResourceName?.lowercase() ?: return false
-        return id.contains("url") || id.contains("search") || id.contains("omnibox") || id.contains("query")
-    }
-
-    private fun onSafeViolation(node: AccessibilityNodeInfo?) {
+    private fun onSafeViolation() {
         val tick = SystemClock.elapsedRealtime()
         if (tick - lastSafeAt < 1500L) return
         lastSafeAt = tick
-
-        // Clear the offending text so the search is not run again when the user returns.
-        try {
-            if (node != null) {
-                val args = Bundle()
-                args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "")
-                node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        navigationWatchUntil = 0L
+        navigationPackage = null
+        pendingPageScan = false
 
         try {
             val intent = Intent(this, SafeBlockActivity::class.java).apply {
@@ -208,6 +219,8 @@ class RestrictAccessibilityService : AccessibilityService() {
     }
 
     companion object {
-        private const val MAX_SCAN_NODES = 300
+        private const val MAX_SCAN_NODES = 500
+        private const val NAVIGATION_WATCH_MS = 15_000L
+        private const val PAGE_SCAN_DELAY_MS = 900L
     }
 }

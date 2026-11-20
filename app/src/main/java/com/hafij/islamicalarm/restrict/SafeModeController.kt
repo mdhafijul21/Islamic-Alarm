@@ -80,7 +80,7 @@ class SafeModeController(
 
         MaterialAlertDialogBuilder(activity)
             .setTitle("নিজের শব্দ যোগ করুন")
-            .setMessage("এই শব্দ সার্চ বক্সে বা ঠিকানা বারে এলে সেফ মোড আটকাবে।")
+            .setMessage("সার্চ রেজাল্ট বা খোলা পেজে এই শব্দ/সাইট শনাক্ত হলে সেফ মোড সতর্ক করবে। শুধু টাইপ করলে চালু হবে না।")
             .setView(box)
             .setPositiveButton("সংরক্ষণ করুন") { _, _ ->
                 val words = input.text.toString().split('\n', ',')
