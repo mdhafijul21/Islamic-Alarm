@@ -49,10 +49,14 @@ class DuaAdapter : RecyclerView.Adapter<DuaAdapter.DuaViewHolder>() {
                 binding.tvDuaTranslation.text = "অর্থ: ${dua.translation}"
             }
 
-            binding.tvDuaWhen.visibility =
-                if (dua.whenToRead.isBlank()) View.GONE else View.VISIBLE
-            binding.tvDuaWhen.text =
-                if (dua.whenToRead.isBlank()) "" else "সময়: ${dua.whenToRead}"
+            val metaLine = when {
+                dua.reference.isNotBlank() && dua.contentType == "HADITH" -> "দলিল: ${dua.reference}"
+                dua.whenToRead.isNotBlank() -> "সময়: ${dua.whenToRead}"
+                dua.reference.isNotBlank() -> "সূত্র: ${dua.reference}"
+                else -> ""
+            }
+            binding.tvDuaWhen.visibility = if (metaLine.isBlank()) View.GONE else View.VISIBLE
+            binding.tvDuaWhen.text = metaLine
 
             val openDetail = {
                 val context = binding.root.context
@@ -73,7 +77,6 @@ class DuaAdapter : RecyclerView.Adapter<DuaAdapter.DuaViewHolder>() {
                 }
                 context.startActivity(intent)
             }
-            binding.btnOpenDuaDetail.setOnClickListener { openDetail() }
             binding.root.setOnClickListener { openDetail() }
         }
     }

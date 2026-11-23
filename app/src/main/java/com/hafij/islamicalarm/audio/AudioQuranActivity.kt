@@ -2,23 +2,20 @@ package com.hafij.islamicalarm.audio
 
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -47,35 +44,10 @@ class AudioQuranActivity : AppCompatActivity() {
 
     private var currentReciter: Reciter = ReciterData.getDefaultReciter()
     private var currentPlayingSurah: Surah? = null
-    private var mediaPlayer: MediaPlayer? = null
-    private var isAudioActive = false
     private var isRepeatOne = false
-    private var tts: TextToSpeech? = null
-    private var ttsReady = false
-    private var ttsArabicAvailable = false
-    private var isTtsMode = false
-    private var ttsAyahs: List<String> = emptyList()
-    private var ttsAyahIndex = 0
+    private var isUserSeeking = false
     private var batchDownloadJob: Job? = null
-
-    private val handler = Handler(Looper.getMainLooper())
-    private val progressRunnable = object : Runnable {
-        override fun run() {
-            mediaPlayer?.let { mp ->
-                if (mp.isPlaying) {
-                    val currentPos = mp.currentPosition
-                    val totalDuration = mp.duration
-                    if (totalDuration > 0) {
-                        val progress = (currentPos.toFloat() / totalDuration * 100).toInt()
-                        binding.sbSurahProgress.progress = progress
-                        binding.tvPlayerCurrentTime.text = formatTime(currentPos)
-                        binding.tvPlayerTotalDuration.text = formatTime(totalDuration)
-                    }
-                    handler.postDelayed(this, 500)
-                }
-            }
-        }
-    }
+    private var lastPromptedMissingSurahId: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,12 +56,12 @@ class AudioQuranActivity : AppCompatActivity() {
 
         binding.toolbarAudioQuran.setNavigationOnClickListener { finish() }
 
-        initTts()
         setupReciterChips()
         setupRecyclerView()
         setupSearch()
         setupPlayerControls()
         setupBatchOfflineDownload()
+        observeAudioServiceState()
         refreshCountLabel()
     }
 
@@ -115,9 +87,14 @@ class AudioQuranActivity : AppCompatActivity() {
                     refreshCountLabel()
                     Toast.makeText(this, "${reciter.nameBn} নির্বাচন করা হয়েছে", Toast.LENGTH_SHORT).show()
 
-                    currentPlayingSurah?.let { surah ->
-                        if (isAudioActive) {
-                            playSurah(surah)
+                    val serviceState = QuranAudioService.stateFlow.value
+                    if (serviceState.surah != null) {
+                        QuranAudioService.dispatchAction(
+                            context = this,
+                            action = QuranAudioService.ACTION_CHANGE_RECITER,
+                            promoteForeground = serviceState.isPlaying || serviceState.isBuffering
+                        ) {
+                            putExtra(QuranAudioService.EXTRA_RECITER_ID, reciter.id)
                         }
                     }
                 }
@@ -229,11 +206,7 @@ class AudioQuranActivity : AppCompatActivity() {
             for (surah in surahsToDownload) {
                 if (!isActive) break
                 val dest = AudioSurahAdapter.targetAudioFile(this@AudioQuranActivity, reciter.id, surah.id)
-                val ok = downloadFileWithFallback(
-                    primaryUrl = reciter.getSurahAudioUrl(surah.id),
-                    fallbackUrl = reciter.getSurahFallbackUrl(surah.id),
-                    destFile = dest
-                )
+                val ok = downloadFileWithMirrors(reciter.getAllPlaybackUrls(surah.id), dest)
                 completed++
                 val c = completed
                 withContext(Dispatchers.Main) {
@@ -260,16 +233,37 @@ class AudioQuranActivity : AppCompatActivity() {
 
     private fun setupPlayerControls() {
         binding.btnPlayerPlayPause.setOnClickListener {
-            currentPlayingSurah?.let {
-                if (isAudioActive) pauseAudio() else resumeAudio()
+            if (currentPlayingSurah != null) {
+                val st = QuranAudioService.stateFlow.value
+                QuranAudioService.dispatchAction(
+                    context = this,
+                    action = QuranAudioService.ACTION_TOGGLE_PLAY_PAUSE,
+                    promoteForeground = !st.isPlaying
+                )
             }
         }
 
-        binding.btnPlayerNext.setOnClickListener { playNextSurah() }
-        binding.btnPlayerPrev.setOnClickListener { playPreviousSurah() }
+        binding.btnPlayerNext.setOnClickListener {
+            QuranAudioService.dispatchAction(
+                context = this,
+                action = QuranAudioService.ACTION_NEXT,
+                promoteForeground = true
+            )
+        }
+
+        binding.btnPlayerPrev.setOnClickListener {
+            QuranAudioService.dispatchAction(
+                context = this,
+                action = QuranAudioService.ACTION_PREV,
+                promoteForeground = true
+            )
+        }
 
         binding.btnPlayerRepeat.setOnClickListener {
             isRepeatOne = !isRepeatOne
+            QuranAudioService.dispatchAction(this, QuranAudioService.ACTION_SET_REPEAT) {
+                putExtra(QuranAudioService.EXTRA_REPEAT_ONE, isRepeatOne)
+            }
             if (isRepeatOne) {
                 binding.btnPlayerRepeat.setColorFilter(resources.getColor(R.color.secondary, theme))
                 Toast.makeText(this, "সুরা পুনরাবৃত্তি (Repeat 1) চালু", Toast.LENGTH_SHORT).show()
@@ -288,168 +282,110 @@ class AudioQuranActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnPlayerClose.setOnClickListener { stopAudio() }
+        binding.btnPlayerClose.setOnClickListener {
+            QuranAudioService.dispatchAction(this, QuranAudioService.ACTION_STOP)
+        }
 
         binding.sbSurahProgress.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser && !isTtsMode && mediaPlayer != null && (mediaPlayer?.duration ?: 0) > 0) {
-                    val newPos = (progress / 100f * mediaPlayer!!.duration).toInt()
-                    mediaPlayer?.seekTo(newPos)
+                val st = QuranAudioService.stateFlow.value
+                if (fromUser && !st.isTtsMode && st.durationMs > 0) {
+                    val newPos = (progress / 100f * st.durationMs).toInt()
                     binding.tvPlayerCurrentTime.text = formatTime(newPos)
+                    QuranAudioService.dispatchAction(this@AudioQuranActivity, QuranAudioService.ACTION_SEEK) {
+                        putExtra(QuranAudioService.EXTRA_SEEK_POS_MS, newPos)
+                    }
                 }
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                isUserSeeking = true
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                isUserSeeking = false
+            }
         })
+    }
+
+    private fun observeAudioServiceState() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                QuranAudioService.stateFlow.collect { state ->
+                    currentPlayingSurah = state.surah
+                    isRepeatOne = state.isRepeatOne
+
+                    val surah = state.surah
+                    if (surah == null) {
+                        binding.cardFullAudioPlayer.visibility = View.GONE
+                        surahAdapter.setCurrentlyPlayingId(null, false)
+                        return@collect
+                    }
+
+                    binding.cardFullAudioPlayer.visibility = View.VISIBLE
+                    binding.tvPlayerSurahTitle.text =
+                        "সুরা ${surah.id}: ${surah.nameBangla} (${surah.nameArabic})"
+                    binding.tvPlayerReciterName.text = state.statusText.ifBlank { state.reciter.nameBn }
+
+                    val isActive = state.isPlaying || state.isBuffering
+                    binding.btnPlayerPlayPause.setImageResource(
+                        if (isActive) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+                    )
+                    surahAdapter.setCurrentlyPlayingId(surah.id, isActive)
+
+                    if (state.isBuffering) {
+                        binding.tvPlayerCurrentTime.text = "০০:০০"
+                        binding.tvPlayerTotalDuration.text = "লোড হচ্ছে..."
+                        if (!isUserSeeking) binding.sbSurahProgress.progress = 0
+                    } else if (state.isTtsMode) {
+                        val total = state.ttsTotalAyahs.coerceAtLeast(1)
+                        val idx = state.ttsAyahIndex
+                        val pct = ((idx + 1) * 100 / total).coerceIn(1, 100)
+                        if (!isUserSeeking) binding.sbSurahProgress.progress = pct
+                        binding.tvPlayerCurrentTime.text = "আয়াত ${idx + 1}"
+                        binding.tvPlayerTotalDuration.text = "মোট $total"
+                    } else if (state.durationMs > 0) {
+                        val progress = (state.positionMs.toFloat() / state.durationMs * 100).toInt().coerceIn(0, 100)
+                        if (!isUserSeeking) binding.sbSurahProgress.progress = progress
+                        binding.tvPlayerCurrentTime.text = formatTime(state.positionMs)
+                        binding.tvPlayerTotalDuration.text = formatTime(state.durationMs)
+                    }
+
+                    val missingId = state.missingOfflinePromptSurahId
+                    if (missingId != null && missingId != lastPromptedMissingSurahId) {
+                        lastPromptedMissingSurahId = missingId
+                        allSurahs.find { it.id == missingId }?.let { showMissingOfflineAudioDialog(it) }
+                        QuranAudioService.dispatchAction(
+                            this@AudioQuranActivity,
+                            QuranAudioService.ACTION_CLEAR_MISSING_PROMPT
+                        )
+                    } else if (missingId == null) {
+                        lastPromptedMissingSurahId = null
+                    }
+                }
+            }
+        }
     }
 
     private fun togglePlay(surah: Surah) {
-        if (currentPlayingSurah?.id == surah.id && (mediaPlayer != null || isTtsMode)) {
-            if (isAudioActive) pauseAudio() else resumeAudio()
+        val current = QuranAudioService.stateFlow.value
+        if (current.surah?.id == surah.id) {
+            QuranAudioService.dispatchAction(
+                context = this,
+                action = QuranAudioService.ACTION_TOGGLE_PLAY_PAUSE,
+                promoteForeground = !current.isPlaying
+            )
             return
         }
-        playSurah(surah)
-    }
-
-    private fun playSurah(surah: Surah) {
-        stopAudio()
-        currentPlayingSurah = surah
-
-        binding.cardFullAudioPlayer.visibility = View.VISIBLE
-        binding.tvPlayerSurahTitle.text = "সুরা ${surah.id}: ${surah.nameBangla} (${surah.nameArabic})"
-        binding.tvPlayerReciterName.text = currentReciter.nameBn
-        binding.sbSurahProgress.progress = 0
-        binding.tvPlayerCurrentTime.text = "০০:০০"
-        binding.tvPlayerTotalDuration.text = "লোড হচ্ছে..."
-
-        val localFile = AudioSurahAdapter.resolveLocalAudioFile(this, currentReciter.id, surah.id)
-        if (localFile != null) {
-            binding.tvPlayerReciterName.text = "${currentReciter.nameBn} (অফলাইনে সংরক্ষিত ✅)"
-            startMediaPlayer(surah, localFile.absolutePath, isLocal = true)
-        } else if (hasInternetConnection()) {
-            val audioUrl = currentReciter.getSurahAudioUrl(surah.id)
-            startMediaPlayer(surah, audioUrl, isLocal = false)
-        } else {
-            // Instant offline playback using bundled quran_uthmani.json via Arabic TTS
-            playTtsRecitation(surah, resetIndex = true)
+        lastPromptedMissingSurahId = null
+        QuranAudioService.dispatchAction(
+            context = this,
+            action = QuranAudioService.ACTION_PLAY_SURAH,
+            promoteForeground = true
+        ) {
+            putExtra(QuranAudioService.EXTRA_SURAH_ID, surah.id)
+            putExtra(QuranAudioService.EXTRA_RECITER_ID, currentReciter.id)
         }
-    }
-
-    private fun startMediaPlayer(surah: Surah, source: String, isLocal: Boolean) {
-        try {
-            mediaPlayer?.release()
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
-                setDataSource(source)
-                setOnPreparedListener { mp ->
-                    mp.start()
-                    this@AudioQuranActivity.isAudioActive = true
-                    isTtsMode = false
-                    binding.btnPlayerPlayPause.setImageResource(android.R.drawable.ic_media_pause)
-                    surahAdapter.setCurrentlyPlayingId(surah.id, true)
-                    binding.tvPlayerTotalDuration.text = formatTime(mp.duration)
-                    handler.post(progressRunnable)
-                }
-                setOnCompletionListener {
-                    if (isRepeatOne) playSurah(surah) else playNextSurah()
-                }
-                setOnErrorListener { _, _, _ ->
-                    if (!isLocal) {
-                        val fallback = currentReciter.getSurahFallbackUrl(surah.id)
-                        if (fallback != source) {
-                            startMediaPlayer(surah, fallback, isLocal = false)
-                        } else {
-                            playTtsRecitation(surah, resetIndex = true)
-                        }
-                    } else {
-                        playTtsRecitation(surah, resetIndex = true)
-                    }
-                    true
-                }
-                prepareAsync()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            playTtsRecitation(surah, resetIndex = true)
-        }
-    }
-
-    private fun playTtsRecitation(surah: Surah, resetIndex: Boolean) {
-        if (ttsReady && !ttsArabicAvailable) {
-            isTtsMode = false
-            isAudioActive = false
-            binding.btnPlayerPlayPause.setImageResource(android.R.drawable.ic_media_play)
-            surahAdapter.setCurrentlyPlayingId(null, false)
-            binding.tvPlayerReciterName.text = "অফলাইন আরবি ভয়েস ফোনে পাওয়া যায়নি"
-            binding.tvPlayerTotalDuration.text = "MP3 ডাউনলোড বা আরবি ভয়েস সেট করুন"
-            showMissingOfflineAudioDialog(surah)
-            return
-        }
-
-        isTtsMode = true
-        isAudioActive = true
-        binding.btnPlayerPlayPause.setImageResource(android.R.drawable.ic_media_pause)
-        surahAdapter.setCurrentlyPlayingId(surah.id, true)
-
-        if (resetIndex || ttsAyahs.isEmpty()) {
-            ttsAyahIndex = 0
-            binding.tvPlayerReciterName.text = "অফলাইন আরবি তিলাওয়াত লোড হচ্ছে..."
-            lifecycleScope.launch {
-                val ayahs = QuranRepository.getOfflineArabicSurahAyahs(this@AudioQuranActivity, surah.id)
-                    .map { it.textArabic }
-                    .ifEmpty { listOf("سورة ${surah.nameArabic}. بسم الله الرحمن الرحيم") }
-                if (!isTtsMode || !isAudioActive || currentPlayingSurah?.id != surah.id) return@launch
-                ttsAyahs = ayahs
-                speakCurrentTtsAyah(surah)
-            }
-        } else {
-            speakCurrentTtsAyah(surah)
-        }
-    }
-
-    private fun speakCurrentTtsAyah(surah: Surah) {
-        if (!isTtsMode || !isAudioActive || currentPlayingSurah?.id != surah.id) return
-        val total = ttsAyahs.size.coerceAtLeast(1)
-        if (ttsAyahIndex >= total) {
-            if (isRepeatOne) {
-                ttsAyahIndex = 0
-            } else {
-                playNextSurah()
-                return
-            }
-        }
-
-        val idx = ttsAyahIndex
-        val ayahText = ttsAyahs[idx]
-        val pct = ((idx + 1) * 100 / total).coerceIn(1, 100)
-        binding.sbSurahProgress.progress = pct
-        binding.tvPlayerCurrentTime.text = "আয়াত ${idx + 1}"
-        binding.tvPlayerTotalDuration.text = "মোট $total"
-        binding.tvPlayerReciterName.text =
-            "অফলাইন আরবি ভয়েস তিলাওয়াত (${idx + 1}/$total)"
-
-        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {}
-            override fun onDone(utteranceId: String?) {
-                if (isTtsMode && isAudioActive && currentPlayingSurah?.id == surah.id) {
-                    ttsAyahIndex++
-                    handler.post { speakCurrentTtsAyah(surah) }
-                }
-            }
-            @Suppress("DEPRECATION")
-            override fun onError(utteranceId: String?) {
-                if (isTtsMode && isAudioActive && currentPlayingSurah?.id == surah.id) {
-                    ttsAyahIndex++
-                    handler.post { speakCurrentTtsAyah(surah) }
-                }
-            }
-        })
-        tts?.speak(ayahText, TextToSpeech.QUEUE_FLUSH, null, "QURAN_TTS_${surah.id}_$idx")
     }
 
     private fun showMissingOfflineAudioDialog(surah: Surah) {
@@ -472,66 +408,6 @@ class AudioQuranActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun pauseAudio() {
-        if (isTtsMode) {
-            tts?.stop()
-        } else {
-            mediaPlayer?.pause()
-        }
-        isAudioActive = false
-        binding.btnPlayerPlayPause.setImageResource(android.R.drawable.ic_media_play)
-        surahAdapter.setCurrentlyPlayingId(currentPlayingSurah?.id, false)
-        handler.removeCallbacks(progressRunnable)
-    }
-
-    private fun resumeAudio() {
-        if (isTtsMode) {
-            currentPlayingSurah?.let { playTtsRecitation(it, resetIndex = false) }
-        } else {
-            mediaPlayer?.start()
-            isAudioActive = true
-            binding.btnPlayerPlayPause.setImageResource(android.R.drawable.ic_media_pause)
-            surahAdapter.setCurrentlyPlayingId(currentPlayingSurah?.id, true)
-            handler.post(progressRunnable)
-        }
-    }
-
-    private fun playNextSurah() {
-        val currentId = currentPlayingSurah?.id ?: 0
-        val nextId = if (currentId < 114) currentId + 1 else 1
-        allSurahs.find { it.id == nextId }?.let { playSurah(it) }
-    }
-
-    private fun playPreviousSurah() {
-        val currentId = currentPlayingSurah?.id ?: 2
-        val prevId = if (currentId > 1) currentId - 1 else 114
-        allSurahs.find { it.id == prevId }?.let { playSurah(it) }
-    }
-
-    private fun stopAudio() {
-        handler.removeCallbacks(progressRunnable)
-        if (isTtsMode) {
-            tts?.stop()
-            isTtsMode = false
-        }
-        mediaPlayer?.let { mp ->
-            try {
-                if (mp.isPlaying) mp.stop()
-                mp.reset()
-                mp.release()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        mediaPlayer = null
-        isAudioActive = false
-        currentPlayingSurah = null
-        ttsAyahs = emptyList()
-        ttsAyahIndex = 0
-        binding.cardFullAudioPlayer.visibility = View.GONE
-        surahAdapter.setCurrentlyPlayingId(null, false)
-    }
-
     private fun downloadSurahOffline(surah: Surah) {
         val reciter = currentReciter
         if (AudioSurahAdapter.resolveLocalAudioFile(this, reciter.id, surah.id) != null) {
@@ -547,11 +423,7 @@ class AudioQuranActivity : AppCompatActivity() {
         val destFile = AudioSurahAdapter.targetAudioFile(this, reciter.id, surah.id)
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val ok = downloadFileWithFallback(
-                primaryUrl = reciter.getSurahAudioUrl(surah.id),
-                fallbackUrl = reciter.getSurahFallbackUrl(surah.id),
-                destFile = destFile
-            )
+            val ok = downloadFileWithMirrors(reciter.getAllPlaybackUrls(surah.id), destFile)
             withContext(Dispatchers.Main) {
                 if (ok) {
                     Toast.makeText(this@AudioQuranActivity, "সুরা ${surah.nameBangla} অফলাইনে সংরক্ষিত হয়েছে ✅", Toast.LENGTH_SHORT).show()
@@ -564,10 +436,9 @@ class AudioQuranActivity : AppCompatActivity() {
         }
     }
 
-    private fun downloadFileWithFallback(primaryUrl: String, fallbackUrl: String, destFile: File): Boolean {
-        if (downloadSingleUrl(primaryUrl, destFile)) return true
-        if (fallbackUrl.isNotBlank() && fallbackUrl != primaryUrl) {
-            return downloadSingleUrl(fallbackUrl, destFile)
+    private fun downloadFileWithMirrors(urls: List<String>, destFile: File): Boolean {
+        for (url in urls) {
+            if (url.isNotBlank() && downloadSingleUrl(url, destFile)) return true
         }
         return false
     }
@@ -577,13 +448,13 @@ class AudioQuranActivity : AppCompatActivity() {
         return try {
             val url = URL(urlStr)
             val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 15000
+            conn.connectTimeout = 10000
             conn.readTimeout = 20000
             conn.connect()
             if (conn.responseCode == HttpURLConnection.HTTP_OK) {
                 conn.inputStream.use { input ->
                     FileOutputStream(tmpFile).use { output ->
-                        val buffer = ByteArray(8192)
+                        val buffer = ByteArray(16384)
                         var bytesRead: Int
                         while (input.read(buffer).also { bytesRead = it } != -1) {
                             output.write(buffer, 0, bytesRead)
@@ -623,22 +494,6 @@ class AudioQuranActivity : AppCompatActivity() {
         }
     }
 
-    private fun initTts() {
-        tts = TextToSpeech(applicationContext) { status ->
-            ttsReady = true
-            if (status == TextToSpeech.SUCCESS) {
-                var result = tts?.setLanguage(Locale("ar"))
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    result = tts?.setLanguage(Locale("ar", "SA")) ?: TextToSpeech.LANG_NOT_SUPPORTED
-                }
-                ttsArabicAvailable = (result != TextToSpeech.LANG_MISSING_DATA &&
-                    result != TextToSpeech.LANG_NOT_SUPPORTED)
-            } else {
-                ttsArabicAvailable = false
-            }
-        }
-    }
-
     private fun formatTime(millis: Int): String {
         val totalSec = millis / 1000
         val min = totalSec / 60
@@ -648,9 +503,7 @@ class AudioQuranActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         batchDownloadJob?.cancel()
+        // Intentionally do NOT stop QuranAudioService here so recitation continues playing in background.
         super.onDestroy()
-        stopAudio()
-        tts?.stop()
-        tts?.shutdown()
     }
 }

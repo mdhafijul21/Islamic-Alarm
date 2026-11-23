@@ -9,6 +9,9 @@ package com.hafij.islamicalarm.duas
 object DuaCategoryArtwork {
     fun iconFor(category: String): String = when (category) {
         DuaData.CATEGORY_ALL -> "📚"
+        DuaData.CATEGORY_FORTY_HADITH -> "📜"
+        DuaData.CATEGORY_PURITY -> "💧"
+        DuaData.CATEGORY_SALAH_RULES -> "🕌"
         DuaData.CATEGORY_MORNING_EVENING -> "🌅"
         DuaData.CATEGORY_AFTER_FARD -> "🤲"
         DuaData.CATEGORY_IN_PRAYER -> "📿"

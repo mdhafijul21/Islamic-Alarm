@@ -57,6 +57,12 @@ class QuranFragment : Fragment() {
                 singleCategory = true
             )
         }
+        binding.cardCatParaSearch.setOnClickListener {
+            val intent = Intent(requireContext(), OfflineArabicQuranActivity::class.java).apply {
+                putExtra(OfflineArabicQuranActivity.EXTRA_PARA_PAGE_SEARCH, true)
+            }
+            startActivity(intent)
+        }
         binding.cardCatAudioQuran.setOnClickListener {
             startActivity(
                 Intent(
@@ -145,8 +151,10 @@ class QuranFragment : Fragment() {
         val lastPage = prefs.getInt("last_read_page", QuranRepository.getHafeziStartPageForSurah(surah.id))
             .coerceIn(1, QuranRepository.HAFEZI_TOTAL_PAGES)
         val juz = QuranRepository.getHafeziJuzForPage(lastPage)
+        val pageInPara = QuranRepository.getHafeziPageInPara(lastPage)
+        val paraTotal = QuranRepository.getHafeziParaTotalPages(juz)
         binding.tvDashboardLastReadMeta.text =
-            "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(lastPage)}"
+            "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(pageInPara)}/${toBengaliNumber(paraTotal)}"
         binding.pbQuranProgress.progress = surah.id
         binding.tvDashboardCount.text = "${toBengaliNumber(surah.id)} / ${toBengaliNumber(114)}"
         binding.tvQuranProgressPercent.text =

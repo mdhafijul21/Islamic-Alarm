@@ -123,7 +123,7 @@
                 android:textColor="@color/secondary"
                 android:textSize="13sp"
                 app:cornerRadius="10dp"
-                app:icon="@android:drawable/ic_menu_view"
+                app:icon="@drawable/ic_arrow_forward"
                 app:iconTint="@color/secondary" />
 
         </LinearLayout>

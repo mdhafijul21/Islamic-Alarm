@@ -1,15 +1,21 @@
 package com.hafij.islamicalarm.quran
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
+import android.text.Layout
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.TextPaint
 import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
+import android.text.style.ReplacementSpan
 import android.text.style.ScaleXSpan
 import android.util.TypedValue
 import android.view.Gravity
@@ -38,11 +44,13 @@ import com.hafij.islamicalarm.databinding.ItemOfflineQuranRowBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.ceil
+import kotlin.math.max
 
 /**
  * 100% Offline 15-Line Bangladeshi Hafezi Quran (Emdadia Layout: 114 Surahs, 30 Paras, 610 Pages).
- * Renders each page in its authentic 15 ruled lines with Al Qalam Quran Majeed 4 calligraphy,
- * Indo-Pak waqf signs, ruku/sajdah/juz marks, and pure Arabic verse text.
+ * Renders each page with full-width equal justified lines, circled Ayah number medallions,
+ * top-center (Para : PageInPara) header, per-Para 1..lastPage numbering, and outer Ruku margin marks.
  */
 class OfflineArabicQuranActivity : AppCompatActivity() {
 
@@ -52,6 +60,8 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
     private var activeTab = TAB_SURAH
     private var isSingleCategoryMode = false
+    private var isParaPageSearchMode = false
+    private var selectedSearchPara: Int? = null
     private var currentPage = 1
     private var openedDirectlyToReader = false
     private var allPageSummaries: List<QuranRepository.OfflinePageSummary> = emptyList()
@@ -78,6 +88,10 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
         activeTab = intent.getIntExtra(EXTRA_INITIAL_TAB, TAB_SURAH).coerceIn(TAB_SURAH, TAB_PAGE)
         isSingleCategoryMode = intent.getBooleanExtra(EXTRA_SINGLE_CATEGORY, false)
+        isParaPageSearchMode = intent.getBooleanExtra(EXTRA_PARA_PAGE_SEARCH, false)
+        if (isParaPageSearchMode) {
+            isSingleCategoryMode = true
+        }
         openedDirectlyToReader = intent.getBooleanExtra(EXTRA_OPEN_LAST_PAGE, false)
         val initialPage = intent.getIntExtra(
             EXTRA_PAGE_NUMBER,
@@ -160,7 +174,14 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
     private fun setupIndexList() {
         indexAdapter = OfflineIndexAdapter(quranTypeface) { row ->
-            openMushafAtPage(row.targetPage)
+            if (isParaPageSearchMode && selectedSearchPara == null && row.paraNumber != null) {
+                selectedSearchPara = row.paraNumber
+                binding.etOfflineSearch.text?.clear()
+                applyModeHeaderAndControls()
+                renderIndexList()
+            } else {
+                openMushafAtPage(row.targetPage)
+            }
         }
         binding.rvOfflineIndex.layoutManager = LinearLayoutManager(this)
         binding.rvOfflineIndex.adapter = indexAdapter
@@ -179,9 +200,25 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
         binding.etOfflineSearch.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                val pageNum = parseBengaliOrAsciiInt(binding.etOfflineSearch.text?.toString().orEmpty())
-                if (activeTab == TAB_PAGE && pageNum != null && pageNum in 1..TOTAL_PAGES) {
-                    openMushafAtPage(pageNum)
+                val typedNum = parseBengaliOrAsciiInt(binding.etOfflineSearch.text?.toString().orEmpty())
+                if (isParaPageSearchMode) {
+                    val activePara = selectedSearchPara
+                    if (activePara == null && typedNum != null && typedNum in 1..30) {
+                        selectedSearchPara = typedNum
+                        binding.etOfflineSearch.text?.clear()
+                        applyModeHeaderAndControls()
+                        renderIndexList()
+                        return@setOnEditorActionListener true
+                    } else if (activePara != null && typedNum != null) {
+                        val range = QuranRepository.getHafeziParaPageRange(activePara)
+                        val paraTotal = range.last - range.first + 1
+                        if (typedNum in 1..paraTotal) {
+                            openMushafAtPage(range.first + typedNum - 1)
+                            return@setOnEditorActionListener true
+                        }
+                    }
+                } else if (activeTab == TAB_PAGE && typedNum != null && typedNum in 1..TOTAL_PAGES) {
+                    openMushafAtPage(typedNum)
                     return@setOnEditorActionListener true
                 }
             }
@@ -192,6 +229,8 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
             binding.etOfflineSearch.text?.clear()
         }
 
+        setupParaPageSearchPanel()
+
         binding.btnQuickJumpPage.setOnClickListener {
             val typedNum = parseBengaliOrAsciiInt(binding.etOfflineSearch.text?.toString().orEmpty())
             if (typedNum != null && typedNum in 1..TOTAL_PAGES) {
@@ -200,6 +239,96 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                 showJumpPageDialog()
             }
         }
+    }
+
+    private fun setupParaPageSearchPanel() {
+        binding.etSearchParaNumber.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val paraNum = parseBengaliOrAsciiInt(s?.toString().orEmpty())
+                updateParaPageSearchState(paraNum)
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+
+        binding.btnPickSearchPara.setOnClickListener {
+            showSelectParaPickerDialog()
+        }
+
+        binding.etSearchParaPageNumber.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
+                executeParaPageSearch()
+                true
+            } else {
+                false
+            }
+        }
+
+        binding.btnExecuteParaPageSearch.setOnClickListener {
+            executeParaPageSearch()
+        }
+    }
+
+    private fun updateParaPageSearchState(paraNum: Int?) {
+        if (paraNum != null && paraNum in 1..30) {
+            selectedSearchPara = paraNum
+            val para = QuranRepository.paraList.find { it.id == paraNum }
+            val paraTotal = QuranRepository.getHafeziParaTotalPages(paraNum)
+            val paraNameBn = para?.nameBangla.orEmpty()
+            binding.tvSearchParaRangeHint.text =
+                "পারা ${toBengaliNumber(paraNum)} ($paraNameBn) • পৃষ্ঠা ১ থেকে ${toBengaliNumber(paraTotal)}"
+            binding.etSearchParaPageNumber.hint =
+                "পৃষ্ঠা নম্বর (১ – ${toBengaliNumber(paraTotal)})"
+        } else {
+            selectedSearchPara = null
+            binding.tvSearchParaRangeHint.text = "১ থেকে ৩০ এর মধ্যে পারা নম্বর লিখুন বা বাছাই করুন"
+            binding.etSearchParaPageNumber.hint = "আগে পারা নম্বর দিন (১–৩০)"
+        }
+    }
+
+    private fun showSelectParaPickerDialog() {
+        val labels = QuranRepository.paraList.map { para ->
+            val total = QuranRepository.getHafeziParaTotalPages(para.id)
+            "পারা ${toBengaliNumber(para.id)} • ${para.nameBangla} (${toBengaliNumber(total)} পৃষ্ঠা)"
+        }.toTypedArray()
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("পারা নির্বাচন করুন (১–৩০)")
+            .setItems(labels) { _, which ->
+                val chosenPara = QuranRepository.paraList.getOrNull(which)?.id ?: return@setItems
+                binding.etSearchParaNumber.setText(chosenPara.toString())
+                binding.etSearchParaPageNumber.requestFocus()
+            }
+            .setNegativeButton("বাতিল", null)
+            .show()
+    }
+
+    private fun executeParaPageSearch() {
+        val paraNum = parseBengaliOrAsciiInt(binding.etSearchParaNumber.text?.toString().orEmpty())
+            ?: selectedSearchPara
+        if (paraNum == null || paraNum !in 1..30) {
+            Toast.makeText(this, "অনুগ্রহ করে ১ থেকে ৩০ এর মধ্যে পারা নম্বর দিন", Toast.LENGTH_SHORT).show()
+            binding.etSearchParaNumber.requestFocus()
+            return
+        }
+        val range = QuranRepository.getHafeziParaPageRange(paraNum)
+        val paraTotal = range.last - range.first + 1
+        val rawPageText = binding.etSearchParaPageNumber.text?.toString()?.trim().orEmpty()
+        val pageInPara = if (rawPageText.isEmpty()) {
+            1
+        } else {
+            parseBengaliOrAsciiInt(rawPageText)
+        }
+        if (pageInPara == null || pageInPara !in 1..paraTotal) {
+            Toast.makeText(
+                this,
+                "পারা ${toBengaliNumber(paraNum)}-এ ১ থেকে ${toBengaliNumber(paraTotal)} এর মধ্যে পৃষ্ঠা দিন",
+                Toast.LENGTH_SHORT
+            ).show()
+            binding.etSearchParaPageNumber.requestFocus()
+            return
+        }
+        openMushafAtPage(range.first + pageInPara - 1)
     }
 
     private fun setupTabs() {
@@ -216,7 +345,26 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
     private fun applyModeHeaderAndControls() {
         binding.tabLayoutOfflineQuran.visibility =
-            if (isSingleCategoryMode) View.GONE else View.VISIBLE
+            if (isSingleCategoryMode || isParaPageSearchMode) View.GONE else View.VISIBLE
+
+        if (isParaPageSearchMode) {
+            binding.cardStandardSearchBar.visibility = View.GONE
+            binding.layoutIndexListFrame.visibility = View.GONE
+            binding.cardParaPageSearchPanel.visibility = View.VISIBLE
+            updateParaPageSearchState(
+                parseBengaliOrAsciiInt(binding.etSearchParaNumber.text?.toString().orEmpty()) ?: selectedSearchPara
+            )
+            if (binding.layoutMushafReader.visibility != View.VISIBLE) {
+                binding.toolbarOfflineQuran.title = "সার্চ"
+                binding.toolbarOfflineQuran.subtitle = "পারা ও পৃষ্ঠা লিখে খুঁজুন"
+            }
+            return
+        }
+
+        binding.cardStandardSearchBar.visibility = View.VISIBLE
+        binding.layoutIndexListFrame.visibility = View.VISIBLE
+        binding.cardParaPageSearchPanel.visibility = View.GONE
+
         binding.btnQuickJumpPage.visibility =
             if (!isSingleCategoryMode || activeTab == TAB_PAGE) View.VISIBLE else View.GONE
         binding.btnQuickJumpPage.text =
@@ -236,8 +384,8 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                         binding.toolbarOfflineQuran.subtitle = "৩০টি পারা • ১৫ লাইন হাফেজী (অফলাইন)"
                     }
                     TAB_PAGE -> {
-                        binding.toolbarOfflineQuran.title = "পৃষ্ঠা সার্চ"
-                        binding.toolbarOfflineQuran.subtitle = "১–৬১০ পৃষ্ঠা খুঁজুন • ১৫ লাইন হাফেজী"
+                        binding.toolbarOfflineQuran.title = "পৃষ্ঠা"
+                        binding.toolbarOfflineQuran.subtitle = "১–৬১০ পৃষ্ঠা • ১৫ লাইন হাফেজী"
                     }
                     else -> {
                         binding.toolbarOfflineQuran.title = "সুরা সমূহ"
@@ -255,6 +403,12 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
         val rawQuery = binding.etOfflineSearch.text?.toString()?.trim().orEmpty()
         val queryNum = parseBengaliOrAsciiInt(rawQuery)
 
+        if (isParaPageSearchMode) {
+            indexAdapter.submitList(emptyList())
+            binding.tvOfflineEmpty.visibility = View.GONE
+            return
+        }
+
         val rows: List<IndexRow> = when (activeTab) {
             TAB_PARA -> {
                 QuranRepository.paraList.filter { para ->
@@ -264,11 +418,12 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                         para.id == queryNum
                 }.map { para ->
                     val exactPage = QuranRepository.getHafeziStartPageForPara(para.id)
+                    val paraTotal = QuranRepository.getHafeziParaTotalPages(para.id)
                     val startSurah = QuranRepository.getHafeziSurahForPage(exactPage)
                     IndexRow(
                         numberLabel = toBengaliNumber(para.id),
                         titleBn = "পারা ${toBengaliNumber(para.id)} • ${para.nameBangla}",
-                        meta = "শুরু: সুরা ${startSurah.nameBangla} • পৃষ্ঠা ${toBengaliNumber(exactPage)}",
+                        meta = "শুরু: সুরা ${startSurah.nameBangla} • পৃষ্ঠা ১ – ${toBengaliNumber(paraTotal)}",
                         arabic = para.nameArabic,
                         targetPage = exactPage
                     )
@@ -291,10 +446,12 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                     }
                 }
                 filteredPages.map { summary ->
+                    val pageInPara = QuranRepository.getHafeziPageInPara(summary.pageNumber)
+                    val paraTotal = QuranRepository.getHafeziParaTotalPages(summary.juzNumber)
                     IndexRow(
                         numberLabel = toBengaliNumber(summary.pageNumber),
                         titleBn = "পৃষ্ঠা ${toBengaliNumber(summary.pageNumber)}",
-                        meta = "পারা ${toBengaliNumber(summary.juzNumber)} • সুরা ${summary.firstSurah.nameBangla}",
+                        meta = "পারা ${toBengaliNumber(summary.juzNumber)} (${toBengaliNumber(pageInPara)}/${toBengaliNumber(paraTotal)}) • সুরা ${summary.firstSurah.nameBangla}",
                         arabic = summary.firstSurah.nameArabic,
                         targetPage = summary.pageNumber
                     )
@@ -310,10 +467,11 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                 }.map { surah ->
                     val startPage = QuranRepository.getHafeziStartPageForSurah(surah.id)
                     val juz = QuranRepository.getHafeziJuzForPage(startPage)
+                    val pageInPara = QuranRepository.getHafeziPageInPara(startPage)
                     IndexRow(
                         numberLabel = toBengaliNumber(surah.id),
                         titleBn = "সুরা ${surah.nameBangla}",
-                        meta = "${surah.revelationType} • ${toBengaliNumber(surah.totalAyahs)} আয়াত • পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(startPage)}",
+                        meta = "${surah.revelationType} • ${toBengaliNumber(surah.totalAyahs)} আয়াত • পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(pageInPara)}",
                         arabic = surah.nameArabic,
                         targetPage = startPage
                     )
@@ -352,7 +510,11 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
         }
 
         binding.tvMushafPageFooter.setOnClickListener {
-            showJumpPageDialog()
+            if (isParaPageSearchMode && selectedSearchPara != null) {
+                showJumpParaPageDialog(selectedSearchPara!!)
+            } else {
+                showJumpPageDialog()
+            }
         }
     }
 
@@ -361,6 +523,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
         binding.layoutMushafReader.visibility = View.GONE
         binding.layoutReaderToolbarActions.visibility = View.GONE
         applyModeHeaderAndControls()
+        renderIndexList()
     }
 
     private fun openMushafAtPage(pageNumber: Int) {
@@ -379,12 +542,14 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
         val summary = allPageSummaries.getOrNull(page - 1)
         val juz = summary?.juzNumber ?: QuranRepository.getHafeziJuzForPage(page)
         val surah = summary?.firstSurah ?: QuranRepository.getHafeziSurahForPage(page)
+        val pageInPara = QuranRepository.getHafeziPageInPara(page)
+        val paraTotal = QuranRepository.getHafeziParaTotalPages(juz)
 
         binding.toolbarOfflineQuran.title = "${surah.nameBangla} (${surah.nameArabic})"
         binding.toolbarOfflineQuran.subtitle =
-            "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(page)} / ${toBengaliNumber(TOTAL_PAGES)}"
+            "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(pageInPara)} / ${toBengaliNumber(paraTotal)}"
         binding.tvMushafPageFooter.text =
-            "পৃষ্ঠা ${toBengaliNumber(page)} / ${toBengaliNumber(TOTAL_PAGES)} • পারা ${toBengaliNumber(juz)}"
+            "পারা ${toBengaliNumber(juz)} : পৃষ্ঠা ${toBengaliNumber(pageInPara)}/${toBengaliNumber(paraTotal)} • মোট ${toBengaliNumber(page)}"
         binding.btnPrevPage.isEnabled = page > 1
         binding.btnNextPage.isEnabled = page < TOTAL_PAGES
     }
@@ -398,6 +563,62 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
             .putInt("last_read_surah_id", surah.id)
             .putString("last_read_surah_name", surah.nameBangla)
             .apply()
+    }
+
+    private fun showSelectParaDialog() {
+        val input = EditText(this).apply {
+            hint = "পারা নম্বর (১ – ৩০)"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setPadding(48, 32, 48, 24)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("পারা নির্বাচন করুন (১ – ৩০)")
+            .setMessage("১ থেকে ৩০ এর মধ্যে পারা নম্বর লিখুন:")
+            .setView(input)
+            .setPositiveButton("পরবর্তী") { _, _ ->
+                val para = parseBengaliOrAsciiInt(input.text?.toString().orEmpty())
+                if (para != null && para in 1..30) {
+                    selectedSearchPara = para
+                    binding.etOfflineSearch.text?.clear()
+                    applyModeHeaderAndControls()
+                    renderIndexList()
+                } else {
+                    Toast.makeText(this, "অনুগ্রহ করে ১ থেকে ৩০ এর মধ্যে পারা নম্বর দিন", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("বাতিল", null)
+            .show()
+    }
+
+    private fun showJumpParaPageDialog(paraNumber: Int) {
+        val range = QuranRepository.getHafeziParaPageRange(paraNumber)
+        val paraTotal = range.last - range.first + 1
+        val currentInPara = if (currentPage in range) currentPage - range.first + 1 else 1
+        val input = EditText(this).apply {
+            hint = "পৃষ্ঠা নম্বর (১ – ${toBengaliNumber(paraTotal)})"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(currentInPara.toString())
+            setSelection(text.length)
+            setPadding(48, 32, 48, 24)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("পারা ${toBengaliNumber(paraNumber)} • পৃষ্ঠায় যান (১ – ${toBengaliNumber(paraTotal)})")
+            .setMessage("এই পারার ১ থেকে ${toBengaliNumber(paraTotal)} এর মধ্যে পৃষ্ঠা নম্বর লিখুন:")
+            .setView(input)
+            .setPositiveButton("পড়ুন") { _, _ ->
+                val pageInPara = parseBengaliOrAsciiInt(input.text?.toString().orEmpty())
+                if (pageInPara != null && pageInPara in 1..paraTotal) {
+                    openMushafAtPage(range.first + pageInPara - 1)
+                } else {
+                    Toast.makeText(
+                        this,
+                        "অনুগ্রহ করে ১ থেকে ${toBengaliNumber(paraTotal)} এর মধ্যে পৃষ্ঠা নম্বর দিন",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .setNegativeButton("বাতিল", null)
+            .show()
     }
 
     private fun showJumpPageDialog() {
@@ -457,7 +678,8 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
         val titleBn: String,
         val meta: String,
         val arabic: String,
-        val targetPage: Int
+        val targetPage: Int,
+        val paraNumber: Int? = null
     )
 
     private class OfflineIndexAdapter(
@@ -498,6 +720,138 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                 quranTypeface?.let { b.tvRowArabic.typeface = it }
                 b.root.setOnClickListener { onClick(row) }
             }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Ayah Circle Medallion Span (ensures every Ayah number is crisp and measurable)
+    // ------------------------------------------------------------------
+
+    internal class AyahMedallionSpan(
+        digits: String,
+        private val ringColor: Int,
+        private val fillColor: Int,
+        private val digitColor: Int,
+        private val arabicTypeface: Typeface?
+    ) : ReplacementSpan() {
+
+        // Al-Qalam Quran Majeed 4 stores Arabic numerals in Extended Arabic-Indic (U+06F0..U+06F9);
+        // U+0661..U+0669 in that font have empty glyf tables.
+        val displayDigits: String = if (arabicTypeface != null) {
+            toHafeziFontDigits(digits)
+        } else {
+            digits
+        }
+
+        private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = ringColor
+        }
+        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = fillColor
+        }
+        private val numPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = digitColor
+            textAlign = Paint.Align.LEFT
+        }
+        private val rect = RectF()
+        private val textBounds = android.graphics.Rect()
+
+        private fun prepareNumPaint(basePaint: Paint): String {
+            var activeText = displayDigits
+            var activeTypeface = arabicTypeface
+            numPaint.textSize = (basePaint.textSize * 0.64f).coerceAtLeast(11f)
+            if (activeTypeface != null) {
+                numPaint.typeface = activeTypeface
+                if (!numPaint.hasGlyph(activeText.take(1))) {
+                    activeTypeface = Typeface.DEFAULT_BOLD
+                    activeText = toStandardArabicDigits(activeText)
+                }
+            }
+            if (activeTypeface == null) {
+                numPaint.typeface = Typeface.DEFAULT_BOLD
+                activeText = toStandardArabicDigits(activeText)
+            }
+            numPaint.getTextBounds(activeText, 0, activeText.length, textBounds)
+            return activeText
+        }
+
+        private fun computeGeometry(paint: Paint): Triple<Float, Float, Float> {
+            val baseD = (paint.textSize * 0.96f).coerceAtLeast(20f)
+            val activeText = prepareNumPaint(paint)
+            val numW = max(numPaint.measureText(activeText), textBounds.width().toFloat())
+            val boxW = max(baseD, numW + baseD * 0.40f)
+            val sidePad = (paint.textSize * 0.12f).coerceAtLeast(2f)
+            return Triple(boxW, baseD, sidePad)
+        }
+
+        override fun getSize(
+            paint: Paint,
+            text: CharSequence,
+            start: Int,
+            end: Int,
+            fm: Paint.FontMetricsInt?
+        ): Int {
+            val (boxW, _, sidePad) = computeGeometry(paint)
+            return ceil(boxW + sidePad * 2f).toInt()
+        }
+
+        override fun draw(
+            canvas: Canvas,
+            text: CharSequence,
+            start: Int,
+            end: Int,
+            x: Float,
+            top: Int,
+            y: Int,
+            bottom: Int,
+            paint: Paint
+        ) {
+            val (boxW, boxH, sidePad) = computeGeometry(paint)
+            val activeText = prepareNumPaint(paint)
+            val cx = x + sidePad + boxW / 2f
+            val cy = y - paint.textSize * 0.28f
+
+            rect.set(cx - boxW / 2f, cy - boxH / 2f, cx + boxW / 2f, cy + boxH / 2f)
+            canvas.drawOval(rect, fillPaint)
+
+            val strokeW = (paint.textSize * 0.065f).coerceAtLeast(1.2f)
+            ringPaint.strokeWidth = strokeW
+            canvas.drawOval(rect, ringPaint)
+
+            val inset = strokeW * 1.9f
+            rect.inset(inset, inset)
+            ringPaint.strokeWidth = strokeW * 0.65f
+            canvas.drawOval(rect, ringPaint)
+
+            val textX = cx - textBounds.exactCenterX()
+            val baselineY = cy - textBounds.exactCenterY()
+            canvas.drawText(activeText, textX, baselineY, numPaint)
+        }
+
+        private fun toHafeziFontDigits(input: String): String {
+            val sb = StringBuilder(input.length)
+            for (ch in input) {
+                when (ch) {
+                    in '0'..'9' -> sb.append((0x06F0 + (ch - '0')).toChar())
+                    in '\u0660'..'\u0669' -> sb.append((0x06F0 + (ch.code - 0x0660)).toChar())
+                    else -> sb.append(ch)
+                }
+            }
+            return sb.toString()
+        }
+
+        private fun toStandardArabicDigits(input: String): String {
+            val sb = StringBuilder(input.length)
+            for (ch in input) {
+                when (ch) {
+                    in '0'..'9' -> sb.append((0x0660 + (ch - '0')).toChar())
+                    in '\u06F0'..'\u06F9' -> sb.append((0x0660 + (ch.code - 0x06F0)).toChar())
+                    else -> sb.append(ch)
+                }
+            }
+            return sb.toString()
         }
     }
 
@@ -547,38 +901,50 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
                 val para = QuranRepository.paraList.find { it.id == pageData.juzNumber }
                 val paraAr = para?.nameArabic ?: ""
-                b.tvMushafTopSurah.text = "${pageData.primarySurah.nameArabic} ${QuranRepository.toArabicNumber(pageData.primarySurah.id)}"
-                b.tvMushafTopMeta.text = "( ${toBnNum(pageData.juzNumber)} : ${toBnNum(pageNumber)} )"
-                b.tvMushafTopJuz.text = "$paraAr ${QuranRepository.toArabicNumber(pageData.juzNumber)}"
-                b.tvMushafBottomManzil.text = "منزل ${QuranRepository.toArabicNumber(pageData.manzilNumber)}"
-                b.tvMushafBottomPage.text = "﴿ ${QuranRepository.toArabicNumber(pageNumber)} ﴾"
+                val pageInPara = QuranRepository.getHafeziPageInPara(pageNumber)
+                val paraTotal = QuranRepository.getHafeziParaTotalPages(pageData.juzNumber)
+
+                b.tvMushafTopSurah.text = toHafeziHeaderDigits("${pageData.primarySurah.nameArabic} ${QuranRepository.toArabicNumber(pageData.primarySurah.id)}")
+                b.tvMushafTopMeta.text = "( ${toBnNumPadded(pageData.juzNumber)} : ${toBnNumPadded(pageInPara)} )"
+                b.tvMushafTopJuz.text = toHafeziHeaderDigits("$paraAr ${QuranRepository.toArabicNumber(pageData.juzNumber)}")
+                b.tvMushafBottomManzil.text = toHafeziHeaderDigits("منزل ${QuranRepository.toArabicNumber(pageData.manzilNumber)}")
+                b.tvMushafBottomPage.text = "﴿ ${QuranRepository.toArabicNumber(pageInPara)} / ${QuranRepository.toArabicNumber(paraTotal)} ﴾"
+                b.tvMushafBottomLineHint.text = "মোট পৃষ্ঠা ${toBnNum(pageNumber)}/${toBnNum(TOTAL_PAGES)}"
 
                 quranTypeface?.let {
                     b.tvMushafTopSurah.typeface = it
                     b.tvMushafTopJuz.typeface = it
                     b.tvMushafBottomManzil.typeface = it
-                    b.tvMushafBottomPage.typeface = it
                 }
+                b.tvMushafBottomPage.typeface = Typeface.DEFAULT_BOLD
 
                 renderHafeziLines(pageData)
             }
 
             private fun renderHafeziLines(pageData: QuranRepository.HafeziMushafPage) {
                 val container = b.llMushafPageContent
+                val marginContainer = b.llMushafMarginMarks
                 container.removeAllViews()
+                marginContainer.removeAllViews()
 
                 val primaryColor = ContextCompat.getColor(context, R.color.dua_primary_dark)
-                val accentColor = ContextCompat.getColor(context, R.color.dua_accent)
+                val medallionRingColor = ContextCompat.getColor(context, R.color.gold_accent)
+                val medallionFillColor = ContextCompat.getColor(context, R.color.dua_soft_gold)
                 val waqfColor = ContextCompat.getColor(context, R.color.dua_primary)
-                val inkColor = ContextCompat.getColor(context, R.color.text_primary)
-                val ruleColor = 0x443B8A6E
+                val inkColor = 0xFF181714.toInt()
+                val ruleColor = 0x337A6F5A
                 val dp = context.resources.displayMetrics.density
                 val isOpeningPage = pageData.pageNumber <= 2
 
                 if (isOpeningPage) {
                     container.addView(View(context).apply {
                         layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.5f
+                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.35f
+                        )
+                    })
+                    marginContainer.addView(View(context).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.35f
                         )
                     })
                 } else {
@@ -605,11 +971,39 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                         val minRowDp = if (isOpeningPage) 36 else 32
                         minimumHeight = (minRowDp * dp).toInt()
                         if (isOpeningPage) {
-                            setPadding((14 * dp).toInt(), (4 * dp).toInt(), (14 * dp).toInt(), (4 * dp).toInt())
+                            setPadding((10 * dp).toInt(), (3 * dp).toInt(), (10 * dp).toInt(), (3 * dp).toInt())
                         } else {
-                            setPadding((2 * dp).toInt(), (1 * dp).toInt(), (2 * dp).toInt(), (1 * dp).toInt())
+                            setPadding(0, (1 * dp).toInt(), 0, (1 * dp).toInt())
                         }
                     }
+
+                    // Aligned outer gutter cell so Ruku/Sajdah badges never narrow inner Mushaf lines
+                    val marginSlot = LinearLayout(context).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER
+                        layoutParams = if (isOpeningPage) {
+                            LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                (36 * dp).toInt()
+                            )
+                        } else {
+                            LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                0,
+                                1f
+                            )
+                        }
+                    }
+                    if (line is QuranRepository.HafeziLine.VerseLine && line.marginMark != null) {
+                        marginSlot.addView(TextView(context).apply {
+                            text = line.marginMark
+                            setTextColor(primaryColor)
+                            setTextSize(TypedValue.COMPLEX_UNIT_SP, 9.5f)
+                            setTypeface(quranTypeface, Typeface.BOLD)
+                            gravity = Gravity.CENTER
+                        })
+                    }
+                    marginContainer.addView(marginSlot)
 
                     when (line) {
                         is QuranRepository.HafeziLine.SurahHeader -> {
@@ -623,13 +1017,13 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                             val banner = TextView(context).apply {
                                 text = headerText
                                 setTextColor(primaryColor)
-                                setTextSize(TypedValue.COMPLEX_UNIT_SP, if (isOpeningPage) 17f else 15f)
+                                setTextSize(TypedValue.COMPLEX_UNIT_SP, if (isOpeningPage) 16.5f else 14.5f)
                                 setTypeface(quranTypeface, Typeface.BOLD)
                                 gravity = Gravity.CENTER
                                 textDirection = View.TEXT_DIRECTION_RTL
                                 setBackgroundResource(R.drawable.bg_quran_chip)
-                                val pV = (if (isOpeningPage) 8 else 2) * dp.toInt()
-                                val pH = (10 * dp).toInt()
+                                val pV = ((if (isOpeningPage) 8 else 2) * dp).toInt()
+                                val pH = (8 * dp).toInt()
                                 setPadding(pH, pV, pH, pV)
                                 maxLines = if (isOpeningPage) 2 else 1
                                 layoutParams = LinearLayout.LayoutParams(
@@ -643,7 +1037,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                         is QuranRepository.HafeziLine.Bismillah -> {
                             val bis = TextView(context).apply {
                                 text = "بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ"
-                                setTextColor(primaryColor)
+                                setTextColor(inkColor)
                                 setTextSize(TypedValue.COMPLEX_UNIT_SP, (20f * fontScale).coerceIn(15f, 25f))
                                 quranTypeface?.let { typeface = it }
                                 gravity = Gravity.CENTER
@@ -666,58 +1060,41 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                         }
 
                         is QuranRepository.HafeziLine.VerseLine -> {
-                            if (line.marginMark != null) {
-                                val badge = TextView(context).apply {
-                                    text = line.marginMark
-                                    setTextColor(primaryColor)
-                                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
-                                    setTypeface(quranTypeface, Typeface.BOLD)
-                                    setBackgroundResource(R.drawable.bg_quran_chip)
-                                    setPadding((4 * dp).toInt(), (1 * dp).toInt(), (4 * dp).toInt(), (1 * dp).toInt())
-                                    gravity = Gravity.CENTER
-                                    layoutParams = LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT
-                                    ).apply {
-                                        marginEnd = (4 * dp).toInt()
-                                    }
-                                }
-                                rowLayout.addView(badge)
-                            }
-
                             val formatted = buildFormattedLine(
                                 rawTokensText = line.textWithTokens,
                                 waqfColor = waqfColor,
-                                ayahMarkerColor = accentColor
+                                ringColor = medallionRingColor,
+                                fillColor = medallionFillColor,
+                                digitColor = inkColor
                             )
 
-                            val baseSp = if (isOpeningPage) 21.5f * fontScale else 20.0f * fontScale
+                            val baseSp = if (isOpeningPage) 21.0f * fontScale else 20.0f * fontScale
+                            val justifyThisLine = formatted.interWordSpaces.isNotEmpty()
                             val lineTv = TextView(context).apply {
                                 text = formatted.spannable
                                 setTextColor(inkColor)
                                 setTextSize(TypedValue.COMPLEX_UNIT_SP, baseSp.coerceIn(14f, 27f))
                                 quranTypeface?.let { typeface = it }
                                 textDirection = View.TEXT_DIRECTION_RTL
-                                gravity = if (line.isCentered || isOpeningPage) {
-                                    Gravity.CENTER
-                                } else {
+                                gravity = if (justifyThisLine) {
                                     Gravity.CENTER_VERTICAL or Gravity.START
+                                } else {
+                                    Gravity.CENTER
                                 }
                                 maxLines = 1
                                 includeFontPadding = false
+                                setPadding((2 * dp).toInt(), 0, (2 * dp).toInt(), 0)
                                 layoutParams = LinearLayout.LayoutParams(
-                                    0,
-                                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                                    1f
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
                                 )
                             }
 
-                            val shouldJustify = !line.isCentered && !isOpeningPage && formatted.interWordSpaces.isNotEmpty()
                             fitSingleHafeziLine(
                                 tv = lineTv,
                                 baseSp = baseSp.coerceIn(14f, 27f),
                                 spaceIndices = formatted.interWordSpaces,
-                                justify = shouldJustify
+                                justify = justifyThisLine
                             )
 
                             rowLayout.addView(lineTv)
@@ -733,7 +1110,12 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                 if (isOpeningPage) {
                     container.addView(View(context).apply {
                         layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.5f
+                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.35f
+                        )
+                    })
+                    marginContainer.addView(View(context).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.35f
                         )
                     })
                 }
@@ -752,18 +1134,23 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
             private fun buildFormattedLine(
                 rawTokensText: String,
                 waqfColor: Int,
-                ayahMarkerColor: Int
+                ringColor: Int,
+                fillColor: Int,
+                digitColor: Int
             ): FormattedHafeziLine {
                 val ssb = SpannableStringBuilder()
-                val interWordSpaces = ArrayList<Int>()
+                val wordSpaces = ArrayList<Int>()
+                val allSpaces = ArrayList<Int>()
                 val parts = rawTokensText.split(" ").filter { it.isNotEmpty() }
 
                 for (part in parts) {
                     val isWaqf = part.startsWith("@")
                     val isAyahNum = part.startsWith("﴿")
                     if (ssb.isNotEmpty()) {
+                        val spIdx = ssb.length
+                        allSpaces.add(spIdx)
                         if (!isWaqf && !isAyahNum) {
-                            interWordSpaces.add(ssb.length)
+                            wordSpaces.add(spIdx)
                         }
                         ssb.append(" ")
                     }
@@ -773,17 +1160,29 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                         val symbol = part.substring(1)
                         ssb.append(symbol)
                         ssb.setSpan(ForegroundColorSpan(waqfColor), start, ssb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                        ssb.setSpan(RelativeSizeSpan(0.68f), start, ssb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        ssb.setSpan(RelativeSizeSpan(0.66f), start, ssb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     } else if (isAyahNum) {
+                        val digits = part.removePrefix("﴿").removeSuffix("﴾")
                         ssb.append(part)
-                        ssb.setSpan(ForegroundColorSpan(ayahMarkerColor), start, ssb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                        ssb.setSpan(RelativeSizeSpan(0.84f), start, ssb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        ssb.setSpan(
+                            AyahMedallionSpan(
+                                digits = digits,
+                                ringColor = ringColor,
+                                fillColor = fillColor,
+                                digitColor = digitColor,
+                                arabicTypeface = quranTypeface
+                            ),
+                            start,
+                            ssb.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
                     } else {
                         ssb.append(part)
                     }
                 }
 
-                return FormattedHafeziLine(ssb, interWordSpaces)
+                val justifySpaces = if (wordSpaces.size >= 2) wordSpaces else allSpaces
+                return FormattedHafeziLine(ssb, justifySpaces)
             }
 
             private fun fitSingleHafeziLine(
@@ -796,7 +1195,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                     val availW = (right - left - tv.paddingLeft - tv.paddingRight).toFloat()
                     if (availW <= 4f) return@addOnLayoutChangeListener
 
-                    val tagKey = "${availW.toInt()}_$baseSp"
+                    val tagKey = "${availW.toInt()}_${baseSp}_${tv.text.hashCode()}"
                     if (tv.tag == tagKey) return@addOnLayoutChangeListener
                     tv.tag = tagKey
 
@@ -807,32 +1206,76 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
                     val metrics = v.resources.displayMetrics
                     val basePx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, baseSp, metrics)
-                    tv.paint.textSize = basePx
-                    val naturalW = tv.paint.measureText(ssb, 0, ssb.length)
+                    val minPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10.5f, metrics)
 
-                    v.post {
-                        if (naturalW > availW) {
-                            val fittedPx = (basePx * (availW / naturalW) * 0.975f).coerceAtLeast(
-                                TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10.5f, metrics)
-                            )
-                            tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, fittedPx)
-                            tv.text = ssb
-                        } else {
-                            tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, basePx)
-                            if (justify && spaceIndices.isNotEmpty() && naturalW > availW * 0.42f) {
-                                val baseSpaceW = tv.paint.measureText(" ").coerceAtLeast(1f)
-                                val extraTotal = availW - naturalW
-                                val scale = (1f + (extraTotal / spaceIndices.size) / baseSpaceW).coerceIn(1f, 3.6f)
+                    val paint = TextPaint(tv.paint)
+                    paint.textSize = basePx
+                    paint.textScaleX = 1.0f
+
+                    var fittedPx = basePx
+                    var measuredW = Layout.getDesiredWidth(ssb, paint)
+
+                    if (measuredW > availW * 0.992f) {
+                        fittedPx = (basePx * (availW * 0.99f / measuredW)).coerceAtLeast(minPx)
+                        paint.textSize = fittedPx
+                        measuredW = Layout.getDesiredWidth(ssb, paint)
+                        if (measuredW > availW * 0.995f) {
+                            fittedPx = (fittedPx * (availW * 0.99f / measuredW)).coerceAtLeast(minPx)
+                            paint.textSize = fittedPx
+                            measuredW = Layout.getDesiredWidth(ssb, paint)
+                        }
+                    }
+
+                    var targetScaleX = 1.0f
+                    if (justify && spaceIndices.isNotEmpty() && measuredW < availW * 0.992f) {
+                        if (measuredW < availW * 0.72f) {
+                            targetScaleX = (availW * 0.76f / measuredW).coerceIn(1.0f, 1.15f)
+                            paint.textScaleX = targetScaleX
+                            measuredW = Layout.getDesiredWidth(ssb, paint)
+                        }
+
+                        val remaining = availW * 0.995f - measuredW
+                        if (remaining > 1f) {
+                            val baseSpaceW = paint.measureText(" ").coerceAtLeast(1f)
+                            val totalSpacesW = spaceIndices.size * baseSpaceW
+                            val scale = (1f + remaining / totalSpacesW).coerceIn(1f, 14f)
+                            for (idx in spaceIndices) {
+                                if (idx in 0 until ssb.length) {
+                                    ssb.setSpan(ScaleXSpan(scale), idx, idx + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                                }
+                            }
+                            val finalW = Layout.getDesiredWidth(ssb, paint)
+                            if (finalW > availW * 0.996f && scale > 1.01f) {
+                                val excess = finalW - availW * 0.993f
+                                val adjusted = (scale - excess / totalSpacesW).coerceAtLeast(1.0f)
+                                for (sp in ssb.getSpans(0, ssb.length, ScaleXSpan::class.java)) {
+                                    ssb.removeSpan(sp)
+                                }
                                 for (idx in spaceIndices) {
                                     if (idx in 0 until ssb.length) {
-                                        ssb.setSpan(ScaleXSpan(scale), idx, idx + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                                        ssb.setSpan(ScaleXSpan(adjusted), idx, idx + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                                     }
                                 }
                             }
-                            tv.text = ssb
                         }
                     }
+
+                    v.post {
+                        tv.setTextSize(TypedValue.COMPLEX_UNIT_PX, fittedPx)
+                        tv.textScaleX = targetScaleX
+                        tv.text = ssb
+                    }
                 }
+            }
+
+            private fun toBnNumPadded(num: Int): String {
+                val padded = num.toString().padStart(2, '0')
+                val digits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+                val sb = StringBuilder()
+                for (ch in padded) {
+                    if (ch.isDigit()) sb.append(digits[ch - '0']) else sb.append(ch)
+                }
+                return sb.toString()
             }
 
             private fun toBnNum(num: Int): String {
@@ -843,12 +1286,26 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                 }
                 return sb.toString()
             }
+
+            private fun toHafeziHeaderDigits(input: String): String {
+                if (quranTypeface == null) return input
+                val sb = StringBuilder(input.length)
+                for (ch in input) {
+                    if (ch in '\u0660'..'\u0669') {
+                        sb.append((0x06F0 + (ch.code - 0x0660)).toChar())
+                    } else {
+                        sb.append(ch)
+                    }
+                }
+                return sb.toString()
+            }
         }
     }
 
     companion object {
         const val EXTRA_INITIAL_TAB = "extra_initial_tab"
         const val EXTRA_SINGLE_CATEGORY = "extra_single_category"
+        const val EXTRA_PARA_PAGE_SEARCH = "extra_para_page_search"
         const val EXTRA_OPEN_LAST_PAGE = "extra_open_last_page"
         const val EXTRA_PAGE_NUMBER = "extra_page_number"
 

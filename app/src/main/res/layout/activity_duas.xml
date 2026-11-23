@@ -58,7 +58,7 @@
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:background="#6609573F" />
+                        android:background="#7311261C" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -71,7 +71,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="প্রতিদিনের সুন্দর আমল"
-                            android:textColor="#CCF5E4"
+                            android:textColor="#F0E2BA"
                             android:textSize="13sp"
                             android:textStyle="bold" />
 
@@ -89,7 +89,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="5dp"
                             android:text="বিশুদ্ধ সূত্রসহ প্রয়োজনীয় ইসলামি আমল"
-                            android:textColor="#EDF9F3"
+                            android:textColor="#EEF1EE"
                             android:textSize="13sp" />
                     </LinearLayout>
                 </FrameLayout>

@@ -192,6 +192,7 @@ class MainActivity : AppCompatActivity() {
         binding.switchAutoSilent.isChecked = true
 
         loadAlarms()
+        refreshOccasionNotificationsAndBadge()
 
         // Check & request runtime permissions on launch (Location, Overlay, Exact Alarm, Battery, Autostart, Phone)
     }
@@ -227,6 +228,7 @@ class MainActivity : AppCompatActivity() {
         if (::restrictController.isInitialized) restrictController.onScreenShown()
         updatePrayerTimes(force = true)
         loadAlarms()
+        refreshOccasionNotificationsAndBadge()
         if (com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)) {
             com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this, fromForeground = true)
         }
@@ -297,6 +299,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .apply()
+        com.hafij.islamicalarm.widget.IslamicAlarmWidget.refreshAllWidgets(this)
     }
 
     private fun autoDetectLocationAndSetPrayerTimes(showToast: Boolean = true) {
@@ -530,6 +533,13 @@ class MainActivity : AppCompatActivity() {
             promptTurnOnGpsAndDetect(showToast = true)
         }
 
+        // Top-right Special Islamic Day Notifications Bell
+        binding.btnHomeNotifications.setOnClickListener {
+            startActivity(
+                Intent(this, com.hafij.islamicalarm.notifications.IslamicNotificationsActivity::class.java)
+            )
+        }
+
         // Quick feature cards
         binding.cardFeatureAmal.setOnClickListener {
             startActivity(Intent(this, AmalTrackerActivity::class.java))
@@ -604,6 +614,20 @@ class MainActivity : AppCompatActivity() {
                     "ইশা ও তারাবিহ/বিতর"
                 )
             }
+        }
+    }
+
+    private fun refreshOccasionNotificationsAndBadge() {
+        if (!::binding.isInitialized) return
+        com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.scheduleDailyCheck(this)
+        com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.evaluateAndNotifyToday(this)
+        val unreadCount = com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.getUnreadCount(this)
+        if (unreadCount > 0) {
+            binding.tvHomeNotificationBadge.visibility = View.VISIBLE
+            binding.tvHomeNotificationBadge.text =
+                com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.formatUnreadBadge(unreadCount)
+        } else {
+            binding.tvHomeNotificationBadge.visibility = View.GONE
         }
     }
 

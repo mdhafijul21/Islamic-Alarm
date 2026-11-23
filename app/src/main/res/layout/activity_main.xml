@@ -81,16 +81,61 @@
                             android:paddingTop="14dp"
                             android:paddingBottom="10dp">
 
-                        <TextView
-                            android:id="@+id/tvHeaderTitle"
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="নামাজের সময়সূচী"
-                            android:textColor="@color/art_text"
-                            android:textSize="21sp"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
 
-                        <!-- Hint shown right above the Location button when Location is not yet turned on & set -->
+                            <TextView
+                                android:id="@+id/tvHeaderTitle"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="নামাজের সময়সূচী"
+                                android:textColor="@color/art_text"
+                                android:textSize="21sp"
+                                android:textStyle="bold" />
+
+                            <FrameLayout
+                                android:id="@+id/btnHomeNotifications"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:contentDescription="ইসলামিক নোটিফিকেশন"
+                                android:focusable="true">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:layout_gravity="center"
+                                    android:importantForAccessibility="no"
+                                    android:src="@drawable/ic_notifications_24"
+                                    app:tint="@color/art_gold" />
+
+                                <TextView
+                                    android:id="@+id/tvHomeNotificationBadge"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="16dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_marginTop="4dp"
+                                    android:layout_marginEnd="4dp"
+                                    android:background="@drawable/bg_notification_badge"
+                                    android:gravity="center"
+                                    android:minWidth="16dp"
+                                    android:paddingHorizontal="4dp"
+                                    android:text="১"
+                                    android:textColor="@color/white"
+                                    android:textSize="9.5sp"
+                                    android:textStyle="bold"
+                                    android:visibility="gone" />
+
+                            </FrameLayout>
+
+                        </LinearLayout>
+
+                        <!-- Hint shown right above the GPS button when Location is not yet turned on & set -->
                         <TextView
                             android:id="@+id/tvLocationPromptHint"
                             android:layout_width="wrap_content"
@@ -101,7 +146,7 @@
                             android:focusable="true"
                             android:paddingHorizontal="8dp"
                             android:paddingVertical="3dp"
-                            android:text="📍 সঠিক সময়ের জন্য লোকেশন বাটন ক্লিক করুন"
+                            android:text="📍 সঠিক সময়ের জন্য GPS বাটন ক্লিক করুন"
                             android:textColor="@color/art_gold"
                             android:textSize="11sp"
                             android:textStyle="bold"
@@ -191,7 +236,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:layout_marginBottom="10dp"
-                            app:cardBackgroundColor="#33094A37"
+                            app:cardBackgroundColor="#40102018"
                             app:cardCornerRadius="18dp"
                             app:cardElevation="0dp"
                             app:strokeWidth="0dp">

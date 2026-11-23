@@ -1,74 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#EAF5EE</color>
-    <color name="primary_variant">#09573F</color>
-    <color name="secondary">#0E7656</color>
-    <color name="secondary_variant">#169672</color>
-    <color name="background">#EAF5EE</color>
+    <color name="primary">#FFFFFF</color>
+    <color name="primary_variant">#143D29</color>
+    <color name="secondary">#1E563B</color>
+    <color name="secondary_variant">#2D6F4F</color>
+    <color name="background">#F6F6F3</color>
     <color name="surface">#FFFFFF</color>
-    <color name="gold_accent">#169672</color>
-    <color name="gold_light">#DDF0E5</color>
-    <color name="dark_emerald">#09573F</color>
-    <color name="light_emerald">#DDF0E5</color>
-    <color name="text_primary">#123328</color>
-    <color name="text_secondary">#517266</color>
+    <color name="gold_accent">#9A7434</color>
+    <color name="gold_light">#F3EFE3</color>
+    <color name="dark_emerald">#143D29</color>
+    <color name="light_emerald">#ECEFE9</color>
+    <color name="text_primary">#1A1D1B</color>
+    <color name="text_secondary">#5E6460</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="card_border">#CBE4D5</color>
-    <color name="border">#CBE4D5</color>
-    <color name="divider">#CBE4D5</color>
-    <color name="surface_container">#DDF0E5</color>
-    <color name="error">#D93636</color>
+    <color name="card_border">#E2E4DE</color>
+    <color name="border">#E2E4DE</color>
+    <color name="divider">#E5E7E1</color>
+    <color name="surface_container">#ECEFE9</color>
+    <color name="error">#C93B3B</color>
 
     <!-- Home header art (mosque silhouette banner), per time of day -->
     <!-- Night (Isha – Fajr) -->
-    <color name="header_teal_top">#157B5E</color>
-    <color name="header_teal_bottom">#0A4E3B</color>
-    <color name="header_moon">#ECFAF4</color>
-    <color name="header_moon_glow">#33ECFAF4</color>
-    <color name="header_silhouette">#CC063326</color>
+    <color name="header_teal_top">#1B3B2E</color>
+    <color name="header_teal_bottom">#10261D</color>
+    <color name="header_moon">#F5EFE0</color>
+    <color name="header_moon_glow">#33F5EFE0</color>
+    <color name="header_silhouette">#CC0B1C15</color>
     <!-- Fajr / dawn (Fajr – sunrise) -->
-    <color name="header_fajr_top">#2D5F5B</color>
-    <color name="header_fajr_bottom">#5CA88E</color>
+    <color name="header_fajr_top">#27423B</color>
+    <color name="header_fajr_bottom">#466C5F</color>
     <!-- Day (sunrise – Asr) -->
-    <color name="header_day_top">#1D8F72</color>
-    <color name="header_day_bottom">#105B49</color>
+    <color name="header_day_top">#1D4D3A</color>
+    <color name="header_day_bottom">#123426</color>
     <!-- Maghrib / sunset (Asr – Isha) -->
-    <color name="header_maghrib_top">#1A6B5C</color>
-    <color name="header_maghrib_bottom">#3D8F78</color>
-    <color name="header_sun">#F1FBF6</color>
-    <color name="header_sun_glow">#40F1FBF6</color>
+    <color name="header_maghrib_top">#2A3D36</color>
+    <color name="header_maghrib_bottom">#4D5A4C</color>
+    <color name="header_sun">#F7F1E1</color>
+    <color name="header_sun_glow">#40F7F1E1</color>
 
     <!-- Light "waqt list" card -->
     <color name="waqt_card_bg">#FFFFFF</color>
-    <color name="waqt_text_dark">#123328</color>
-    <color name="waqt_text_dark_secondary">#517266</color>
-    <color name="waqt_divider">#CBE4D5</color>
+    <color name="waqt_text_dark">#1A1D1B</color>
+    <color name="waqt_text_dark_secondary">#5E6460</color>
+    <color name="waqt_divider">#E5E7E1</color>
 
-    <!-- Light green palette for Quran & Dua sections -->
-    <color name="dua_background">#EAF5EE</color>
+    <!-- Refined natural palette for Quran & Dua sections -->
+    <color name="dua_background">#F6F6F3</color>
     <color name="dua_surface">#FFFFFF</color>
-    <color name="dua_primary">#0E7656</color>
-    <color name="dua_primary_dark">#09573F</color>
-    <color name="dua_accent">#169672</color>
-    <color name="dua_text">#123328</color>
-    <color name="dua_muted">#517266</color>
-    <color name="dua_border">#CBE4D5</color>
-    <color name="dua_soft_green">#DDF0E5</color>
-    <color name="dua_soft_gold">#D5EDE0</color>
-    <color name="dua_soft_pink">#E4F4EC</color>
-    <color name="dua_soft_lavender">#E0F2F1</color>
+    <color name="dua_primary">#1E563B</color>
+    <color name="dua_primary_dark">#143D29</color>
+    <color name="dua_accent">#9A7434</color>
+    <color name="dua_text">#1A1D1B</color>
+    <color name="dua_muted">#5E6460</color>
+    <color name="dua_border">#E2E4DE</color>
+    <color name="dua_soft_green">#ECEFE9</color>
+    <color name="dua_soft_gold">#F3EFE3</color>
+    <color name="dua_soft_pink">#F1EFEA</color>
+    <color name="dua_soft_lavender">#ECEFEB</color>
 
     <!-- Light theme helper: switch track -->
-    <color name="switch_track">#B9D9C8</color>
+    <color name="switch_track">#C5CCC6</color>
 
-    <!-- Emerald header & lock-screen overlay tokens (no black/gold) -->
+    <!-- Deep mosque-dark header & lock-screen overlay tokens -->
     <color name="art_text">#FFFFFF</color>
-    <color name="art_text_secondary">#DCF5EB</color>
-    <color name="art_gold">#E3FAF0</color>
-    <color name="art_surface">#136D52</color>
-    <color name="art_border">#5CC6A2</color>
-    <color name="art_base">#0B563F</color>
-    <color name="art_gold_soft">#1A7D60</color>
-    <color name="art_chip">#12694E</color>
+    <color name="art_text_secondary">#E3E8E4</color>
+    <color name="art_gold">#F4E4BC</color>
+    <color name="art_surface">#1D3A2D</color>
+    <color name="art_border">#8FA89B</color>
+    <color name="art_base">#142A20</color>
+    <color name="art_gold_soft">#254A39</color>
+    <color name="art_chip">#1A3A2C</color>
 </resources>

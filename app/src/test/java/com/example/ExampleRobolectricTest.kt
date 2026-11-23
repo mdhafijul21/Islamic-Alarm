@@ -138,7 +138,7 @@ class ExampleRobolectricTest {
         val cases = listOf(
             Triple(OfflineArabicQuranActivity.TAB_SURAH, "সুরা সমূহ", android.view.View.GONE),
             Triple(OfflineArabicQuranActivity.TAB_PARA, "পারা সমূহ", android.view.View.GONE),
-            Triple(OfflineArabicQuranActivity.TAB_PAGE, "পৃষ্ঠা সার্চ", android.view.View.VISIBLE)
+            Triple(OfflineArabicQuranActivity.TAB_PAGE, "পৃষ্ঠা", android.view.View.VISIBLE)
         )
         for ((tab, expectedTitle, expectedJumpBtnVisibility) in cases) {
             val intent = Intent(ctx, OfflineArabicQuranActivity::class.java).apply {
@@ -463,7 +463,7 @@ class ExampleRobolectricTest {
             com.hafij.islamicalarm.R.id.tvLocationPromptHint
         )
         assertEquals(android.view.View.VISIBLE, hintView.visibility)
-        assertTrue(hintView.text.toString().contains("সঠিক সময়ের জন্য লোকেশন বাটন ক্লিক করুন"))
+        assertTrue(hintView.text.toString().contains("সঠিক সময়ের জন্য GPS বাটন ক্লিক করুন"))
 
         val cardAutoSilent = mainActivity.findViewById<android.view.View>(
             com.hafij.islamicalarm.R.id.cardAutoSilent
@@ -610,5 +610,357 @@ class ExampleRobolectricTest {
         assertEquals(0, mainActivity.resources.getIdentifier("cardAudioPlayer", "id", mainActivity.packageName))
         assertEquals(0, mainActivity.resources.getIdentifier("btnPlayAudio", "id", mainActivity.packageName))
         assertEquals(0, mainActivity.resources.getIdentifier("btnPlaySurahAudio", "id", mainActivity.packageName))
+    }
+
+    @Test
+    fun testHafeziPerParaSearchAudioRenameAndDuasCategoryGrid() { runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        QuranRepository.ensureHafeziLoaded(ctx)
+
+        // 1. Per-Para page range and 1..lastPage mapping in QuranRepository
+        assertEquals(1..21, QuranRepository.getHafeziParaPageRange(1))
+        assertEquals(21, QuranRepository.getHafeziParaTotalPages(1))
+        assertEquals(1, QuranRepository.getHafeziPageInPara(1))
+        assertEquals(21, QuranRepository.getHafeziPageInPara(21))
+
+        assertEquals(63..81, QuranRepository.getHafeziParaPageRange(4))
+        assertEquals(19, QuranRepository.getHafeziParaTotalPages(4))
+        assertEquals(16, QuranRepository.getHafeziPageInPara(78))
+
+        assertEquals(586..610, QuranRepository.getHafeziParaPageRange(30))
+        assertEquals(25, QuranRepository.getHafeziParaTotalPages(30))
+        assertEquals(25, QuranRepository.getHafeziPageInPara(610))
+
+        // 2. Search-Only "সার্চ" mode: no pre-filled list, only Para + Page search controls
+        val searchIntent = Intent(ctx, OfflineArabicQuranActivity::class.java).apply {
+            putExtra(OfflineArabicQuranActivity.EXTRA_PARA_PAGE_SEARCH, true)
+        }
+        val offlineAct = Robolectric.buildActivity(OfflineArabicQuranActivity::class.java, searchIntent)
+            .create().start().resume().get()
+        val toolbar = offlineAct.findViewById<com.google.android.material.appbar.MaterialToolbar>(
+            com.hafij.islamicalarm.R.id.toolbarOfflineQuran
+        )
+        val searchPanel = offlineAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.cardParaPageSearchPanel
+        )
+        val indexListFrame = offlineAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.layoutIndexListFrame
+        )
+        val standardSearchBar = offlineAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.cardStandardSearchBar
+        )
+        val rvIndex = offlineAct.findViewById<androidx.recyclerview.widget.RecyclerView>(
+            com.hafij.islamicalarm.R.id.rvOfflineIndex
+        )
+        val deadline = System.currentTimeMillis() + 3000L
+        while (offlineAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.pbOfflineLoading).visibility == android.view.View.VISIBLE &&
+            System.currentTimeMillis() < deadline
+        ) {
+            Thread.sleep(25)
+            org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        }
+
+        assertEquals("সার্চ", toolbar.title?.toString())
+        assertEquals(android.view.View.VISIBLE, searchPanel.visibility)
+        assertEquals(android.view.View.GONE, indexListFrame.visibility)
+        assertEquals(android.view.View.GONE, standardSearchBar.visibility)
+        assertEquals(0, rvIndex.adapter?.itemCount ?: 0)
+
+        // Enter Para 4 and Page 16 in the search-only fields and open Mushaf
+        val etParaNum = offlineAct.findViewById<android.widget.EditText>(
+            com.hafij.islamicalarm.R.id.etSearchParaNumber
+        )
+        val etParaPage = offlineAct.findViewById<android.widget.EditText>(
+            com.hafij.islamicalarm.R.id.etSearchParaPageNumber
+        )
+        val tvRangeHint = offlineAct.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvSearchParaRangeHint
+        )
+        val btnSearchGo = offlineAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.btnExecuteParaPageSearch
+        )
+        etParaNum.setText("4")
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertTrue(tvRangeHint.text.toString().contains("পারা ৪"))
+        assertTrue(tvRangeHint.text.toString().contains("১৯"))
+
+        etParaPage.setText("16")
+        btnSearchGo.performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+
+        assertTrue(toolbar.subtitle?.toString().orEmpty().contains("পারা ৪ • পৃষ্ঠা ১৬ / ১৯"))
+        val footerText = offlineAct.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvMushafPageFooter
+        ).text.toString()
+        assertTrue(footerText.contains("পারা ৪ : পৃষ্ঠা ১৬/১৯"))
+
+        // Verify ViewPager2 Mushaf page renders top-center ( ০৪ : ১৬ ), ﴿ ١٦ / ١٩ ﴾, and visible Ayah numbers inside medallions
+        val vpMushaf = offlineAct.findViewById<androidx.viewpager2.widget.ViewPager2>(
+            com.hafij.islamicalarm.R.id.vpMushafPages
+        )
+        val vpInnerRv = vpMushaf.getChildAt(0) as androidx.recyclerview.widget.RecyclerView
+        vpInnerRv.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY)
+        )
+        vpInnerRv.layout(0, 0, 1080, 1920)
+        val mushafHolder = vpInnerRv.findViewHolderForAdapterPosition(77) // global page 78
+        assertNotNull(mushafHolder)
+        val topMeta = mushafHolder!!.itemView.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvMushafTopMeta
+        )
+        val bottomPage = mushafHolder.itemView.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvMushafBottomPage
+        )
+        val linesContainer = mushafHolder.itemView.findViewById<android.view.ViewGroup>(
+            com.hafij.islamicalarm.R.id.llMushafPageContent
+        )
+        assertEquals("( ০৪ : ১৬ )", topMeta.text.toString())
+        assertEquals("﴿ ١٦ / ١٩ ﴾", bottomPage.text.toString())
+        assertTrue("Expected 15 Mushaf rows plus rule lines", linesContainer.childCount >= 15)
+
+        val allMedallions = mutableListOf<OfflineArabicQuranActivity.AyahMedallionSpan>()
+        fun collectMedallions(v: android.view.View) {
+            if (v is android.widget.TextView) {
+                val spanned = v.text as? android.text.Spanned ?: return
+                allMedallions.addAll(
+                    spanned.getSpans(0, spanned.length, OfflineArabicQuranActivity.AyahMedallionSpan::class.java)
+                )
+            } else if (v is android.view.ViewGroup) {
+                for (i in 0 until v.childCount) collectMedallions(v.getChildAt(i))
+            }
+        }
+        collectMedallions(linesContainer)
+        assertTrue("Mushaf page 78 should render Ayah medallion spans", allMedallions.isNotEmpty())
+        assertTrue(
+            "All Ayah medallion spans must carry visible non-empty Extended Arabic-Indic or fallback digits",
+            allMedallions.all { it.displayDigits.isNotBlank() && it.displayDigits.all { ch -> ch in '\u06F0'..'\u06F9' || ch in '\u0660'..'\u0669' } }
+        )
+
+        // 3. Quran Dashboard cards ("পৃষ্ঠা", "সার্চ", "অডিও") & Duas category grid (no "সবগুলো")
+        val mainAct = Robolectric.buildActivity(MainActivity::class.java).create().start().resume().get()
+        val navBar = mainAct.findViewById<com.hafij.islamicalarm.MainBottomBar>(
+            com.hafij.islamicalarm.R.id.bottomNavigation
+        )
+        fun collectTexts(v: android.view.View): List<String> = when (v) {
+            is android.widget.TextView -> listOf(v.text.toString())
+            is android.view.ViewGroup -> (0 until v.childCount).flatMap { collectTexts(v.getChildAt(it)) }
+            else -> emptyList()
+        }
+
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_quran
+        mainAct.supportFragmentManager.executePendingTransactions()
+        val pageCard = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.cardCatSearch)
+        val searchCard = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.cardCatParaSearch)
+        val audioCard = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.cardCatAudioQuran)
+        assertEquals(android.view.View.VISIBLE, pageCard.visibility)
+        assertEquals(android.view.View.VISIBLE, searchCard.visibility)
+        assertEquals(android.view.View.VISIBLE, audioCard.visibility)
+        assertTrue(collectTexts(pageCard).contains("পৃষ্ঠা"))
+        assertTrue(collectTexts(pageCard).none { it.contains("সার্চ") })
+        assertTrue(collectTexts(searchCard).contains("সার্চ"))
+        assertTrue(collectTexts(audioCard).contains("অডিও"))
+        assertTrue(collectTexts(audioCard).none { it.contains("কুরআন") })
+
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_duas
+        mainAct.supportFragmentManager.executePendingTransactions()
+        assertTrue(!com.hafij.islamicalarm.duas.DuaData.getCategories.contains(com.hafij.islamicalarm.duas.DuaData.CATEGORY_ALL))
+        val rvDuaCats = mainAct.findViewById<androidx.recyclerview.widget.RecyclerView>(
+            com.hafij.islamicalarm.R.id.rvDuaCategories
+        )
+        rvDuaCats.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY)
+        )
+        rvDuaCats.layout(0, 0, 1080, 1920)
+        val visibleDuaTexts = collectTexts(rvDuaCats)
+        assertTrue(visibleDuaTexts.none { it == "সবগুলো" || it == "(সবগুলো)" })
+        assertTrue(visibleDuaTexts.contains("পছন্দের দোয়া"))
+
+        // 4. AudioQuranActivity renamed to "অডিও", multi-mirror CDN fast URLs, and foreground media notification (Prev | Play/Pause | Next)
+        val reciterUrls = com.hafij.islamicalarm.audio.ReciterData.getDefaultReciter().getAllPlaybackUrls(1)
+        assertTrue(reciterUrls.size >= 3)
+        assertTrue(reciterUrls.first().contains("cdn.islamic.network"))
+
+        val playingNotif = com.hafij.islamicalarm.audio.QuranAudioService.buildPlaybackNotification(
+            context = ctx,
+            state = com.hafij.islamicalarm.audio.QuranAudioState(
+                surah = QuranRepository.surahList.first(),
+                reciter = com.hafij.islamicalarm.audio.ReciterData.getDefaultReciter(),
+                isPlaying = true
+            )
+        )
+        assertEquals(3, playingNotif.actions?.size)
+        assertEquals("আগের সুরা", playingNotif.actions!![0].title.toString())
+        assertEquals("বিরতি", playingNotif.actions!![1].title.toString())
+        assertEquals("পরের সুরা", playingNotif.actions!![2].title.toString())
+
+        val pausedNotif = com.hafij.islamicalarm.audio.QuranAudioService.buildPlaybackNotification(
+            context = ctx,
+            state = com.hafij.islamicalarm.audio.QuranAudioState(
+                surah = QuranRepository.surahList.first(),
+                reciter = com.hafij.islamicalarm.audio.ReciterData.getDefaultReciter(),
+                isPlaying = false
+            )
+        )
+        assertEquals("চালু করুন", pausedNotif.actions!![1].title.toString())
+
+        val audioCtrl = Robolectric.buildActivity(com.hafij.islamicalarm.audio.AudioQuranActivity::class.java)
+            .create().start().resume()
+        val audioAct = audioCtrl.get()
+        val audioToolbar = audioAct.findViewById<androidx.appcompat.widget.Toolbar>(
+            com.hafij.islamicalarm.R.id.toolbarAudioQuran
+        )
+        val downloadAllBtn = audioAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.btnDownloadAllOffline
+        )
+        assertEquals("অডিও", audioToolbar.title?.toString())
+        assertEquals(android.view.View.VISIBLE, downloadAllBtn.visibility)
+        audioCtrl.pause().stop().destroy()
+    }
+    }
+
+    @Test
+    fun testGpsHintNotificationsWidgetPinFortyHadithPuritySalahAndCompactDuas() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+
+        // 1. Homepage top-right notification icon & GPS prompt text
+        val mainActivity = Robolectric.buildActivity(MainActivity::class.java)
+            .create().start().resume().get()
+        val hintText = mainActivity.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvLocationPromptHint
+        ).text.toString()
+        assertEquals("📍 সঠিক সময়ের জন্য GPS বাটন ক্লিক করুন", hintText)
+
+        val notifBtn = mainActivity.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.btnHomeNotifications
+        )
+        assertEquals(android.view.View.VISIBLE, notifBtn.visibility)
+
+        // 2. Auto Islamic occasion detection (Jumuah, Ayyam-e-Beed, Shab-e-Barat, Shab-e-Qadr, Eid-ul-Fitr, Eid-ul-Azha)
+        fun findDateMatching(
+            predicate: (java.util.Calendar, com.hafij.islamicalarm.prayertimes.HijriDate) -> Boolean
+        ): java.util.Calendar {
+            val c = java.util.Calendar.getInstance()
+            c.set(2026, java.util.Calendar.JANUARY, 1, 9, 0, 0)
+            for (i in 0..400) {
+                val hijri = com.hafij.islamicalarm.prayertimes.HijriCalendarHelper.getHijriDate(c)
+                if (predicate(c, hijri)) return c.clone() as java.util.Calendar
+                c.add(java.util.Calendar.DAY_OF_YEAR, 1)
+            }
+            error("No date matched in 400 days")
+        }
+
+        val friday = findDateMatching { c, _ -> c.get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY }
+        val ayyamBeed = findDateMatching { _, h -> h.day == 14 }
+        val shabBarat = findDateMatching { _, h -> h.month == 8 && h.day == 15 }
+        val shabQadr = findDateMatching { _, h -> h.month == 9 && h.day == 27 }
+        val eidFitr = findDateMatching { _, h -> h.month == 10 && h.day == 1 }
+        val eidAzha = findDateMatching { _, h -> h.month == 12 && h.day == 10 }
+
+        assertTrue(com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.matchingOccasionsFor(friday).any { it.id == "jumuah" })
+        assertTrue(com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.matchingOccasionsFor(ayyamBeed).any { it.id == "ayyam_al_beed" })
+        assertTrue(com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.matchingOccasionsFor(shabBarat).any { it.id == "shab_e_barat" })
+        assertTrue(com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.matchingOccasionsFor(shabQadr).any { it.id == "shab_e_qadr" })
+        assertTrue(com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.matchingOccasionsFor(eidFitr).any { it.id == "eid_ul_fitr" })
+        assertTrue(com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.matchingOccasionsFor(eidAzha).any { it.id == "eid_ul_azha" })
+
+        val recorded = com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.evaluateAndNotifyToday(ctx, shabQadr)
+        assertTrue(recorded.isNotEmpty())
+        assertTrue(recorded.all { it.fazilatBn.isNotBlank() && it.hadithBangla.isNotBlank() && it.hadithReference.isNotBlank() })
+        assertTrue(com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.getUnreadCount(ctx) >= 1)
+
+        val notifActCtrl = Robolectric.buildActivity(
+            com.hafij.islamicalarm.notifications.IslamicNotificationsActivity::class.java
+        ).create().start().resume()
+        val notifAct = notifActCtrl.get()
+        val inboxLayout = notifAct.findViewById<android.view.ViewGroup>(
+            com.hafij.islamicalarm.R.id.layoutInboxNotifications
+        )
+        assertTrue(inboxLayout.childCount >= 1)
+        notifActCtrl.pause().stop().destroy()
+
+        // 3. Duas categories: 40 short Hadiths, Purity & Wudu-Ghusl, Salah rules; no entry count; no eye icon
+        val categories = com.hafij.islamicalarm.duas.DuaData.getCategories
+        assertEquals(com.hafij.islamicalarm.duas.DuaData.CATEGORY_FORTY_HADITH, categories[0])
+        assertEquals(com.hafij.islamicalarm.duas.DuaData.CATEGORY_PURITY, categories[1])
+        assertEquals(com.hafij.islamicalarm.duas.DuaData.CATEGORY_SALAH_RULES, categories[2])
+
+        val fortyHadiths = com.hafij.islamicalarm.duas.DuaData.getDuasAndHadiths.filter {
+            it.category == com.hafij.islamicalarm.duas.DuaData.CATEGORY_FORTY_HADITH
+        }
+        assertEquals(40, fortyHadiths.size)
+        assertTrue(fortyHadiths.all { it.arabic.isNotBlank() && it.translation.isNotBlank() && it.reference.isNotBlank() })
+
+        val purityItems = com.hafij.islamicalarm.duas.DuaData.getDuasAndHadiths.filter {
+            it.category == com.hafij.islamicalarm.duas.DuaData.CATEGORY_PURITY
+        }
+        assertTrue(purityItems.any { it.title.contains("ইস্তিঞ্জা") })
+        assertTrue(purityItems.any { it.title.contains("ওজু") && it.title.contains("ফরজ") })
+        assertTrue(purityItems.any { it.title.contains("গোসল") })
+        assertTrue(purityItems.any { it.title.contains("ওজু ভেঙে") })
+
+        val salahItems = com.hafij.islamicalarm.duas.DuaData.getDuasAndHadiths.filter {
+            it.category == com.hafij.islamicalarm.duas.DuaData.CATEGORY_SALAH_RULES
+        }
+        assertTrue(salahItems.any { it.title.contains("পদ্ধতি") })
+        assertTrue(salahItems.any { it.title.contains("ফরজ") })
+        assertTrue(salahItems.any { it.title.contains("ওয়াজিব") })
+        assertTrue(salahItems.any { it.title.contains("সুন্নাত") })
+        assertTrue(salahItems.any { it.title.contains("মাকরুহ") })
+        assertTrue(salahItems.any { it.title.contains("নামাজ ভেঙে") })
+
+        assertEquals(0, ctx.resources.getIdentifier("btnOpenDuaDetail", "id", ctx.packageName))
+        assertEquals(0, ctx.resources.getIdentifier("tvCategoryCount", "id", ctx.packageName))
+
+        val navBar = mainActivity.findViewById<com.hafij.islamicalarm.MainBottomBar>(
+            com.hafij.islamicalarm.R.id.bottomNavigation
+        )
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_duas
+        mainActivity.supportFragmentManager.executePendingTransactions()
+        val rvDuaCats = mainActivity.findViewById<androidx.recyclerview.widget.RecyclerView>(
+            com.hafij.islamicalarm.R.id.rvDuaCategories
+        )
+        rvDuaCats.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY)
+        )
+        rvDuaCats.layout(0, 0, 1080, 1920)
+        fun collectTexts(v: android.view.View): List<String> = when (v) {
+            is android.widget.TextView -> listOf(v.text.toString())
+            is android.view.ViewGroup -> (0 until v.childCount).flatMap { collectTexts(v.getChildAt(it)) }
+            else -> emptyList()
+        }
+        val catTexts = collectTexts(rvDuaCats)
+        assertTrue(catTexts.none { it.contains("এন্ট্রি") })
+
+        // 4. Settings "Add to Home" widget button & widget update
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_settings
+        mainActivity.supportFragmentManager.executePendingTransactions()
+        val addToHomeBtn = mainActivity.findViewById<android.widget.Button>(
+            com.hafij.islamicalarm.R.id.btnSettingsAddToHome
+        )
+        assertEquals(android.view.View.VISIBLE, addToHomeBtn.visibility)
+        assertEquals("Add to Home", addToHomeBtn.text.toString())
+
+        val awm = android.appwidget.AppWidgetManager.getInstance(ctx)
+        val widgetId = org.robolectric.Shadows.shadowOf(awm).createWidget(
+            com.hafij.islamicalarm.widget.IslamicAlarmWidget::class.java,
+            com.hafij.islamicalarm.R.layout.widget_islamic_alarm
+        )
+        com.hafij.islamicalarm.widget.IslamicAlarmWidget.updateAppWidget(ctx, awm, widgetId)
+        val widgetView = org.robolectric.Shadows.shadowOf(awm).getViewFor(widgetId)
+        val widgetLocation = widgetView.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvWidgetLocation
+        ).text.toString()
+        val widgetNext = widgetView.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvWidgetNextPrayer
+        ).text.toString()
+        val widgetChrono = widgetView.findViewById<android.widget.Chronometer>(
+            com.hafij.islamicalarm.R.id.chronometerWidgetCountdown
+        )
+        assertTrue(widgetLocation.contains("ঢাকা"))
+        assertTrue(widgetNext.startsWith("পরবর্তী নামাজ:"))
+        assertNotNull(widgetChrono)
     }
 }

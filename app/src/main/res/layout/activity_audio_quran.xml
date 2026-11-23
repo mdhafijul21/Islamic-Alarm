@@ -17,9 +17,9 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:subtitle="বিশ্বখ্যাত ক্বারীগণের কণ্ঠে ১১৪টি সুরা"
+            app:subtitle="বিশ্বখ্যাত ক্বারীগণের কণ্ঠে ১১৪টি সুরা • ডাউনলোড ও অফলাইন"
             app:subtitleTextColor="@color/text_secondary"
-            app:title="🎧 অডিও কুরআন তিলাওয়াত"
+            app:title="অডিও"
             app:titleTextColor="@color/secondary" />
 
         <!-- Search Bar -->

@@ -1,6 +1,9 @@
 package com.hafij.islamicalarm.settings
 
 import android.Manifest
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -14,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.hafij.islamicalarm.MainActivity
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivitySettingsBinding
@@ -21,6 +25,7 @@ import com.hafij.islamicalarm.permissions.PermStep
 import com.hafij.islamicalarm.permissions.PermissionHelper
 import com.hafij.islamicalarm.report.ReportItem
 import com.hafij.islamicalarm.report.ReportStore
+import com.hafij.islamicalarm.widget.IslamicAlarmWidget
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -99,7 +104,61 @@ class SettingsFragment : Fragment() {
             activeCategory = 2
             renderCategoryScreen()
         }
+        b.btnSettingsAddToHome.setOnClickListener {
+            pinPrayerCounterWidget()
+        }
+        b.cardAddToHomeWidget.setOnClickListener {
+            pinPrayerCounterWidget()
+        }
         renderCategoryScreen()
+    }
+
+    private fun pinPrayerCounterWidget() {
+        val ctx = context ?: return
+        IslamicAlarmWidget.refreshAllWidgets(ctx)
+        val appWidgetManager = AppWidgetManager.getInstance(ctx)
+        val provider = ComponentName(ctx, IslamicAlarmWidget::class.java)
+        val supported = try {
+            appWidgetManager.isRequestPinAppWidgetSupported
+        } catch (_: Exception) {
+            false
+        }
+
+        if (supported) {
+            val callbackIntent = Intent(ctx, IslamicAlarmWidget::class.java).apply {
+                action = IslamicAlarmWidget.ACTION_WIDGET_PINNED
+            }
+            val successCallback = PendingIntent.getBroadcast(
+                ctx,
+                405,
+                callbackIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val requested = try {
+                appWidgetManager.requestPinAppWidget(provider, null, successCallback)
+            } catch (_: Exception) {
+                false
+            }
+            if (requested) {
+                Toast.makeText(
+                    ctx,
+                    "হোম স্ক্রিনে টাইম কাউন্টার যোগ করার অনুমতি নিশ্চিত করুন",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+        }
+
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle("⏱️ হোম স্ক্রিনে টাইম কাউন্টার যোগ করুন")
+            .setMessage(
+                "আপনার ফোনের লঞ্চারে সরাসরি পিন সাপোর্ট না করলে নিচের সহজ ধাপ অনুসরণ করুন:\n\n" +
+                    "১. ফোনের হোম স্ক্রিনের খালি জায়গায় একটু চেপে ধরুন।\n" +
+                    "২. Widgets অপশনে প্রবেশ করুন।\n" +
+                    "৩. \"Islamic Alarm\" খুঁজে হোম স্ক্রিনে টেনে ছেড়ে দিন — পরবর্তী নামাজের লাইভ কাউন্টার দেখাবে।"
+            )
+            .setPositiveButton("বুঝেছি", null)
+            .show()
     }
 
     private fun renderCategoryScreen() {

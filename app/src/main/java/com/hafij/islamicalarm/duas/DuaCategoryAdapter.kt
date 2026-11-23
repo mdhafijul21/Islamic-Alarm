@@ -40,7 +40,6 @@ class DuaCategoryAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: DuaCategory) {
             binding.tvCategoryName.text = item.title
-            binding.tvCategoryCount.text = "${item.count}টি এন্ট্রি"
             binding.tvCategoryIcon.text = item.icon
             binding.tvCategoryIcon.contentDescription = item.title
             binding.root.setOnClickListener { onCategoryClick(item.title) }

@@ -523,7 +523,7 @@
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <!-- Category grid: Row 2 (Page Search & Latest) -->
+            <!-- Category grid: Row 2 (পৃষ্ঠা & সার্চ) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -561,8 +561,8 @@
                                 android:layout_width="26dp"
                                 android:layout_height="26dp"
                                 android:layout_gravity="center"
-                                android:contentDescription="পৃষ্ঠা সার্চ"
-                                android:src="@android:drawable/ic_menu_search"
+                                android:contentDescription="পৃষ্ঠা"
+                                android:src="@drawable/ic_nav_quran"
                                 app:tint="@color/dua_primary" />
                         </FrameLayout>
 
@@ -571,7 +571,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="10dp"
                             android:gravity="center"
-                            android:text="পৃষ্ঠা সার্চ"
+                            android:text="পৃষ্ঠা"
                             android:textColor="@color/dua_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -581,11 +581,76 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:gravity="center"
-                            android:text="৬১০ পৃষ্ঠা খুঁজুন"
+                            android:text="১–৬১০ পৃষ্ঠা পড়ুন"
                             android:textColor="@color/dua_muted"
                             android:textSize="11sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardCatParaSearch"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="5dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="@color/dua_surface"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="2dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="14dp">
+
+                        <FrameLayout
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
+                            android:background="@drawable/bg_quran_icon_circle">
+
+                            <ImageView
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="সার্চ"
+                                android:src="@android:drawable/ic_menu_search"
+                                app:tint="@color/dua_primary" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:gravity="center"
+                            android:text="সার্চ"
+                            android:textColor="@color/dua_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:gravity="center"
+                            android:text="পারা ও পৃষ্ঠা খুঁজুন"
+                            android:textColor="@color/dua_muted"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Category grid: Row 3 (অডিও & অর্থ সহ) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="11dp"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardCatAudioQuran"
@@ -617,7 +682,7 @@
                                 android:layout_width="26dp"
                                 android:layout_height="26dp"
                                 android:layout_gravity="center"
-                                android:contentDescription="অডিও কুরআন"
+                                android:contentDescription="অডিও"
                                 android:src="@drawable/ic_volume_up"
                                 app:tint="@color/dua_primary" />
                         </FrameLayout>
@@ -627,7 +692,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="10dp"
                             android:gravity="center"
-                            android:text="অডিও কুরআন"
+                            android:text="অডিও"
                             android:textColor="@color/dua_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -637,75 +702,68 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:gravity="center"
-                            android:text="১১৪ সুরা (অফলাইন/ডাউনলোড)"
+                            android:text="১১৪ সুরা • ডাউনলোড"
                             android:textColor="@color/dua_muted"
                             android:textSize="11sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
 
-            <!-- Bottom Category: অর্থ সহ (Arabic + Bengali Meaning, 100% Offline) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardCatMeaning"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="@color/dua_surface"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/dua_border"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardCatMeaning"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="16dp">
-
-                    <FrameLayout
-                        android:layout_width="50dp"
-                        android:layout_height="50dp"
-                        android:background="@drawable/bg_quran_icon_circle">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:layout_gravity="center"
-                            android:contentDescription="অর্থ সহ"
-                            android:src="@drawable/ic_nav_quran"
-                            app:tint="@color/dua_primary" />
-                    </FrameLayout>
+                    android:layout_marginHorizontal="5dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="@color/dua_surface"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="2dp"
+                    app:strokeWidth="0dp">
 
                     <LinearLayout
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="14dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="14dp">
+
+                        <FrameLayout
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
+                            android:background="@drawable/bg_quran_icon_circle">
+
+                            <ImageView
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="অর্থ সহ"
+                                android:src="@drawable/ic_nav_quran"
+                                app:tint="@color/dua_primary" />
+                        </FrameLayout>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:gravity="center"
                             android:text="অর্থ সহ"
                             android:textColor="@color/dua_primary"
-                            android:textSize="15sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="আরবি + বাংলা অর্থ সহ (১১৪ সুরা)"
+                            android:gravity="center"
+                            android:text="আরবি + বাংলা অর্থ সহ"
                             android:textColor="@color/dua_muted"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
                     </LinearLayout>
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

@@ -3,13 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="14dp"
-    android:layout_marginVertical="7dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="3dp"
     android:clickable="true"
     android:focusable="true"
     app:cardBackgroundColor="@color/dua_surface"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="2dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="1dp"
     app:strokeColor="@color/dua_border"
     app:strokeWidth="1dp">
 
@@ -17,7 +17,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="8dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -27,17 +28,17 @@
 
             <TextView
                 android:id="@+id/tvDuaIcon"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:background="@drawable/bg_dua_artwork"
                 android:gravity="center"
                 android:text="🤲"
-                android:textSize="27sp" />
+                android:textSize="16sp" />
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="11dp"
+                android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -45,71 +46,72 @@
                     android:id="@+id/tvDuaTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="2"
                     android:text="দোয়ার শিরোনাম"
                     android:textColor="@color/dua_primary"
-                    android:textSize="16sp"
+                    android:textSize="13.5sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tvDuaCategoryTag"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:background="@drawable/bg_dua_count"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="4dp"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:text="ক্যাটাগরি"
-                    android:textColor="@color/dua_primary_dark"
-                    android:textSize="10sp" />
+                    android:textColor="@color/dua_muted"
+                    android:textSize="9.5sp" />
             </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="6dp"
+                android:text="›"
+                android:textColor="@color/dua_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/tvDuaArabic"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="5dp"
             android:background="@drawable/bg_arabic_verse"
+            android:ellipsize="end"
+            android:fontFamily="serif"
             android:gravity="end"
-            android:lineSpacingExtra="5dp"
-            android:maxLines="4"
-            android:padding="12dp"
+            android:lineSpacingExtra="2dp"
+            android:maxLines="2"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="5dp"
             android:text="الْقُرْآنُ الْكَرِيمُ"
             android:textColor="@color/dua_primary_dark"
             android:textDirection="rtl"
-            android:textSize="23sp"
-            android:fontFamily="serif" />
+            android:textSize="16sp" />
 
         <TextView
             android:id="@+id/tvDuaTranslation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="9dp"
+            android:layout_marginTop="4dp"
             android:ellipsize="end"
-            android:maxLines="3"
+            android:maxLines="2"
             android:text="অর্থ:"
             android:textColor="@color/dua_muted"
-            android:textSize="13sp" />
+            android:textSize="11.5sp" />
 
         <TextView
             android:id="@+id/tvDuaWhen"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="7dp"
-            android:textColor="@color/dua_muted"
-            android:textSize="12sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpenDuaDetail"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="7dp"
-            android:text="বিস্তারিত পড়ুন"
-            android:textColor="@color/dua_primary"
-            app:backgroundTint="@color/dua_soft_green"
-            app:cornerRadius="12dp"
-            app:icon="@android:drawable/ic_menu_view"
-            app:iconTint="@color/dua_primary" />
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/dua_primary_dark"
+            android:textSize="10.5sp" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

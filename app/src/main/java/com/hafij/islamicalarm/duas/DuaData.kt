@@ -7,6 +7,9 @@ package com.hafij.islamicalarm.duas
  */
 object DuaData {
     const val CATEGORY_ALL = "সবগুলো"
+    const val CATEGORY_FORTY_HADITH = "৪০টি প্রসিদ্ধ ছোট হাদিস"
+    const val CATEGORY_PURITY = "পবিত্রতা ও ওজু-গোসল"
+    const val CATEGORY_SALAH_RULES = "নামাজের পদ্ধতি ও মাসআলা"
     const val CATEGORY_MORNING_EVENING = "সকাল ও সন্ধ্যার জিকির"
     const val CATEGORY_AFTER_FARD = "ফরজ নামাজের পরের মাসনুন"
     const val CATEGORY_IN_PRAYER = "নামাজের ভেতরের দোয়া"
@@ -41,14 +44,15 @@ object DuaData {
     const val CATEGORY_CHARITY = "যাকাত, সদকা ও দান"
 
     val getCategories = listOf(
-        CATEGORY_ALL, CATEGORY_MORNING_EVENING, CATEGORY_AFTER_FARD, CATEGORY_IN_PRAYER,
-        CATEGORY_DAILY, CATEGORY_SLEEP, CATEGORY_WAKE, CATEGORY_HOME, CATEGORY_TOILET,
-        CATEGORY_MOSQUE, CATEGORY_FOOD, CATEGORY_WUDU, CATEGORY_PARENTS, CATEGORY_FAMILY,
+        CATEGORY_FORTY_HADITH, CATEGORY_PURITY, CATEGORY_SALAH_RULES,
+        CATEGORY_MORNING_EVENING, CATEGORY_AFTER_FARD, CATEGORY_IN_PRAYER,
+        CATEGORY_DAILY, CATEGORY_SLEEP, CATEGORY_WAKE, CATEGORY_HOME,
+        CATEGORY_MOSQUE, CATEGORY_FOOD, CATEGORY_PARENTS, CATEGORY_FAMILY,
         CATEGORY_RABBANA, CATEGORY_PROPHETS, CATEGORY_TAWBAH, CATEGORY_AKHIRA,
         CATEGORY_DISTRESS, CATEGORY_ILLNESS, CATEGORY_DEBT, CATEGORY_TRAVEL,
         CATEGORY_WEATHER, CATEGORY_FRIDAY, CATEGORY_NAFL, CATEGORY_TAHAJJUD,
         CATEGORY_ISTIKHARA, CATEGORY_FASTING, CATEGORY_RAMADAN, CATEGORY_HAJJ,
-        CATEGORY_DECEASED, CATEGORY_HADITH, CATEGORY_CHARITY
+        CATEGORY_DECEASED, CATEGORY_CHARITY
     )
 
     private fun dua(
@@ -326,9 +330,22 @@ object DuaData {
     val getDuasAndHadiths: List<DuaItem> by lazy {
         val fixed = DuaFixes.items
         val fixedIds = fixed.map { it.id }.toSet()
-        (baseDuas.filter { it.id !in fixedIds } + fixed +
+        val legacyMapped = (baseDuas.filter { it.id !in fixedIds } + fixed +
             DuaMore1.items + DuaMore2.items + DuaMore3.items +
             DuaMore4.items + DuaMore5.items)
-            .sortedWith(compareBy({ getCategories.indexOf(it.category) }, { it.id }))
+            .filter { it.category != CATEGORY_HADITH }
+            .map { item ->
+                when (item.category) {
+                    CATEGORY_TOILET, CATEGORY_WUDU -> item.copy(category = CATEGORY_PURITY)
+                    else -> item
+                }
+            }
+        (DuaFortyHadith.items + DuaPuritySalahData.items + legacyMapped)
+            .sortedWith(
+                compareBy(
+                    { getCategories.indexOf(it.category).let { idx -> if (idx == -1) Int.MAX_VALUE else idx } },
+                    { it.id }
+                )
+            )
     }
 }

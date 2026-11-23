@@ -19,6 +19,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <queries>
@@ -170,6 +171,13 @@
             android:label="অডিও কুরআন"
             android:theme="@style/Theme.IslamicAlarm" />
 
+        <!-- Islamic Special Day Notifications Activity -->
+        <activity
+            android:name="com.hafij.islamicalarm.notifications.IslamicNotificationsActivity"
+            android:exported="false"
+            android:label="ইসলামি নোটিফিকেশন ও ফজিলত"
+            android:theme="@style/Theme.IslamicAlarm" />
+
         <!-- App Widget Provider -->
         <receiver
             android:name="com.hafij.islamicalarm.widget.IslamicAlarmWidget"
@@ -177,6 +185,7 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.hafij.islamicalarm.ACTION_REFRESH_WIDGET" />
+                <action android:name="com.hafij.islamicalarm.ACTION_WIDGET_PINNED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -198,6 +207,17 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Daily Islamic Special Occasions Notification Receiver -->
+        <receiver
+            android:name="com.hafij.islamicalarm.notifications.IslamicOccasionReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.hafij.islamicalarm.ACTION_CHECK_DAILY_OCCASION" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
             </intent-filter>
         </receiver>
 
@@ -257,6 +277,12 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <service
+            android:name="com.hafij.islamicalarm.audio.QuranAudioService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
     </application>
 

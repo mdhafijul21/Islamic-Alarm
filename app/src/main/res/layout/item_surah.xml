@@ -142,7 +142,7 @@
                 android:backgroundTint="@color/secondary"
                 android:text="পড়ুন"
                 android:textColor="@color/primary"
-                app:icon="@android:drawable/ic_menu_view"
+                app:icon="@drawable/ic_arrow_forward"
                 app:iconTint="@color/primary" />
 
         </LinearLayout>

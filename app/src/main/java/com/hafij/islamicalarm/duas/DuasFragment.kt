@@ -114,17 +114,15 @@ class DuasFragment : Fragment() {
         lastFavoriteSnapshot = favoriteIds
 
         val allDuas = DuaData.getDuasAndHadiths
-        val categories = DuaData.getCategories.map { category ->
-            val count = if (category == DuaData.CATEGORY_ALL) {
-                allDuas.size
-            } else {
-                allDuas.count { it.category == category }
-            }
-            DuaCategory(category, count, DuaCategoryArtwork.iconFor(category))
-        }.toMutableList()
+        val categories = DuaData.getCategories
+            .filter { it != DuaData.CATEGORY_ALL }
+            .map { category ->
+                val count = allDuas.count { it.category == category }
+                DuaCategory(category, count, DuaCategoryArtwork.iconFor(category))
+            }.toMutableList()
 
         categories.add(
-            1,
+            3.coerceAtMost(categories.size),
             DuaCategory(
                 favoritesCategory,
                 favoriteIds.count { id -> allDuas.any { it.id.toString() == id } },

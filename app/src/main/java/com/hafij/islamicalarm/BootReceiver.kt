@@ -14,6 +14,7 @@ class BootReceiver : BroadcastReceiver() {
         ) {
             AlarmScheduler.rescheduleAllAlarms(context)
             com.hafij.islamicalarm.auto.AutoAlarmManager.rescheduleOnBoot(context)
+            com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.scheduleDailyCheck(context)
         }
     }
 }

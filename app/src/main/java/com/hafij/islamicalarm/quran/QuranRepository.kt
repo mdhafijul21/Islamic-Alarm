@@ -802,6 +802,29 @@ object QuranRepository {
         return hafeziJuzStartPages[paraNumber.coerceIn(1, 30)] ?: 1
     }
 
+    fun getHafeziParaPageRange(paraNumber: Int): IntRange {
+        val safePara = paraNumber.coerceIn(1, 30)
+        val start = getHafeziStartPageForPara(safePara)
+        val end = if (safePara < 30) {
+            getHafeziStartPageForPara(safePara + 1) - 1
+        } else {
+            HAFEZI_TOTAL_PAGES
+        }
+        return start..end.coerceAtLeast(start)
+    }
+
+    fun getHafeziParaTotalPages(paraNumber: Int): Int {
+        val range = getHafeziParaPageRange(paraNumber)
+        return (range.last - range.first + 1).coerceAtLeast(1)
+    }
+
+    fun getHafeziPageInPara(globalPage: Int): Int {
+        val safePage = globalPage.coerceIn(1, HAFEZI_TOTAL_PAGES)
+        val para = getHafeziJuzForPage(safePage)
+        val start = getHafeziStartPageForPara(para)
+        return (safePage - start + 1).coerceAtLeast(1)
+    }
+
     @Synchronized
     fun ensureHafeziLoaded(context: Context) {
         if (hafeziPagesCache != null && hafeziPageSummariesCache != null) return
