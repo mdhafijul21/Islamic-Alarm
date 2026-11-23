@@ -3,7 +3,7 @@
     android:id="@+id/widgetRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F3EA"
+    android:background="#EAF5EE"
     android:orientation="vertical"
     android:padding="12dp">
 
@@ -25,7 +25,7 @@
             android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:text="ইসলামিক এলার্ম"
-            android:textColor="#145B48"
+            android:textColor="#0E7656"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -44,7 +44,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="পরবর্তী এলার্ম: নির্ধারিত নেই"
-        android:textColor="#183B32"
+        android:textColor="#123328"
         android:textSize="13sp"
         android:textStyle="bold" />
 
@@ -54,7 +54,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="সাহরী ০৪:২০ AM | ইফতার ০৬:৩০ PM"
-        android:textColor="#64766F"
+        android:textColor="#517266"
         android:textSize="11sp" />
 
 </LinearLayout>

@@ -16,9 +16,11 @@ import android.media.MediaPlayer
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
-import android.os.CountDownTimer
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.telephony.TelephonyManager
@@ -44,15 +46,36 @@ class PrayerLockOverlayService : Service() {
 
     private var windowManager: WindowManager? = null
     private var overlayBinding: ActivityLockScreenBinding? = null
-    private var countDownTimer: CountDownTimer? = null
+    private val countdownHandler = Handler(Looper.getMainLooper())
+    private var lockEndElapsedMs: Long = 0L
+    private var lastDisplayedSeconds: Long = -1L
+    private var isTickerRunning: Boolean = false
     private var remainingTimeMillis: Long = 0L
     private var isCallInProgress: Boolean = false
     private var wakeLock: PowerManager.WakeLock? = null
     private var textToSpeech: TextToSpeech? = null
-    private var ringtone: Ringtone? = null
     private var azanMediaPlayer: MediaPlayer? = null
     private var receiversRegistered = false
     private var audioStarted = false
+
+    private val countdownRunnable = object : Runnable {
+        override fun run() {
+            if (!isTickerRunning) return
+            val rem = (lockEndElapsedMs - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
+            remainingTimeMillis = rem
+            val displaySeconds = if (rem <= 0L) 0L else (rem + 999L) / 1000L
+            if (displaySeconds != lastDisplayedSeconds) {
+                lastDisplayedSeconds = displaySeconds
+                updateTimerSecondsDisplay(displaySeconds)
+            }
+            if (rem <= 0L) {
+                isTickerRunning = false
+                releaseLockAndStop()
+            } else {
+                countdownHandler.postDelayed(this, 200L)
+            }
+        }
+    }
 
     private val callStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -167,18 +190,10 @@ class PrayerLockOverlayService : Service() {
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val alarmSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Islamic Alarm Clock",
+                "Islamic Alarm Lock (Silent Ringtone)",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Prayer Time Lock Screen Alarm"
@@ -186,7 +201,7 @@ class PrayerLockOverlayService : Service() {
                 vibrationPattern = longArrayOf(0, 500, 250, 500, 250, 500)
                 setBypassDnd(true)
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
-                setSound(alarmSoundUri, audioAttributes)
+                setSound(null, null)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -212,6 +227,7 @@ class PrayerLockOverlayService : Service() {
             .setContentText("ফোন লক সক্রিয়, নামাজের প্রস্তুতি নিন")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setSilent(true)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setContentIntent(fullScreenPendingIntent)
             .setOngoing(true)
@@ -310,24 +326,31 @@ class PrayerLockOverlayService : Service() {
     }
 
     private fun startCountdown(millis: Long) {
-        countDownTimer?.cancel()
-        countDownTimer = object : CountDownTimer(millis, 1000L) {
-            override fun onTick(millisUntilFinished: Long) {
-                remainingTimeMillis = millisUntilFinished
-                updateTimerDisplay(millisUntilFinished)
-            }
+        val targetEndElapsed = SystemClock.elapsedRealtime() + millis
+        if (isTickerRunning && kotlin.math.abs(lockEndElapsedMs - targetEndElapsed) < 1500L) {
+            return
+        }
+        countdownHandler.removeCallbacks(countdownRunnable)
+        lockEndElapsedMs = targetEndElapsed
+        lastDisplayedSeconds = -1L
+        isTickerRunning = true
+        countdownHandler.post(countdownRunnable)
+    }
 
-            override fun onFinish() {
-                overlayBinding?.tvCountdownTimer?.text = "00:00"
-                releaseLockAndStop()
-            }
-        }.start()
+    private fun stopCountdown() {
+        isTickerRunning = false
+        countdownHandler.removeCallbacks(countdownRunnable)
     }
 
     private fun updateTimerDisplay(millis: Long) {
-        val totalSeconds = (millis / 1000L).coerceAtLeast(0L)
-        val minutes = totalSeconds / 60L
-        val seconds = totalSeconds % 60L
+        val totalSeconds = if (millis <= 0L) 0L else (millis + 999L) / 1000L
+        updateTimerSecondsDisplay(totalSeconds)
+    }
+
+    private fun updateTimerSecondsDisplay(totalSeconds: Long) {
+        val clamped = totalSeconds.coerceAtLeast(0L)
+        val minutes = clamped / 60L
+        val seconds = clamped % 60L
         overlayBinding?.tvCountdownTimer?.text =
             String.format(Locale.ENGLISH, "%02d:%02d", minutes, seconds)
     }
@@ -404,32 +427,14 @@ class PrayerLockOverlayService : Service() {
                     isLooping = true
                     setOnPreparedListener { mp -> mp.start() }
                     setOnErrorListener { _, _, _ ->
-                        playDefaultSystemRingtone()
+                        // Never play a system ringtone as fallback when alarm rings
                         true
                     }
                     prepareAsync()
                 }
-                return
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-        }
-        playDefaultSystemRingtone()
-    }
-
-    private fun playDefaultSystemRingtone() {
-        try {
-            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-
-            ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ringtone?.isLooping = true
-            }
-            ringtone?.play()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
@@ -444,13 +449,6 @@ class PrayerLockOverlayService : Service() {
             e.printStackTrace()
         }
         azanMediaPlayer = null
-
-        try {
-            ringtone?.stop()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        ringtone = null
     }
 
     private fun initTextToSpeech(label: String) {
@@ -513,7 +511,7 @@ class PrayerLockOverlayService : Service() {
 
         AutoSilentManager.restoreRingerMode(this)
         stopAlarmSound()
-        countDownTimer?.cancel()
+        stopCountdown()
         removeOverlay()
         releaseWakeLock()
         stopForegroundAndSelf()
@@ -548,7 +546,7 @@ class PrayerLockOverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        countDownTimer?.cancel()
+        stopCountdown()
         stopAlarmSound()
         removeOverlay()
         releaseWakeLock()
@@ -576,7 +574,7 @@ class PrayerLockOverlayService : Service() {
         const val EXTRA_LABEL = "LABEL"
         const val EXTRA_FROM_ALARM = "FROM_ALARM"
 
-        private const val CHANNEL_ID = "islamic_alarm_channel_v4"
+        private const val CHANNEL_ID = "islamic_alarm_channel_v5_silent"
         private const val NOTIFICATION_ID = 4109
         private const val PREFS_LOCK = "IslamicAlarmLockPrefs"
         private const val PREFS_HISTORY = "IslamicAlarmLockHistory"

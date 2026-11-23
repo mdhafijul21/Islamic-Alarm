@@ -7,18 +7,11 @@ import com.hafij.islamicalarm.databinding.ItemSurahBinding
 
 class SurahAdapter(
     private var surahList: List<Surah>,
-    private val onPlayAudio: (Surah) -> Unit,
-    private val onReadPage: (Surah) -> Unit,
-    private var currentlyPlayingSurahId: Int? = null
+    private val onReadPage: (Surah) -> Unit
 ) : RecyclerView.Adapter<SurahAdapter.SurahViewHolder>() {
 
     fun updateData(newList: List<Surah>) {
         surahList = newList
-        notifyDataSetChanged()
-    }
-
-    fun setCurrentlyPlayingId(id: Int?) {
-        currentlyPlayingSurahId = id
         notifyDataSetChanged()
     }
 
@@ -47,19 +40,6 @@ class SurahAdapter(
             binding.tvSurahMeaning.text = "অর্থ: ${surah.meaningBangla} • আয়াত: ${toBengaliNumber(surah.totalAyahs)}"
             binding.tvRevelationType.text = surah.revelationType
             binding.tvParaNumber.text = "পারা ${toBengaliNumber(surah.paraNumber)}"
-
-            val isPlaying = surah.id == currentlyPlayingSurahId
-            if (isPlaying) {
-                binding.btnPlayAudio.text = "চলছে..."
-                binding.btnPlayAudio.setIconResource(android.R.drawable.ic_media_pause)
-            } else {
-                binding.btnPlayAudio.text = "অডিও শুনুন"
-                binding.btnPlayAudio.setIconResource(android.R.drawable.ic_media_play)
-            }
-
-            binding.btnPlayAudio.setOnClickListener {
-                onPlayAudio(surah)
-            }
 
             binding.btnReadPage.setOnClickListener {
                 onReadPage(surah)

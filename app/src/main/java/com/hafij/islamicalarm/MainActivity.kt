@@ -55,14 +55,36 @@ class MainActivity : AppCompatActivity() {
 
     private var selectedDistrict: District = LocationData.getDefaultDistrict()
     private var currentSchedule: PrayerSchedule? = null
+    private var lastScheduleKey: String? = null
     private var countdownTimer: CountDownTimer? = null
     private var pendingPermissionChainNext: (() -> Unit)? = null
 
-    // Start-up permission wizard (asks one permission at a time)
+    // Start-up (in-app) permission wizard & Alarm (settings) permission wizard
     private lateinit var restrictController: com.hafij.islamicalarm.restrict.RestrictModeController
-    private val skippedPermSteps = mutableSetOf<String>()
+    private val skippedHomePermSteps = mutableSetOf<String>()
+    private val skippedAlarmPermSteps = mutableSetOf<String>()
     private var permDialog: androidx.appcompat.app.AlertDialog? = null
     private var autoDetectTried = false
+
+    private val recordAudioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this, fromForeground = true)
+            Toast.makeText(
+                this,
+                "✅ মাইক্রোফোন অনুমতি মিলেছে! ফজর/আসর/মাগরিব/ইশায় আজান শুনলেই ২০ মি. অটো এলার্ম বাজবে।",
+                Toast.LENGTH_LONG
+            ).show()
+        } else {
+            Toast.makeText(
+                this,
+                "মাইক্রোফোন অনুমতি না থাকায় শুধু যোহর (১:২০) ও জুমা (১২:৪৫) অটো এলার্ম চলবে।",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        refreshAutoAlarmUi()
+    }
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -147,9 +169,12 @@ class MainActivity : AppCompatActivity() {
                             as? com.hafij.islamicalarm.duas.DuasFragment
                     val quran = supportFragmentManager.findFragmentByTag("quran")
                             as? com.hafij.islamicalarm.quran.QuranFragment
+                    val settings = supportFragmentManager.findFragmentByTag("settings")
+                            as? com.hafij.islamicalarm.settings.SettingsFragment
                     val handledByDuas = duas != null && !duas.isHidden && duas.handleBack()
                     val handledByQuran = quran != null && !quran.isHidden && quran.handleBack()
-                    if (!handledByDuas && !handledByQuran) {
+                    val handledBySettings = settings != null && !settings.isHidden && settings.handleBack()
+                    if (!handledByDuas && !handledByQuran && !handledBySettings) {
                         binding.bottomNavigation.selectedItemId = R.id.nav_prayer_times
                     }
                 } else if (binding.layoutAlarmContainer.visibility == View.VISIBLE) {
@@ -162,15 +187,9 @@ class MainActivity : AppCompatActivity() {
         })
 
 
-        binding.switchAutoSilent.isChecked =
-            com.hafij.islamicalarm.silent.AutoSilentManager.isAutoSilentEnabled(this)
-        binding.switchAutoSilent.setOnCheckedChangeListener { _, isChecked ->
-            com.hafij.islamicalarm.silent.AutoSilentManager.setAutoSilentEnabled(this, isChecked)
-            if (isChecked && !com.hafij.islamicalarm.silent.AutoSilentManager.hasDndPermission(this)) {
-                Toast.makeText(this, "সাইলেন্ট মোডের জন্য DND পারমিশন চালু করুন", Toast.LENGTH_SHORT).show()
-                com.hafij.islamicalarm.silent.AutoSilentManager.requestDndPermission(this)
-            }
-        }
+        // Keep Auto Silent active permanently while hidden from the homepage
+        com.hafij.islamicalarm.silent.AutoSilentManager.setAutoSilentEnabled(this, true)
+        binding.switchAutoSilent.isChecked = true
 
         loadAlarms()
 
@@ -198,10 +217,19 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        runPermissionWizard()
+        if (binding.layoutAlarmContainer.visibility == View.VISIBLE) {
+            updateAlarmPermissionBanner()
+            refreshAutoAlarmUi()
+            runAlarmPermissionWizard()
+        } else if (binding.layoutPrayerTimesContainer.visibility == View.VISIBLE) {
+            runHomePermissionWizard()
+        }
         if (::restrictController.isInitialized) restrictController.onScreenShown()
-        updatePrayerTimes()
+        updatePrayerTimes(force = true)
         loadAlarms()
+        if (com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)) {
+            com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this, fromForeground = true)
+        }
     }
 
     override fun onDestroy() {
@@ -250,8 +278,9 @@ class MainActivity : AppCompatActivity() {
         return LocationData.getDefaultDistrict()
     }
 
-    private fun saveSelectedDistrict(district: District) {
+    private fun saveSelectedDistrict(district: District, explicitUserOrGpsSet: Boolean = true) {
         selectedDistrict = district
+        lastScheduleKey = null
         prefs.edit()
             .putString("selected_district_bn", district.nameBn)
             .putString("selected_district_en", district.nameEn)
@@ -262,6 +291,11 @@ class MainActivity : AppCompatActivity() {
             .putInt("selected_district_offset", district.offsetMinutes)
             .putString("selected_district_type", district.type.name)
             .putString("selected_district_method", district.method.name)
+            .apply {
+                if (explicitUserOrGpsSet) {
+                    putBoolean("has_user_set_location", true)
+                }
+            }
             .apply()
     }
 
@@ -387,6 +421,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Shows Quran / Tasbih / Dua inside this Activity (no new window = no flicker). */
     private fun showFragmentScreen(tag: String) {
+        dismissPermDialog()
         binding.layoutPrayerTimesContainer.visibility = View.GONE
         binding.layoutAlarmContainer.visibility = View.GONE
         binding.fragmentContainer.visibility = View.VISIBLE
@@ -424,29 +459,70 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAlarmScreen() {
+        dismissPermDialog()
         hideFragmentScreens()
         binding.layoutPrayerTimesContainer.visibility = View.GONE
         binding.layoutAlarmContainer.visibility = View.VISIBLE
-        updatePrayerTimes()
-        loadAlarms()
-        if (::restrictController.isInitialized) restrictController.onScreenShown()
+        skippedAlarmPermSteps.clear()
+        updateAlarmPermissionBanner()
+        refreshAutoAlarmUi()
+        binding.root.post {
+            if (isFinishing || isDestroyed) return@post
+            if (binding.layoutAlarmContainer.visibility != View.VISIBLE) return@post
+            updatePrayerTimes()
+            loadAlarms()
+            if (::restrictController.isInitialized) restrictController.onScreenShown()
+            runAlarmPermissionWizard()
+        }
+    }
+
+    private fun formattedLocationButtonText(): String {
+        val cleanName = selectedDistrict.displayName.removePrefix("📍 ").trim()
+        return "$cleanName ▾"
+    }
+
+    private fun updateLocationHeaderUi() {
+        binding.btnSelectDistrict.text = formattedLocationButtonText()
+        val hasSet = prefs.getBoolean("has_user_set_location", false)
+        val locationReady = LocationHelper.hasLocationPermission(this) &&
+            LocationHelper.isLocationEnabled(this) &&
+            hasSet
+        binding.tvLocationPromptHint.visibility = if (locationReady) View.GONE else View.VISIBLE
     }
 
     private fun showPrayerTimesScreen() {
+        dismissPermDialog()
         hideFragmentScreens()
         binding.layoutAlarmContainer.visibility = View.GONE
         binding.layoutPrayerTimesContainer.visibility = View.VISIBLE
         binding.tvHeaderTitle.text = "নামাজের সময়সূচী"
-        binding.tvHeaderLocation.text = "📍 ${selectedDistrict.displayName}"
-        updatePrayerTimes()
-        loadAlarms()
+        updateLocationHeaderUi()
+        binding.root.post {
+            if (isFinishing || isDestroyed) return@post
+            if (binding.layoutPrayerTimesContainer.visibility != View.VISIBLE) return@post
+            updatePrayerTimes()
+            runHomePermissionWizard()
+        }
     }
 
     private fun setupPrayerTimesHub() {
 
-        // District Selector
+        binding.btnGrantMissingAlarmPerms.setOnClickListener {
+            skippedAlarmPermSteps.clear()
+            runAlarmPermissionWizard()
+        }
+
+        binding.btnAutoAlarm.setOnClickListener {
+            onAutoAlarmButtonClicked()
+        }
+        refreshAutoAlarmUi()
+
+        // District / Location Selector
         binding.btnSelectDistrict.setOnClickListener {
             showDistrictSelectionDialog()
+        }
+        binding.tvLocationPromptHint.setOnClickListener {
+            promptTurnOnGpsAndDetect(showToast = true)
         }
 
         // Quick GPS Button
@@ -477,14 +553,6 @@ class MainActivity : AppCompatActivity() {
 
         binding.cardFeatureRamadan.setOnClickListener {
             startActivity(Intent(this, com.hafij.islamicalarm.ramadan.RamadanActivity::class.java))
-        }
-
-        binding.cardFeatureAudioQuran.setOnClickListener {
-            openAudioQuranActivity()
-        }
-
-        binding.cardFeatureAzan.setOnClickListener {
-            openAzanAudioActivity()
         }
 
         // Waqt Alarm quick buttons
@@ -665,7 +733,7 @@ class MainActivity : AppCompatActivity() {
         // Auto GPS Detect Button
         dialogBinding.btnDetectGpsLocation.setOnClickListener {
             dialog.dismiss()
-            autoDetectLocationAndSetPrayerTimes(showToast = true)
+            promptTurnOnGpsAndDetect(showToast = true)
         }
 
         dialogBinding.tvLocationBreadcrumb.setOnClickListener {
@@ -719,65 +787,133 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun updatePrayerTimes() {
+    private fun updatePrayerTimes(force: Boolean = false) {
         val now = Calendar.getInstance()
-        val schedule = PrayerTimeCalculator.calculate(now, selectedDistrict)
-        currentSchedule = schedule
+        val key = "${selectedDistrict.nameBn}_${now.get(Calendar.YEAR)}_${now.get(Calendar.DAY_OF_YEAR)}"
+        val schedule = if (!force && key == lastScheduleKey && currentSchedule != null) {
+            currentSchedule!!
+        } else {
+            lastScheduleKey = key
+            PrayerTimeCalculator.calculate(now, selectedDistrict).also { sch ->
+                currentSchedule = sch
+                updateLocationHeaderUi()
 
-        binding.btnSelectDistrict.text = "📍 ${selectedDistrict.nameBn}"
+                // Hijri Date
+                val hijriDate = HijriCalendarHelper.getHijriDate(now)
+                binding.tvMainHijriDate.text = hijriDate.formattedBn
 
-        if (binding.layoutPrayerTimesContainer.visibility == View.VISIBLE) {
-            binding.tvHeaderLocation.text = "📍 ${selectedDistrict.displayName}"
+                // Times
+                binding.tvFajrTime.text = "শুরু: ভোর ${sch.fajr} — সূর্যোদয়: ভোর ${sch.sunrise}"
+                binding.tvDhuhrTime.text = "শুরু: দুপুর ${sch.dhuhr} — আসর শুরু পর্যন্ত"
+                binding.tvAsrTime.text = "শুরু: বিকাল ${sch.asr} — সূর্যাস্ত: সন্ধ্যা ${sch.sunset}"
+                binding.tvMaghribTime.text = "শুরু: সন্ধ্যা ${sch.maghrib} (ইফতার) — ইশা শুরু পর্যন্ত"
+                binding.tvIshaTime.text = "শুরু: রাত ${sch.isha} — ফজর শুরু পর্যন্ত"
+
+                // Alarm screen times
+                binding.tvAlarmFajrTime.text = "শুরু: ভোর ${sch.fajr}"
+                binding.tvAlarmDhuhrTime.text = "শুরু: দুপুর ${sch.dhuhr}"
+                binding.tvAlarmAsrTime.text = "শুরু: বিকাল ${sch.asr}"
+                binding.tvAlarmMaghribTime.text = "শুরু: সন্ধ্যা ${sch.maghrib}"
+                binding.tvAlarmIshaTime.text = "শুরু: রাত ${sch.isha}"
+
+                // Sahri: starts at midnight (last part of the night), ends 5 minutes before Fajr
+                binding.tvSahriTimes.text = "শুরু: ${sch.midnight} — শেষ: ${sch.sehriEnd}"
+
+                // Iftar: starts at Maghrib, the waqt runs until Isha begins
+                binding.tvIftarTimes.text = "শুরু: ${sch.maghrib} — শেষ: ${sch.isha}"
+            }
         }
 
-        // Hijri Date
-        val hijriDate = HijriCalendarHelper.getHijriDate(now)
-        binding.tvMainHijriDate.text = hijriDate.formattedBn
-
-        // Times
-        binding.tvFajrTime.text = "শুরু: ভোর ${schedule.fajr} — সূর্যোদয়: ভোর ${schedule.sunrise}"
-        binding.tvDhuhrTime.text = "শুরু: দুপুর ${schedule.dhuhr} — আসর শুরু পর্যন্ত"
-        binding.tvAsrTime.text = "শুরু: বিকাল ${schedule.asr} — সূর্যাস্ত: সন্ধ্যা ${schedule.sunset}"
-        binding.tvMaghribTime.text = "শুরু: সন্ধ্যা ${schedule.maghrib} (ইফতার) — ইশা শুরু পর্যন্ত"
-        binding.tvIshaTime.text = "শুরু: রাত ${schedule.isha} — ফজর শুরু পর্যন্ত"
-
-        // Alarm screen times
-        binding.tvAlarmFajrTime.text = "শুরু: ভোর ${schedule.fajr}"
-        binding.tvAlarmDhuhrTime.text = "শুরু: দুপুর ${schedule.dhuhr}"
-        binding.tvAlarmAsrTime.text = "শুরু: বিকাল ${schedule.asr}"
-        binding.tvAlarmMaghribTime.text = "শুরু: সন্ধ্যা ${schedule.maghrib}"
-        binding.tvAlarmIshaTime.text = "শুরু: রাত ${schedule.isha}"
-
-        // Sahri: starts at midnight (last part of the night), ends 5 minutes before Fajr
-        binding.tvSahriTimes.text = "শুরু: ${schedule.midnight} — শেষ: ${schedule.sehriEnd}"
-
-        // Iftar: starts at Maghrib, the waqt runs until Isha begins
-        binding.tvIftarTimes.text = "শুরু: ${schedule.maghrib} — শেষ: ${schedule.isha}"
+        updateLocationHeaderUi()
 
         binding.tvCurrentWaqtStatus.text = PrayerTimeCalculator.getCurrentWaqtName(now, schedule)
         updateHeaderBackground(now, schedule)
 
-        startPrayerCountdownTicker()
+        if (force || countdownTimer == null) {
+            startPrayerCountdownTicker()
+        }
+    }
+
+    private fun onAutoAlarmButtonClicked() {
+        val currentlyEnabled = com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)
+        if (currentlyEnabled) {
+            com.hafij.islamicalarm.auto.AutoAlarmManager.setAutoModeEnabled(this, false)
+            refreshAutoAlarmUi()
+            Toast.makeText(this, "অটো এলার্ম বন্ধ করা হয়েছে", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!ensureAlarmPermissionsBeforeSetting()) return
+
+        com.hafij.islamicalarm.auto.AutoAlarmManager.setAutoModeEnabled(this, true)
+        refreshAutoAlarmUi()
+
+        if (!com.hafij.islamicalarm.auto.AutoAlarmManager.hasRecordAudioPermission(this)) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("🎙️ আজান শুনতে মাইক্রোফোন অনুমতি")
+                .setMessage(
+                    "কী কাজ করবে: প্রতিদিন দুপুর ১:২০ ও জুমায় ১২:৪৫-এ অটো এলার্ম ইতিমধ্যে চালু হয়েছে। " +
+                        "ফজর, আসর, মাগরিব ও ইশায় আজান শোনা মাত্র ২০ মিনিটের অটো এলার্ম চালাতে মাইক্রোফোন অনুমতি প্রয়োজন।\n\n" +
+                        "কীভাবে দেবেন: নিচের 'অনুমতি দিন' চেপে পপ-আপে 'While using the app' বা 'Allow' নির্বাচন করুন।"
+                )
+                .setPositiveButton("অনুমতি দিন") { _, _ ->
+                    recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+                .setNegativeButton("শুধু যোহর/জুমা চলুক", null)
+                .show()
+        } else {
+            Toast.makeText(
+                this,
+                "✅ অটো মোড চালু: যোহর ১:২০ / জুমা ১২:৪৫ ও আজান শনাক্ত এলার্ম সক্রিয়।",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun refreshAutoAlarmUi() {
+        if (!::binding.isInitialized) return
+        val enabled = com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)
+        binding.btnAutoAlarm.text = if (enabled) "অটো: চালু" else "অটো: বন্ধ"
+        binding.btnAutoAlarm.setTextColor(
+            ContextCompat.getColor(this, if (enabled) R.color.white else R.color.secondary)
+        )
+        binding.btnAutoAlarm.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            ContextCompat.getColor(this, if (enabled) R.color.secondary else R.color.surface_container)
+        )
+        binding.tvAutoAlarmStatus.text =
+            com.hafij.islamicalarm.auto.AutoAlarmManager.buildStatusSummary(this)
     }
 
     /**
-     * Swaps the home header's background art (mosque silhouette + sun/moon) to match
-     * the current prayer waqt: dawn colors at Fajr, bright sky through the day,
-     * sunset colors from Asr to Isha, and night colors from Isha to Fajr.
+     * Swaps the home header's crisp scenic mosque illustration to match
+     * all 5 waqt periods: Fajr dawn, Day/Dhuhr, Asr golden afternoon,
+     * Maghrib twilight, and Isha/Tahajjud night.
      */
     private fun updateHeaderBackground(now: Calendar, schedule: com.hafij.islamicalarm.prayertimes.PrayerSchedule) {
-        val nowMillis = now.timeInMillis
-        val bgRes = when {
-            nowMillis in schedule.fajrCal.timeInMillis until schedule.sunriseCal.timeInMillis ->
-                R.drawable.bg_header_fajr
-            nowMillis in schedule.sunriseCal.timeInMillis until schedule.asrCal.timeInMillis ->
-                R.drawable.bg_header_day
-            nowMillis in schedule.asrCal.timeInMillis until schedule.ishaCal.timeInMillis ->
-                R.drawable.bg_header_maghrib
-            else ->
-                R.drawable.bg_header_night
+        val artRes = resolveHeaderImageRes(now, schedule)
+        if (binding.ivHeaderTimeArt.tag != artRes) {
+            binding.ivHeaderTimeArt.tag = artRes
+            binding.ivHeaderTimeArt.setImageResource(artRes)
         }
-        binding.headerArtContainer.setBackgroundResource(bgRes)
+    }
+
+    internal fun resolveHeaderImageRes(
+        now: Calendar,
+        schedule: com.hafij.islamicalarm.prayertimes.PrayerSchedule
+    ): Int {
+        val nowMillis = now.timeInMillis
+        return when {
+            nowMillis in schedule.fajrCal.timeInMillis until schedule.sunriseCal.timeInMillis ->
+                R.drawable.img_header_fajr
+            nowMillis in schedule.sunriseCal.timeInMillis until schedule.asrCal.timeInMillis ->
+                R.drawable.img_header_day
+            nowMillis in schedule.asrCal.timeInMillis until schedule.maghribCal.timeInMillis ->
+                R.drawable.img_header_asr
+            nowMillis in schedule.maghribCal.timeInMillis until schedule.ishaCal.timeInMillis ->
+                R.drawable.img_header_maghrib
+            else ->
+                R.drawable.img_header_night
+        }
     }
 
     private fun startPrayerCountdownTicker() {
@@ -825,6 +961,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showQuickAlarmDialog(hour: Int, minute: Int, defaultLabel: String) {
+        if (!ensureAlarmPermissionsBeforeSetting()) return
         val newAlarm = AlarmItem(
             hour = hour,
             minute = minute,
@@ -839,6 +976,10 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         alarmAdapter = AlarmAdapter(
             onToggleAlarm = { alarm, isEnabled ->
+                if (isEnabled && !ensureAlarmPermissionsBeforeSetting()) {
+                    loadAlarms()
+                    return@AlarmAdapter
+                }
                 val updatedAlarm = alarm.copy(isEnabled = isEnabled)
                 alarmStore.updateAlarm(updatedAlarm)
                 if (isEnabled) {
@@ -852,6 +993,9 @@ class MainActivity : AppCompatActivity() {
                 loadAlarms()
             },
             onEditAlarm = { alarm ->
+                if (alarm.isEnabled && !ensureAlarmPermissionsBeforeSetting()) {
+                    return@AlarmAdapter
+                }
                 showAddOrEditAlarmDialog(alarm)
             },
             onDeleteAlarm = { alarm ->
@@ -975,15 +1119,22 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
+            val willBeEnabled = if (isEditing) existingAlarm!!.isEnabled else true
+            if (willBeEnabled && !ensureAlarmPermissionsBeforeSetting()) {
+                return@setOnClickListener
+            }
+
             if (isEditing) {
                 alarmStore.updateAlarm(alarm)
             } else {
                 alarmStore.addAlarm(alarm)
             }
 
-            val triggerMillis = AlarmScheduler.scheduleAlarm(this@MainActivity, alarm)
-            val toastMsg = AlarmScheduler.getFormattedNextRingTime(this@MainActivity, triggerMillis)
-            Toast.makeText(this@MainActivity, toastMsg, Toast.LENGTH_LONG).show()
+            if (alarm.isEnabled) {
+                val triggerMillis = AlarmScheduler.scheduleAlarm(this@MainActivity, alarm)
+                val toastMsg = AlarmScheduler.getFormattedNextRingTime(this@MainActivity, triggerMillis)
+                Toast.makeText(this@MainActivity, toastMsg, Toast.LENGTH_LONG).show()
+            }
 
             loadAlarms()
             dialog.dismiss()
@@ -1022,39 +1173,96 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun runPermissionWizard() {
+    private fun dismissPermDialog() {
+        if (permDialog?.isShowing == true) {
+            permDialog?.dismiss()
+        }
+        permDialog = null
+    }
+
+    private fun updateAlarmPermissionBanner() {
+        val missing = PermissionHelper.missingAlarmSteps(this)
+        if (missing.isEmpty()) {
+            binding.cardAlarmPermissionBanner.visibility = View.GONE
+        } else {
+            binding.cardAlarmPermissionBanner.visibility = View.VISIBLE
+            binding.tvAlarmPermBannerTitle.text =
+                "⚠️ এলার্ম সেট করতে সবগুলো পারমিশন চালু করুন (${missing.size}টি বাকি)"
+            binding.tvAlarmPermBannerMissing.text =
+                "বাকি আছে: " + missing.joinToString(", ") { it.title }
+        }
+    }
+
+    private fun ensureAlarmPermissionsBeforeSetting(): Boolean {
+        val missing = PermissionHelper.missingAlarmSteps(this)
+        if (missing.isEmpty()) return true
+        updateAlarmPermissionBanner()
+        Toast.makeText(
+            this,
+            "একটি পারমিশনও বাদ থাকলে এলার্ম সেট করা যাবে না (আরও ${missing.size}টি বাকি)",
+            Toast.LENGTH_LONG
+        ).show()
+        skippedAlarmPermSteps.clear()
+        runAlarmPermissionWizard()
+        return false
+    }
+
+    private fun runHomePermissionWizard() {
         if (isFinishing || isDestroyed) return
         if (permDialog?.isShowing == true) return
+        if (binding.layoutPrayerTimesContainer.visibility != View.VISIBLE) return
 
-        val steps = PermissionHelper.applicableSteps(this)
+        val steps = PermissionHelper.homeSteps(this)
 
         if (PermissionHelper.isGranted(this, PermissionHelper.ID_LOCATION)) {
             maybeAutoDetectLocation()
         }
 
         val next = steps.firstOrNull {
-            it.id !in skippedPermSteps && !PermissionHelper.isGranted(this, it.id)
+            it.id !in skippedHomePermSteps && !PermissionHelper.isGranted(this, it.id)
         } ?: return
 
         val number = steps.indexOf(next) + 1
         permDialog = MaterialAlertDialogBuilder(this)
-            .setTitle("অনুমতি " + number + "/" + steps.size + ": " + next.title)
+            .setTitle("অনুমতি $number/${steps.size}: ${next.title}")
             .setMessage(next.why + "\n\n" + next.howTo)
             .setPositiveButton("অনুমতি দিন") { _, _ ->
-                // Remember it so we never loop on the same step in this session.
-                skippedPermSteps.add(next.id)
+                skippedHomePermSteps.add(next.id)
+                requestPermissionStep(next.id)
+            }
+            .setNegativeButton("পরে করবো") { _, _ ->
+                skippedHomePermSteps.add(next.id)
+                binding.root.post { runHomePermissionWizard() }
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun runAlarmPermissionWizard() {
+        if (isFinishing || isDestroyed) return
+        if (permDialog?.isShowing == true) return
+        if (binding.layoutAlarmContainer.visibility != View.VISIBLE) return
+
+        val steps = PermissionHelper.alarmSteps(this)
+        val next = steps.firstOrNull {
+            it.id !in skippedAlarmPermSteps && !PermissionHelper.isGranted(this, it.id)
+        } ?: return
+
+        val number = steps.indexOf(next) + 1
+        permDialog = MaterialAlertDialogBuilder(this)
+            .setTitle("এলার্ম অনুমতি $number/${steps.size}: ${next.title}")
+            .setMessage(next.why + "\n\n" + next.howTo)
+            .setPositiveButton("অনুমতি দিন") { _, _ ->
+                skippedAlarmPermSteps.add(next.id)
                 if (next.id == PermissionHelper.ID_AUTOSTART) {
                     PermissionHelper.markAutostartDone(this)
                 }
                 requestPermissionStep(next.id)
             }
             .setNegativeButton("পরে করবো") { _, _ ->
-                skippedPermSteps.add(next.id)
-                if (next.id == PermissionHelper.ID_AUTOSTART) {
-                    PermissionHelper.markAutostartDone(this)
-                }
-                // Post so the current dialog is fully dismissed before the next one.
-                binding.root.post { runPermissionWizard() }
+                skippedAlarmPermSteps.add(next.id)
+                updateAlarmPermissionBanner()
+                binding.root.post { runAlarmPermissionWizard() }
             }
             .setCancelable(false)
             .show()
@@ -1297,16 +1505,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun openLibraryActivity() {
         val intent = Intent(this, com.hafij.islamicalarm.books.IslamicLibraryActivity::class.java)
-        startActivity(intent)
-    }
-
-    private fun openAudioQuranActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.audio.AudioQuranActivity::class.java)
-        startActivity(intent)
-    }
-
-    private fun openAzanAudioActivity() {
-        val intent = Intent(this, com.hafij.islamicalarm.audio.AzanAudioActivity::class.java)
         startActivity(intent)
     }
 

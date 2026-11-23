@@ -92,17 +92,34 @@ class RestrictModeController(
         for (slot in store.getSlots()) {
             val row = inflater.inflate(R.layout.item_restrict_slot, container, false)
             val tvTitle = row.findViewById<TextView>(R.id.tvSlotTitle)
+            val tvStatusBadge = row.findViewById<TextView>(R.id.tvSlotStatusBadge)
             val tvInfo = row.findViewById<TextView>(R.id.tvSlotInfo)
             val sw = row.findViewById<SwitchCompat>(R.id.switchSlot)
+            val btnEdit = row.findViewById<Button>(R.id.btnEditSlot)
 
-            tvTitle.text = "স্লট " + (slot.index + 1)
+            tvTitle.text = "⛔ অ্যাপ ও ব্রাউজার রেস্ট্রিক্ট"
             if (!slot.isConfigured) {
-                tvInfo.text = "সেট করা নেই। চাপ দিয়ে সময় ও অ্যাপ বাছাই করুন।"
+                tvStatusBadge.text = "সেট করা নেই"
+                tvStatusBadge.setTextColor(ContextCompat.getColor(activity, R.color.text_secondary))
+                tvInfo.text = "এখনো কোনো সময় বা অ্যাপ বাছাই করা হয়নি।\nনিচের বাটনে চাপ দিয়ে সময়, মেয়াদ এবং যেসব অ্যাপ বা ব্রাউজার লক রাখতে চান তা বাছাই করুন।"
                 sw.visibility = View.GONE
+                btnEdit.text = "সময় ও অ্যাপ সেট করুন"
             } else {
                 val running = slot.activeWindowEnd(now) > 0L
-                tvInfo.text = describe(slot) + (if (running) "\n🔴 এখন চলছে" else "")
+                tvStatusBadge.text = when {
+                    running -> "🔴 এখন চলছে"
+                    slot.enabled -> "✅ চালু আছে"
+                    else -> "⏸️ বন্ধ আছে"
+                }
+                tvStatusBadge.setTextColor(
+                    ContextCompat.getColor(
+                        activity,
+                        if (running) R.color.error else if (slot.enabled) R.color.secondary else R.color.text_secondary
+                    )
+                )
+                tvInfo.text = describe(slot)
                 sw.visibility = View.VISIBLE
+                sw.setOnCheckedChangeListener(null)
                 sw.isChecked = slot.enabled
                 sw.setOnCheckedChangeListener { _, checked ->
                     var updated = slot.copy(enabled = checked)
@@ -112,7 +129,9 @@ class RestrictModeController(
                     store.saveSlot(updated)
                     refresh()
                 }
+                btnEdit.text = "সময় ও অ্যাপ পরিবর্তন করুন"
             }
+            btnEdit.setOnClickListener { showEditDialog(slot) }
             row.setOnClickListener { showEditDialog(slot) }
             container.addView(row)
         }
@@ -123,9 +142,11 @@ class RestrictModeController(
         cal.set(Calendar.HOUR_OF_DAY, slot.hour)
         cal.set(Calendar.MINUTE, slot.minute)
         val time = SimpleDateFormat("hh:mm a", Locale.ENGLISH).format(cal.time)
-        val repeat = if (slot.repeatDaily) "প্রতিদিন" else "একবার"
-        return "⏰ " + time + " • " + slot.durationMinutes + " মিনিট • " + repeat +
-            "\n📱 " + slot.packages.size + "টি অ্যাপ/ব্রাউজার"
+        val repeat = if (slot.repeatDaily) "প্রতিদিন" else "শুধু একবার"
+        return "⏰ শুরুর সময়: $time\n" +
+            "⏳ সময়কাল: ${slot.durationMinutes} মিনিট\n" +
+            "🔁 ধরন: $repeat\n" +
+            "📱 বাছাই করা অ্যাপ/ব্রাউজার: ${slot.packages.size}টি"
     }
 
     private fun showEditDialog(slot: RestrictSlot) {
@@ -167,7 +188,7 @@ class RestrictModeController(
         }
 
         val builder = MaterialAlertDialogBuilder(activity)
-            .setTitle("স্লট " + (slot.index + 1))
+            .setTitle("রেস্ট্রিক্ট মোড সেটিংস")
             .setView(view)
             .setPositiveButton("সংরক্ষণ করুন", null)
             .setNegativeButton("বাতিল", null)

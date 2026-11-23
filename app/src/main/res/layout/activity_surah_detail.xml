@@ -28,34 +28,16 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Reading & Audio Control Bar -->
+    <!-- Reading Font Control Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/surface"
         android:elevation="2dp"
-        android:gravity="center_vertical"
+        android:gravity="end|center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
         android:paddingVertical="4dp">
-
-        <!-- Audio Recitation Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnPlaySurahAudio"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="@color/surface_container"
-            android:text="অডিও শুনুন"
-            android:textColor="@color/secondary"
-            android:textSize="12sp"
-            app:icon="@drawable/ic_volume_up"
-            app:iconTint="@color/secondary" />
-
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
 
         <!-- Font Zoom Controls -->
         <ImageButton
@@ -139,7 +121,7 @@
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingTop="4dp"
-            android:paddingBottom="24dp"
+            android:paddingBottom="12dp"
             tools:listitem="@layout/item_ayah" />
 
     </FrameLayout>

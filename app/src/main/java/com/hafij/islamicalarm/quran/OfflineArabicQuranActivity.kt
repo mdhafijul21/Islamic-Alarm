@@ -571,7 +571,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                 val accentColor = ContextCompat.getColor(context, R.color.dua_accent)
                 val waqfColor = ContextCompat.getColor(context, R.color.dua_primary)
                 val inkColor = ContextCompat.getColor(context, R.color.text_primary)
-                val ruleColor = 0x559B8253
+                val ruleColor = 0x443B8A6E
                 val dp = context.resources.displayMetrics.density
                 val isOpeningPage = pageData.pageNumber <= 2
 

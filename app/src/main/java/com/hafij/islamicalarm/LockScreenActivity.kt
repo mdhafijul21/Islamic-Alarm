@@ -5,12 +5,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.media.Ringtone
-import android.media.RingtoneManager
 import android.os.Build
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.os.PowerManager
+import android.os.SystemClock
 import android.speech.tts.TextToSpeech
 import android.telephony.TelephonyManager
 import android.view.View
@@ -29,14 +27,35 @@ import java.util.Locale
 class LockScreenActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLockScreenBinding
-    private var countDownTimer: CountDownTimer? = null
+    private var lockEndElapsedMs: Long = 0L
+    private var lastDisplayedSeconds: Long = -1L
+    private var isTickerRunning: Boolean = false
+    private var activeSessionKey: String? = null
     private var remainingTimeMillis: Long = 0L
     private var isCallInProgress: Boolean = false
     private var wakeLock: PowerManager.WakeLock? = null
     private var textToSpeech: TextToSpeech? = null
-    private var ringtone: Ringtone? = null
     private var azanMediaPlayer: android.media.MediaPlayer? = null
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private val countdownRunnable = object : Runnable {
+        override fun run() {
+            if (!isTickerRunning) return
+            val rem = (lockEndElapsedMs - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
+            remainingTimeMillis = rem
+            val displaySeconds = if (rem <= 0L) 0L else (rem + 999L) / 1000L
+            if (displaySeconds != lastDisplayedSeconds) {
+                lastDisplayedSeconds = displaySeconds
+                updateTimerSecondsDisplay(displaySeconds)
+            }
+            if (rem <= 0L) {
+                isTickerRunning = false
+                releaseLockAndFinish()
+            } else {
+                handler.postDelayed(this, 200L)
+            }
+        }
+    }
 
     private val callStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -152,13 +171,17 @@ class LockScreenActivity : AppCompatActivity() {
         }
 
         if (hasActiveSession && (intentAlarmId == null || intentAlarmId == savedAlarmId)) {
-            // Continuation of the running session (relaunch / resume): never changes the end time.
+            // Continuation of the running session: avoid resetting a running ticker
+            val sessionKey = "$savedAlarmId:$savedEnd"
             remainingTimeMillis = savedEnd - now
+            if (isTickerRunning && activeSessionKey == sessionKey) {
+                return
+            }
+            activeSessionKey = sessionKey
         } else if (intentAlarmId != null) {
             // Explicit request to start a session (real alarm or test button).
             val fromAlarm = intent.getBooleanExtra("FROM_ALARM", false)
             if (fromAlarm && wasRecentlyFinished(intentAlarmId, now)) {
-                // Late duplicate delivery (e.g. the full-screen notification) of a session that already ended.
                 remainingTimeMillis = 0L
                 finish()
                 return
@@ -167,6 +190,7 @@ class LockScreenActivity : AppCompatActivity() {
             val durationMinutes = intent.getIntExtra("LOCK_DURATION_MINUTES", 15).coerceAtLeast(1)
             remainingTimeMillis = durationMinutes * 60 * 1000L
             val endTime = now + remainingTimeMillis
+            activeSessionKey = "$intentAlarmId:$endTime"
 
             prefs.edit()
                 .putString("active_alarm_id", intentAlarmId)
@@ -174,16 +198,13 @@ class LockScreenActivity : AppCompatActivity() {
                 .putString("active_label", label)
                 .apply()
 
-            // Play audio/TTS only on fresh start
-            if (ringtone == null) {
+            if (azanMediaPlayer == null) {
                 playAlarmSound()
             }
             if (textToSpeech == null) {
                 initTextToSpeech(label)
             }
         } else {
-            // A relaunch without any extras and no active session. It must not start a new lock
-            // (this used to create an extra 15 minute lock after the real one had ended).
             remainingTimeMillis = 0L
             finish()
             return
@@ -224,33 +245,14 @@ class LockScreenActivity : AppCompatActivity() {
                         mp.start()
                     }
                     setOnErrorListener { _, _, _ ->
-                        playDefaultSystemRingtone()
+                        // Never play a system ringtone as fallback when alarm rings
                         true
                     }
                     prepareAsync()
                 }
-                return
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-        }
-
-        playDefaultSystemRingtone()
-    }
-
-    private fun playDefaultSystemRingtone() {
-        try {
-            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-
-            ringtone = RingtoneManager.getRingtone(applicationContext, alarmUri)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ringtone?.isLooping = true
-            }
-            ringtone?.play()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
@@ -265,13 +267,6 @@ class LockScreenActivity : AppCompatActivity() {
             e.printStackTrace()
         }
         azanMediaPlayer = null
-
-        try {
-            ringtone?.stop()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        ringtone = null
     }
 
     private fun initTextToSpeech(label: String) {
@@ -383,26 +378,23 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun startCountdown(millis: Long) {
-        countDownTimer?.cancel()
-        countDownTimer = object : CountDownTimer(millis, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                remainingTimeMillis = millisUntilFinished
-                updateTimerDisplay(millisUntilFinished)
-            }
-
-            override fun onFinish() {
-                binding.tvCountdownTimer.text = "00:00"
-                releaseLockAndFinish()
-            }
-        }.start()
+        handler.removeCallbacks(countdownRunnable)
+        lockEndElapsedMs = SystemClock.elapsedRealtime() + millis
+        lastDisplayedSeconds = -1L
+        isTickerRunning = true
+        handler.post(countdownRunnable)
     }
 
-    private fun updateTimerDisplay(millis: Long) {
-        val totalSeconds = millis / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        val timeString = String.format(Locale.ENGLISH, "%02d:%02d", minutes, seconds)
-        binding.tvCountdownTimer.text = timeString
+    private fun stopCountdown() {
+        isTickerRunning = false
+        handler.removeCallbacks(countdownRunnable)
+    }
+
+    private fun updateTimerSecondsDisplay(totalSeconds: Long) {
+        val clamped = totalSeconds.coerceAtLeast(0L)
+        val minutes = clamped / 60L
+        val seconds = clamped % 60L
+        binding.tvCountdownTimer.text = String.format(Locale.ENGLISH, "%02d:%02d", minutes, seconds)
     }
 
     private fun handleCallState(state: String?) {
@@ -459,6 +451,7 @@ class LockScreenActivity : AppCompatActivity() {
         }
 
         com.hafij.islamicalarm.silent.AutoSilentManager.restoreRingerMode(this)
+        stopCountdown()
         stopAlarmSound()
         releaseWakeLock()
         finish()
@@ -507,8 +500,8 @@ class LockScreenActivity : AppCompatActivity() {
         if (!PrayerLockOverlayService.isOverlayShowing) {
             com.hafij.islamicalarm.silent.AutoSilentManager.restoreRingerMode(this)
         }
+        stopCountdown()
         stopAlarmSound()
-        countDownTimer?.cancel()
         releaseWakeLock()
         textToSpeech?.stop()
         textToSpeech?.shutdown()

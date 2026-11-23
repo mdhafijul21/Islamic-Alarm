@@ -1,16 +1,12 @@
 package com.hafij.islamicalarm.quran
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivitySurahDetailBinding
 import kotlinx.coroutines.launch
 
@@ -19,8 +15,6 @@ class SurahDetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySurahDetailBinding
     private lateinit var ayahAdapter: AyahAdapter
     private var surah: Surah? = null
-    private var mediaPlayer: MediaPlayer? = null
-    private var isPlayingAudio = false
     private var fontScaleDelta = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,7 +27,6 @@ class SurahDetailActivity : AppCompatActivity() {
 
         setupToolbar()
         setupFontControls()
-        setupAudioPlayer()
         setupRecyclerView()
         loadAyahs()
         saveLastRead()
@@ -66,83 +59,6 @@ class SurahDetailActivity : AppCompatActivity() {
                 binding.tvSurahFontSizeIndicator.text = if (fontScaleDelta == 0f) "A" else "A-"
             }
         }
-    }
-
-    private fun setupAudioPlayer() {
-        val s = surah ?: return
-        binding.btnPlaySurahAudio.setOnClickListener {
-            if (isPlayingAudio) {
-                pauseAudio()
-            } else {
-                playAudio(s.audioUrl, s.fallbackAudioUrl)
-            }
-        }
-    }
-
-    private fun playAudio(url: String, fallbackUrl: String) {
-        stopAudio()
-        binding.btnPlaySurahAudio.text = "লোড হচ্ছে..."
-
-        try {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
-                setDataSource(url)
-                setOnPreparedListener { mp ->
-                    mp.start()
-                    isPlayingAudio = true
-                    binding.btnPlaySurahAudio.text = "বিরতি (Pause)"
-                    Toast.makeText(this@SurahDetailActivity, "ক্বারী মিশারী আল-আফাসীর কণ্ঠে তিলাওয়াত চলছে...", Toast.LENGTH_SHORT).show()
-                }
-                setOnCompletionListener {
-                    isPlayingAudio = false
-                    binding.btnPlaySurahAudio.text = "অডিও শুনুন"
-                }
-                setOnErrorListener { _, _, _ ->
-                    if (fallbackUrl.isNotBlank() && url != fallbackUrl) {
-                        playAudio(fallbackUrl, "")
-                    } else {
-                        isPlayingAudio = false
-                        binding.btnPlaySurahAudio.text = "অডিও শুনুন"
-                        Toast.makeText(this@SurahDetailActivity, "অডিও চালু করা যায়নি, ইন্টারনেট সংযোগ চেক করুন", Toast.LENGTH_SHORT).show()
-                    }
-                    true
-                }
-                prepareAsync()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            binding.btnPlaySurahAudio.text = "অডিও শুনুন"
-        }
-    }
-
-    private fun pauseAudio() {
-        mediaPlayer?.let { mp ->
-            if (mp.isPlaying) {
-                mp.pause()
-                isPlayingAudio = false
-                binding.btnPlaySurahAudio.text = "শুনুন (Play)"
-            }
-        }
-    }
-
-    private fun stopAudio() {
-        mediaPlayer?.let { mp ->
-            try {
-                if (mp.isPlaying) mp.stop()
-                mp.reset()
-                mp.release()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        mediaPlayer = null
-        isPlayingAudio = false
-        binding.btnPlaySurahAudio.text = "অডিও শুনুন"
     }
 
     private fun setupRecyclerView() {
@@ -189,7 +105,7 @@ class SurahDetailActivity : AppCompatActivity() {
         prefs.edit()
             .putInt("last_read_surah_id", s.id)
             .putString("last_read_surah_name", s.nameBangla)
-            .putInt("last_read_page", s.startPage)
+            .putInt("last_read_page", QuranRepository.getHafeziStartPageForSurah(s.id))
             .apply()
     }
 
@@ -205,10 +121,5 @@ class SurahDetailActivity : AppCompatActivity() {
             }
         }
         return sb.toString()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        stopAudio()
     }
 }

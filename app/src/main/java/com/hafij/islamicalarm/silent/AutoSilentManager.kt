@@ -12,13 +12,13 @@ object AutoSilentManager {
     private const val KEY_PREVIOUS_RINGER_MODE = "previous_ringer_mode"
 
     fun isAutoSilentEnabled(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_AUTO_SILENT_ENABLED, true) // Default enabled
+        // Always active when hidden from Home UI: prayer alarm locks automatically silence and restore.
+        return true
     }
 
     fun setAutoSilentEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_AUTO_SILENT_ENABLED, enabled).apply()
+        prefs.edit().putBoolean(KEY_AUTO_SILENT_ENABLED, true).apply()
     }
 
     fun hasDndPermission(context: Context): Boolean {

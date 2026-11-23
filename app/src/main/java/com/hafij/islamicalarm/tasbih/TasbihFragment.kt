@@ -1,18 +1,21 @@
 package com.hafij.islamicalarm.tasbih
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.view.HapticFeedbackConstants
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.ViewGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivityTasbihBinding
@@ -30,6 +33,7 @@ class TasbihFragment : Fragment() {
     private var isVibrationOn = true
 
     private var toneGenerator: ToneGenerator? = null
+    private var cachedVibrator: Vibrator? = null
 
     private val zikrList = listOf(
         ZikrItem("سُبْحَانَ ٱللَّهِ", "সুবহানাল্লাহ (আল্লাহ পবিত্র)"),
@@ -53,19 +57,11 @@ class TasbihFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.toolbarTasbih.setNavigationOnClickListener {
-            (activity as? com.hafij.islamicalarm.MainActivity)?.goHome()
-        }
-
-        try {
-            toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, 60)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
 
         loadSavedState()
         updateUi()
 
+        binding.btnChangeTasbih.setOnClickListener { showZikrSelectionDialog() }
         binding.tvSelectedZikrArabic.setOnClickListener { showZikrSelectionDialog() }
         binding.tvSelectedZikrBangla.setOnClickListener { showZikrSelectionDialog() }
 
@@ -94,6 +90,9 @@ class TasbihFragment : Fragment() {
             isVibrationOn = !isVibrationOn
             saveState()
             updateUi()
+            if (isVibrationOn) {
+                vibrateDevice(65L)
+            }
         }
 
         binding.btnResetCounter.setOnClickListener {
@@ -123,26 +122,54 @@ class TasbihFragment : Fragment() {
             .show()
     }
 
+    private fun getOrCreateToneGenerator(): ToneGenerator? {
+        if (toneGenerator == null) {
+            try {
+                toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, 60)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return toneGenerator
+    }
+
+    private fun resolveVibrator(): Vibrator? {
+        cachedVibrator?.let { return it }
+        val ctx = context ?: return null
+        val vib = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                ctx.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
+        } catch (e: Exception) {
+            null
+        }
+        cachedVibrator = vib
+        return vib
+    }
+
     private fun performTap() {
         currentCount++
         totalCountToday++
 
         if (isSoundOn) {
             try {
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 40)
+                getOrCreateToneGenerator()?.startTone(ToneGenerator.TONE_PROP_BEEP, 40)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
 
         if (isVibrationOn) {
-            vibrateDevice(50)
+            vibrateDevice(65L)
         }
 
         if (targetCount > 0 && currentCount == targetCount) {
             // Target achieved celebration!
             if (isVibrationOn) {
-                vibrateDevice(300)
+                vibrateDevice(280L)
             }
             Toast.makeText(
                 requireContext(),
@@ -156,26 +183,42 @@ class TasbihFragment : Fragment() {
     }
 
     private fun vibrateDevice(durationMs: Long) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = requireContext().getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vibratorManager.defaultVibrator.vibrate(
-                    VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE)
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        val ms = durationMs.coerceAtLeast(65L)
+        val vib = resolveVibrator()
+        var vibrated = false
+        if (vib != null && vib.hasVibrator()) {
+            try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(
-                        VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE)
-                    )
+                    val amp = if (vib.hasAmplitudeControl()) 255 else VibrationEffect.DEFAULT_AMPLITUDE
+                    val effect = VibrationEffect.createOneShot(ms, amp)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val vibAttrs = VibrationAttributes.Builder()
+                            .setUsage(VibrationAttributes.USAGE_ALARM)
+                            .build()
+                        vib.vibrate(effect, vibAttrs)
+                    } else {
+                        val audioAttrs = AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .build()
+                        @Suppress("DEPRECATION")
+                        vib.vibrate(effect, audioAttrs)
+                    }
                 } else {
                     @Suppress("DEPRECATION")
-                    vibrator.vibrate(durationMs)
+                    vib.vibrate(ms)
                 }
+                vibrated = true
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        }
+        if (!vibrated && view != null) {
+            @Suppress("DEPRECATION")
+            binding.btnCountTap.performHapticFeedback(
+                HapticFeedbackConstants.KEYBOARD_TAP,
+                HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+            )
         }
     }
 

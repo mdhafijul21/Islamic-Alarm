@@ -13,6 +13,7 @@ class BootReceiver : BroadcastReceiver() {
             action == "android.intent.action.QUICKBOOT_POWERON"
         ) {
             AlarmScheduler.rescheduleAllAlarms(context)
+            com.hafij.islamicalarm.auto.AutoAlarmManager.rescheduleOnBoot(context)
         }
     }
 }

@@ -259,11 +259,18 @@ object QuranRepository {
     }
 
     suspend fun fetchSurahAyahs(context: Context, surahNumber: Int): List<AyahItem> = withContext(Dispatchers.IO) {
+        // 1. Primary (100% Offline): Complete 114 Surahs & 6,236 Ayahs (Arabic + Bengali meaning)
+        ensureOfflineMeaningLoaded(context)
+        val bundledOffline = offlineMeaningSurahsCache?.get(surahNumber)
+        if (!bundledOffline.isNullOrEmpty()) {
+            return@withContext bundledOffline
+        }
+
         val quranDir = java.io.File(context.filesDir, "quran_data").apply { if (!exists()) mkdirs() }
         val persistentFile = java.io.File(quranDir, "surah_v4_$surahNumber.json")
         val cacheFile = java.io.File(context.cacheDir, "surah_v2_$surahNumber.json")
 
-        // 1. Try reading from permanent local storage or cache
+        // 2. Try reading from permanent local storage or cache
         if (persistentFile.exists()) {
             try {
                 val cachedJson = persistentFile.readText()
@@ -545,10 +552,62 @@ object QuranRepository {
     private var offlineSurahsCache: Map<Int, List<AyahItem>>? = null
 
     @Volatile
+    private var offlineMeaningSurahsCache: Map<Int, List<AyahItem>>? = null
+
+    @Volatile
     private var offlinePagesCache: Map<Int, OfflineMushafPage>? = null
 
     @Volatile
     private var offlinePageSummariesCache: List<OfflinePageSummary>? = null
+
+    @Synchronized
+    fun ensureOfflineMeaningLoaded(context: Context) {
+        if (offlineMeaningSurahsCache != null) return
+
+        ensureOfflineArabicLoaded(context)
+        val arabicMap = offlineSurahsCache ?: return
+        val appCtx = context.applicationContext
+        val meaningMap = HashMap<Int, List<AyahItem>>(114)
+
+        try {
+            appCtx.assets.open("quran_bn_meaning.json").bufferedReader(Charsets.UTF_8).use { reader ->
+                val jsonStr = reader.readText()
+                val rootArray = JSONArray(jsonStr)
+                for (i in 0 until rootArray.length()) {
+                    val surahObj = rootArray.getJSONObject(i)
+                    val surahNum = surahObj.getInt("s")
+                    val bnArray = surahObj.getJSONArray("b")
+                    val arabicAyahs = arabicMap[surahNum].orEmpty()
+                    val combined = ArrayList<AyahItem>(arabicAyahs.size)
+
+                    for (j in arabicAyahs.indices) {
+                        val base = arabicAyahs[j]
+                        val bnText = if (j < bnArray.length()) bnArray.getString(j).trim() else ""
+                        val formattedArabic = if (base.textArabic.endsWith("﴾") || base.textArabic.endsWith("﴿")) {
+                            base.textArabic
+                        } else {
+                            "${base.textArabic} ﴿${toArabicNumber(base.numberInSurah)}﴾"
+                        }
+                        combined.add(
+                            base.copy(
+                                textArabic = formattedArabic,
+                                textBangla = bnText
+                            )
+                        )
+                    }
+                    if (combined.isNotEmpty()) {
+                        meaningMap[surahNum] = combined
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        if (meaningMap.isNotEmpty()) {
+            offlineMeaningSurahsCache = meaningMap
+        }
+    }
 
     @Synchronized
     fun ensureOfflineArabicLoaded(context: Context) {

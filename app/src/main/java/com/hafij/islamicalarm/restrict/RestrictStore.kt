@@ -160,7 +160,7 @@ class RestrictStore(context: Context) {
         blockEndFor(pkg, now) > 0L
 
     companion object {
-        const val SLOT_COUNT = 5
+        const val SLOT_COUNT = 1
         private const val PREF_NAME = "restrict_mode_prefs"
         private const val KEY_SLOTS = "slots_json"
     }

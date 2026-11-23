@@ -4,10 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginBottom="6dp"
     app:cardBackgroundColor="@color/surface"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="2dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="1dp"
     app:strokeColor="@color/card_border"
     app:strokeWidth="1dp">
 
@@ -15,140 +15,115 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="6dp">
 
-        <RelativeLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <!-- Alarm Time -->
             <TextView
                 android:id="@+id/tvAlarmTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
                 android:textColor="@color/text_primary"
-                android:textSize="28sp"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 tools:text="05:30 AM" />
 
-            <!-- Enable/Disable Switch -->
+            <TextView
+                android:id="@+id/tvAlarmLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/secondary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="ফজর সালাত" />
+
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switchEnabled"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
+                android:minHeight="48dp"
                 app:useMaterialThemeColors="true" />
 
-        </RelativeLayout>
+        </LinearLayout>
 
-        <!-- Details Row (Label + Lock Duration Badge) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <!-- Label -->
-            <TextView
-                android:id="@+id/tvAlarmLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_label_chip"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
-                android:textColor="@color/secondary"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                tools:text="ফজর" />
-
-            <!-- Lock Duration -->
             <TextView
                 android:id="@+id/tvLockDuration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_duration_chip"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
                 android:textColor="@color/gold_accent"
-                android:textSize="13sp"
-                tools:text="🔒 ১৫ মিনিট" />
+                android:textSize="11sp"
+                tools:text="🔒 ১৫ মি." />
 
-            <!-- Hard Lock Badge -->
-            <TextView
-                android:id="@+id/tvLockLevelBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_challenge_badge"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp"
-                android:text="🔒 হার্ড লক"
-                android:textColor="@color/secondary"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <!-- Repeat Mode Chip -->
             <TextView
                 android:id="@+id/tvRepeatMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:background="@drawable/bg_label_chip"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                tools:text="প্রতিদিন" />
+                android:textSize="11sp"
+                tools:text="• প্রতিদিন" />
 
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginVertical="12dp"
-            android:background="@color/card_border" />
-
-        <!-- Action Buttons: Test Lock, Edit & Delete -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:orientation="horizontal">
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnTestAlarm"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="লক টেস্ট"
+                android:insetTop="4dp"
+                android:insetBottom="4dp"
+                android:minWidth="0dp"
+                android:minHeight="48dp"
+                android:paddingHorizontal="6dp"
+                android:text="টেস্ট"
                 android:textColor="@color/gold_accent"
-                app:icon="@android:drawable/ic_media_play"
-                app:iconTint="@color/gold_accent" />
+                android:textSize="11sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnEdit"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:insetTop="4dp"
+                android:insetBottom="4dp"
+                android:minWidth="0dp"
+                android:minHeight="48dp"
+                android:paddingHorizontal="6dp"
                 android:text="@string/edit_alarm"
                 android:textColor="@color/secondary"
-                app:icon="@android:drawable/ic_menu_edit"
-                app:iconTint="@color/secondary" />
+                android:textSize="11sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDelete"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:insetTop="4dp"
+                android:insetBottom="4dp"
+                android:minWidth="0dp"
+                android:minHeight="48dp"
+                android:paddingHorizontal="6dp"
                 android:text="@string/delete"
                 android:textColor="@color/error"
-                app:icon="@android:drawable/ic_menu_delete"
-                app:iconTint="@color/error" />
+                android:textSize="11sp" />
 
         </LinearLayout>
 

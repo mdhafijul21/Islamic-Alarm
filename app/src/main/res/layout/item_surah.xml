@@ -128,23 +128,12 @@
             android:layout_marginBottom="8dp"
             android:background="@color/waqt_divider" />
 
-        <!-- Action Buttons: Audio Play/Pause and Read Page -->
+        <!-- Action Button: Read Page -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="end"
             android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPlayAudio"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="অডিও শুনুন"
-                android:textColor="@color/secondary"
-                app:icon="@android:drawable/ic_media_play"
-                app:iconTint="@color/secondary" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnReadPage"

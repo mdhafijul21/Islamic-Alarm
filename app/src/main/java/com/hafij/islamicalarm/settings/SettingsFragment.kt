@@ -31,18 +31,23 @@ class SettingsFragment : Fragment() {
     private var _binding: ActivitySettingsBinding? = null
     private val binding get() = _binding!!
     private var reportStore: ReportStore? = null
+    private var lastPermSignature: String? = null
 
     private val notificationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { refreshPermissions() }
+    ) { refreshPermissions(force = true) }
 
     private val phoneLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { refreshPermissions() }
+    ) { refreshPermissions(force = true) }
 
     private val locationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { refreshPermissions() }
+    ) { refreshPermissions(force = true) }
+
+    private val micLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { refreshPermissions(force = true) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -53,18 +58,75 @@ class SettingsFragment : Fragment() {
         return binding.root
     }
 
+    private var activeCategory: Int = -1
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.toolbarSettings.setNavigationOnClickListener {
-            (activity as? MainActivity)?.goHome()
+            handleBack()
         }
         reportStore = ReportStore(requireContext())
 
+        setupCategories()
         setupGuide()
         setupReport()
-        refreshPermissions()
+        refreshPermissions(force = true)
         refreshReports()
-        binding.tvAppVersion.text = "সংস্করণ " + appVersion()
+        binding.tvAppVersion.text = "ইসলামিক এলার্ম • সংস্করণ " + appVersion()
+    }
+
+    fun handleBack(): Boolean {
+        if (_binding == null) return false
+        if (activeCategory != -1) {
+            activeCategory = -1
+            renderCategoryScreen()
+            return true
+        }
+        return false
+    }
+
+    private fun setupCategories() {
+        val b = _binding ?: return
+        b.rowCatPermissionsHeader.setOnClickListener {
+            activeCategory = 0
+            renderCategoryScreen()
+        }
+        b.rowCatGuideHeader.setOnClickListener {
+            activeCategory = 1
+            renderCategoryScreen()
+        }
+        b.rowCatReportHeader.setOnClickListener {
+            activeCategory = 2
+            renderCategoryScreen()
+        }
+        renderCategoryScreen()
+    }
+
+    private fun renderCategoryScreen() {
+        val b = _binding ?: return
+        val inDetail = activeCategory != -1
+        b.layoutSettingsMenu.visibility = if (inDetail) View.GONE else View.VISIBLE
+        b.layoutSettingsDetail.visibility = if (inDetail) View.VISIBLE else View.GONE
+
+        b.layoutCatPermissionsBody.visibility = if (activeCategory == 0) View.VISIBLE else View.GONE
+        b.layoutCatGuideBody.visibility = if (activeCategory == 1) View.VISIBLE else View.GONE
+        b.layoutCatReportBody.visibility = if (activeCategory == 2) View.VISIBLE else View.GONE
+
+        if (inDetail) {
+            b.toolbarSettings.setNavigationIcon(R.drawable.ic_arrow_back_24)
+            b.toolbarSettings.setNavigationIconTint(
+                androidx.core.content.ContextCompat.getColor(requireContext(), R.color.secondary)
+            )
+            b.toolbarSettings.title = when (activeCategory) {
+                0 -> "১. পারমিশন"
+                1 -> "২. কিভাবে ব্যবহার করবেন"
+                else -> "৩. আপনার মতামত / রিপোর্ট"
+            }
+        } else {
+            b.toolbarSettings.navigationIcon = null
+            b.toolbarSettings.title = "সেটিংস"
+        }
+        b.settingsScrollView.scrollTo(0, 0)
     }
 
     override fun onResume() {
@@ -76,36 +138,50 @@ class SettingsFragment : Fragment() {
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
         if (!hidden) {
-            refreshPermissions()
-            refreshReports()
+            view?.post {
+                if (_binding == null || !isAdded || isHidden) return@post
+                refreshPermissions()
+                refreshReports()
+            }
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        lastPermSignature = null
         _binding = null
     }
 
     // ---------------------------------------------------------------- permissions
 
-    private fun refreshPermissions() {
+    private fun refreshPermissions(force: Boolean = false) {
         val b = _binding ?: return
         val ctx = context ?: return
+
+        val steps = PermissionHelper.applicableSteps(ctx) + PermissionHelper.microphoneStep
+        val statuses = steps.map { step ->
+            if (PermissionHelper.isDetectable(step.id)) {
+                PermissionHelper.isGranted(ctx, step.id)
+            } else {
+                null
+            }
+        }
+        val signature = statuses.joinToString(",") { it?.toString() ?: "u" }
+        if (!force && signature == lastPermSignature) return
+        lastPermSignature = signature
+
         b.layoutPermRows.removeAllViews()
 
-        val steps = PermissionHelper.applicableSteps(ctx)
         var detectable = 0
         var granted = 0
 
-        for (step in steps) {
-            if (PermissionHelper.isDetectable(step.id)) {
+        steps.forEachIndexed { idx, step ->
+            val st = statuses[idx]
+            if (st != null) {
                 detectable++
-                val ok = PermissionHelper.isGranted(ctx, step.id)
-                if (ok) granted++
-                addPermissionRow(step, ok)
-            } else {
-                addPermissionRow(step, null)
+                if (st) granted++
             }
+            addPermissionRow(step, st)
         }
         addPermissionRow(PermissionHelper.screenPinStep, null)
 
@@ -127,7 +203,7 @@ class SettingsFragment : Fragment() {
             null -> "❓"
         }
         tvTitle.text = step.title
-        tvDesc.text = if (granted == true) step.why else step.why + "\n▶ " + step.howTo
+        tvDesc.text = if (granted == true) step.why else step.why + "\n\n" + step.howTo
 
         if (granted == true) {
             btn.visibility = View.GONE
@@ -164,6 +240,12 @@ class SettingsFragment : Fragment() {
                 id,
                 arrayOf(Manifest.permission.READ_PHONE_STATE),
                 { phoneLauncher.launch(Manifest.permission.READ_PHONE_STATE) },
+                { PermissionHelper.openAppDetails(act) }
+            )
+            PermissionHelper.ID_MICROPHONE -> askRuntime(
+                id,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                { micLauncher.launch(Manifest.permission.RECORD_AUDIO) },
                 { PermissionHelper.openAppDetails(act) }
             )
             PermissionHelper.ID_AUTOSTART -> {

@@ -64,7 +64,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:background="@drawable/bg_arabic_verse"
+                android:background="@drawable/bg_arabic_verse_lock"
                 android:gravity="center"
                 android:lineSpacingExtra="8dp"
                 android:paddingHorizontal="16dp"
@@ -92,7 +92,7 @@
                 android:layout_height="1.5dp"
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="16dp"
-                android:background="#40FFD700" />
+                android:background="#59A8E6CE" />
 
             <!-- Remaining Time Title: "অবশিষ্ট সময়" -->
             <TextView

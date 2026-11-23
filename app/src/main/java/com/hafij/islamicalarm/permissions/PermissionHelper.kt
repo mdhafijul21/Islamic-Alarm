@@ -42,6 +42,7 @@ object PermissionHelper {
     const val ID_ACCESSIBILITY = "accessibility"
     const val ID_AUTOSTART = "autostart"
     const val ID_SCREEN_PIN = "screen_pin"
+    const val ID_MICROPHONE = "microphone"
 
     private const val PREFS = "perm_helper_prefs"
     private const val KEY_AUTOSTART_DONE = "autostart_done"
@@ -54,73 +55,105 @@ object PermissionHelper {
         PermStep(
             ID_LOCATION,
             "লোকেশন",
-            "আপনার এলাকার সঠিক নামাজের সময় বের করার জন্য।",
-            "আসা ডায়ালগে 'অ্যাপ ব্যবহারের সময়' বা 'Allow' চাপুন।"
+            "কী কাজ করবে: আপনার বর্তমান এলাকার সঠিক নামাজ, সাহরি ও ইফতারের সময়সূচী স্বয়ংক্রিয়ভাবে নির্ণয় করবে।",
+            "কীভাবে দেবেন: নিচের 'অনুমতি দিন' বাটনে চাপুন, তারপর পপ-আপ এলে 'While using the app' বা 'Allow' নির্বাচন করুন।"
         ),
         PermStep(
             ID_NOTIFICATIONS,
             "নোটিফিকেশন",
-            "নামাজের সময় এলার্ম নোটিফিকেশন ও ফুলস্ক্রিন লক দেখানোর জন্য।",
-            "আসা ডায়ালগে 'Allow' চাপুন। ডায়ালগ না এলে খোলা সেটিংসে নোটিফিকেশন চালু করুন।"
+            "কী কাজ করবে: নামাজের সময় হলে নোটিফিকেশন, এলার্ম অ্যালার্ট এবং লক স্ক্রিনের তথ্য দেখাবে।",
+            "কীভাবে দেবেন: নিচের 'অনুমতি দিন' বাটনে চেপে আসা পপ-আপে 'Allow' নির্বাচন করুন। পপ-আপ না এলে খোলা সেটিংস থেকে Notifications সুইচ চালু করে ব্যাক করুন।"
         ),
         PermStep(
             ID_OVERLAY,
-            "অন্য অ্যাপের উপরে দেখানো",
-            "ব্রাউজার বা অন্য যেকোনো অ্যাপ খোলা থাকলেও এলার্মের হার্ড লক স্ক্রিন সামনে আনার জন্য।",
-            "সেটিংসে অ্যাপের সুইচ চালু করে ব্যাক বাটন চেপে অ্যাপে ফিরুন।"
+            "অন্য অ্যাপের উপরে দেখানো (Overlay)",
+            "কী কাজ করবে: ফোনে অন্য যেকোনো অ্যাপ, গেম বা ব্রাউজার খোলা থাকলেও নামাজের সময় সাথে সাথে লক স্ক্রিন সামনে দেখাবে এবং সেফ মোডে ভিডিও ব্লার করবে।",
+            "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে ফোনের সেটিংস খুলবে -> তালিকায় Islamic Alarm খুঁজে 'Allow display over other apps' সুইচ চালু করুন -> ব্যাক বাটনে অ্যাপে ফিরুন।"
         ),
         PermStep(
             ID_EXACT_ALARM,
             "সঠিক সময়ে এলার্ম (Alarms & reminders)",
-            "ঠিক নির্দিষ্ট সময়ে এলার্ম বাজানোর জন্য।",
-            "সেটিংসে অ্যাপের সুইচ চালু করে ব্যাক বাটন চেপে অ্যাপে ফিরুন।"
+            "কী কাজ করবে: ফোন স্লিপ মোডে থাকলেও ঠিক নির্দিষ্ট মিনিট ও সেকেন্ডে নামাজের এলার্ম ও লক চালু করবে।",
+            "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে ফোনের সেটিংস খুলবে -> 'Allow setting alarms and reminders' সুইচটি চালু করুন -> ব্যাক করে অ্যাপে ফিরুন।"
         ),
         PermStep(
             ID_FULL_SCREEN,
             "ফুল-স্ক্রিন নোটিফিকেশন",
-            "ফোনের স্ক্রিন বন্ধ বা লক থাকলে এলার্ম স্ক্রিন জাগিয়ে দেখানোর জন্য (অ্যান্ড্রয়েড ১৪ ও তার উপরে)।",
-            "সেটিংসে অ্যাপের সুইচ চালু করে ব্যাক বাটন চেপে অ্যাপে ফিরুন।"
+            "কী কাজ করবে: ফোনের স্ক্রিন বন্ধ বা পিন/প্যাটার্ন লক অবস্থায় থাকলেও এলার্মের সময় ফুল-স্ক্রিন লক দেখাবে (Android 14 ও তার উপরে)।",
+            "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে সেটিংস খুলবে -> Islamic Alarm-এর জন্য 'Allow full screen notifications' সুইচ চালু করুন -> ব্যাক করে ফিরুন।"
         ),
         PermStep(
             ID_BATTERY,
             "ব্যাটারি অপ্টিমাইজেশন বন্ধ",
-            "ফোন ব্যাকগ্রাউন্ডে অ্যাপ বন্ধ করে দিলে এলার্ম মিস হতে পারে, সেটা ঠেকানোর জন্য।",
-            "আসা ডায়ালগে 'Allow' বা 'অনুমতি' চাপুন। সেটিংস খুললে অ্যাপটিকে 'Don't optimize' বা 'Unrestricted' করুন।"
+            "কী কাজ করবে: ফোন ব্যাকগ্রাউন্ডে অ্যাপটিকে জোর করে বন্ধ করা থেকে আটকাবে, যাতে কোনো ওয়াক্তের এলার্ম মিস না হয়।",
+            "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে ছোট পপ-আপ এলে 'Allow' চাপুন। আর সেটিংস পেজ খুললে Battery ব্যবহার 'Unrestricted' বা 'Don't optimize' নির্বাচন করে ব্যাক করুন।"
         ),
         PermStep(
             ID_DND,
-            "ডু নট ডিস্টার্ব অ্যাক্সেস",
-            "এলার্মের সময় ফোন পুরো সাইলেন্ট করা ও পরে আগের অবস্থায় ফেরানোর (অটো সাইলেন্ট) জন্য। না দিলে ফোন শুধু ভাইব্রেট মোডে যাবে।",
-            "সেটিংসে অ্যাপ খুঁজে সুইচ চালু করুন, তারপর ব্যাক চেপে অ্যাপে ফিরুন।"
+            "ডু নট ডিস্টার্ব (DND) অ্যাক্সেস",
+            "কী কাজ করবে: নামাজের সময় ফোন পুরোপুরি সাইলেন্ট করবে এবং নামাজ শেষে আবার আগের রিংগার মোডে ফিরিয়ে আনবে (অটো সাইলেন্ট)।",
+            "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে Do Not Disturb access পেজ খুলবে -> তালিকায় Islamic Alarm খুঁজে চাপুন ও 'Allow Do Not Disturb' সুইচ চালু করুন -> ব্যাক করুন।"
         ),
         PermStep(
             ID_ACCESSIBILITY,
             "অ্যাক্সেসিবিলিটি সার্ভিস (রেস্ট্রিক্ট ও সেফ মোড)",
-            "রেস্ট্রিক্ট মোডে বাছাই করা অ্যাপ বা ব্রাউজার খোলা হলে সেটা ধরে বিরতির স্ক্রিন দেখানোর জন্য, আর সেফ মোডে সার্চ বক্স ও ঠিকানা বারের লেখায় নিষিদ্ধ শব্দ খোঁজার জন্য। পাসওয়ার্ডের ঘর পড়া হয় না, কোনো লেখা সংরক্ষণ বা কোথাও পাঠানো হয় না।",
-            "খোলা পেজে Islamic Alarm বেছে সুইচ চালু করুন ও সতর্কবার্তায় অনুমতি দিন। সুইচ ধূসর হলে: Settings > Apps > Islamic Alarm > উপরের ⋮ মেনু > 'Allow restricted settings' দিয়ে আবার চেষ্টা করুন।"
+            "কী কাজ করবে: রেস্ট্রিক্ট মোডে বাছাই করা অ্যাপ/ব্রাউজার লক করবে এবং সেফ মোডে নিষিদ্ধ ভিডিও শনাক্ত হলে স্ক্রিন ব্লার করে অটো ব্যাক করাবে। পাসওয়ার্ড বা ব্যক্তিগত লেখা সংগ্রহ করে না।",
+            "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে Accessibility পেজ খুলবে -> Downloaded apps থেকে 'Islamic Alarm' বেছে সুইচ চালু করুন। যদি সুইচ ধূসর বা বন্ধ থাকে: ফোনের Settings > Apps > Islamic Alarm > উপরের ⋮ মেনু > 'Allow restricted settings' দিয়ে আবার সুইচটি চালু করুন।"
         ),
         PermStep(
             ID_PHONE,
             "ফোন কল স্টেট",
-            "এলার্ম চলার সময় কল এলে সেটা বুঝে কল রিসিভ করতে দেওয়ার জন্য।",
-            "আসা ডায়ালগে 'Allow' চাপুন।"
+            "কী কাজ করবে: নামাজের এলার্ম বা লক স্ক্রিন চলাকালীন জরুরি ফোন কল এলে তা শনাক্ত করে কল রিসিভ করার সুযোগ দেবে।",
+            "কীভাবে দেবেন: নিচের 'অনুমতি দিন' বাটনে চাপুন এবং আসা পপ-আপে 'Allow' নির্বাচন করুন।"
         ),
         PermStep(
             ID_AUTOSTART,
             "অটোস্টার্ট (Auto launch)",
-            "Realme, Oppo, Xiaomi ইত্যাদি ফোনে অ্যাপ বন্ধ থাকলে বা ফোন রিস্টার্টের পর এলার্ম চালু রাখার জন্য।",
-            "খোলা পেজে অ্যাপের সুইচ চালু করুন। অ্যাপ এটা চালু আছে কিনা জানতে পারে না, তাই নিজে দেখে নিন। পেজ না খুললে Settings > Apps থেকে অ্যাপ খুঁজে 'Auto launch' চালু করুন।"
+            "কী কাজ করবে: Xiaomi, Redmi, Oppo, Realme, Vivo, Huawei ইত্যাদি ফোনে অ্যাপ কেটে দিলে বা ফোন রিস্টার্টের পরও এলার্ম সার্ভিস সচল রাখবে।",
+            "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে ফোনের অটোস্টার্ট পেজ খুলবে -> Islamic Alarm-এর সুইচ চালু করে ব্যাক করুন। পেজ না খুললে Settings > Apps > Islamic Alarm > App info থেকে 'Auto launch' / 'Autostart' চালু করুন।"
         )
     )
 
     val screenPinStep = PermStep(
         ID_SCREEN_PIN,
         "স্ক্রিন পিনিং (ঐচ্ছিক)",
-        "চালু থাকলে এলার্মের লক আরও কঠোরভাবে স্ক্রিন আটকে রাখতে পারে। সাধারণ অ্যাপ এটা নিজে চালু করতে পারে না।",
-        "সিকিউরিটি বা প্রাইভেসি সেটিংসে 'Screen pinning' খুঁজে চালু করুন (ফোনভেদে নাম ও জায়গা আলাদা)।"
+        "কী কাজ করবে: চালু থাকলে এলার্মের লক চলাকালীন নেভিগেশন বাটন দিয়ে অন্য অ্যাপে যাওয়া আরও কঠোরভাবে আটকে থাকবে।",
+        "কীভাবে দেবেন: 'সেটিংস খুলুন' চাপুন -> ফোনের Security বা Privacy সেটিংসে 'App pinning' / 'Screen pinning' খুঁজে চালু করুন।"
+    )
+
+    val microphoneStep = PermStep(
+        ID_MICROPHONE,
+        "মাইক্রোফোন (অটো আজান শনাক্ত)",
+        "কী কাজ করবে: এলার্ম অপশনে 'অটো' চালু থাকলে ফজর, আসর, মাগরিব ও ইশার ওয়াক্তে আজান শোনা মাত্র সময় অনুযায়ী সেই ওয়াক্তের ২০ মিনিটের এলার্ম চালু করবে।",
+        "কীভাবে দেবেন: 'চালু করুন' বাটনে চাপুন এবং আসা পপ-আপে 'While using the app' বা 'Allow' নির্বাচন করুন।"
     )
 
     fun applicableSteps(ctx: Context): List<PermStep> = allSteps.filter { isApplicable(it.id) }
+
+    /**
+     * Permissions that Android grants directly inside the app via standard runtime dialogs.
+     * Kept on the Home screen startup wizard.
+     */
+    fun isInAppPermission(id: String): Boolean = when (id) {
+        ID_LOCATION, ID_PHONE -> true
+        ID_NOTIFICATIONS -> Build.VERSION.SDK_INT >= 33
+        else -> false
+    }
+
+    /** In-app grantable permissions requested on the Home screen. */
+    fun homeSteps(ctx: Context): List<PermStep> =
+        applicableSteps(ctx).filter { isInAppPermission(it.id) }
+
+    /** System Settings-based permissions requested in the Alarm option. */
+    fun alarmSteps(ctx: Context): List<PermStep> =
+        applicableSteps(ctx).filter { !isInAppPermission(it.id) }
+
+    /** Missing Settings-based permissions required before any alarm can be set or enabled. */
+    fun missingAlarmSteps(ctx: Context): List<PermStep> =
+        alarmSteps(ctx).filter { !isGranted(ctx, it.id) }
+
+    fun areAllAlarmPermissionsGranted(ctx: Context): Boolean =
+        missingAlarmSteps(ctx).isEmpty()
 
     private fun isApplicable(id: String): Boolean = when (id) {
         ID_EXACT_ALARM -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -162,6 +195,7 @@ object PermissionHelper {
             (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .isNotificationPolicyAccessGranted
         ID_PHONE -> hasPerm(ctx, Manifest.permission.READ_PHONE_STATE)
+        ID_MICROPHONE -> hasPerm(ctx, Manifest.permission.RECORD_AUDIO)
         ID_ACCESSIBILITY -> isAccessibilityEnabled(ctx)
         // Cannot be detected: treated as "done" once the user was shown the screen.
         ID_AUTOSTART ->

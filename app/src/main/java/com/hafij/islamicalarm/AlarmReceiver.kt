@@ -11,11 +11,29 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.hafij.islamicalarm.auto.AutoAlarmManager
 import com.hafij.islamicalarm.data.AlarmStore
 
 class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == AutoAlarmManager.ACTION_AUTO_DHUHR_ALARM) {
+            if (!AutoAlarmManager.isAutoModeEnabled(context)) return
+            val label = intent.getStringExtra(AutoAlarmManager.EXTRA_AUTO_LABEL)
+                ?.takeIf { it.isNotBlank() }
+                ?: "যোহর/জুমা সালাত (অটো)"
+            triggerLockSession(
+                context = context,
+                alarmId = "auto_dhuhr_jumuah_${System.currentTimeMillis() / 60000L}",
+                lockDurationMinutes = AutoAlarmManager.AUTO_DURATION_MINUTES,
+                label = label,
+                fromAlarm = true
+            )
+            // Schedule tomorrow's 1:20 PM (or Friday 12:45 PM)
+            AutoAlarmManager.scheduleNextDhuhrOrJumuahAlarm(context)
+            return
+        }
+
         val alarmId = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_ID) ?: return
         val alarmStore = AlarmStore(context)
         val alarm = alarmStore.getAlarm(alarmId)
@@ -28,6 +46,32 @@ class AlarmReceiver : BroadcastReceiver() {
         }
 
         if (alarm.isEnabled) {
+            triggerLockSession(
+                context = context,
+                alarmId = alarm.id,
+                lockDurationMinutes = alarm.lockDurationMinutes,
+                label = alarm.label,
+                fromAlarm = true
+            )
+
+            // Reschedule or disable based on repeat mode
+            if (alarm.isRepeatDaily) {
+                AlarmScheduler.scheduleAlarm(context, alarm)
+            } else {
+                val updated = alarm.copy(isEnabled = false)
+                alarmStore.updateAlarm(updated)
+            }
+        }
+    }
+
+    companion object {
+        fun triggerLockSession(
+            context: Context,
+            alarmId: String,
+            lockDurationMinutes: Int,
+            label: String,
+            fromAlarm: Boolean
+        ) {
             // Enable Auto Silent mode for prayer
             com.hafij.islamicalarm.silent.AutoSilentManager.enableSilentMode(context)
 
@@ -47,10 +91,10 @@ class AlarmReceiver : BroadcastReceiver() {
             try {
                 val serviceIntent = PrayerLockOverlayService.createStartIntent(
                     context = context,
-                    alarmId = alarm.id,
-                    lockDurationMinutes = alarm.lockDurationMinutes,
-                    label = alarm.label,
-                    fromAlarm = true
+                    alarmId = alarmId,
+                    lockDurationMinutes = lockDurationMinutes,
+                    label = label,
+                    fromAlarm = fromAlarm
                 )
                 ContextCompat.startForegroundService(context, serviceIntent)
                 serviceStarted = true
@@ -62,10 +106,10 @@ class AlarmReceiver : BroadcastReceiver() {
             // is not granted or foreground service start is blocked.
             if (!serviceStarted || !Settings.canDrawOverlays(context)) {
                 val lockIntent = Intent(context, LockScreenActivity::class.java).apply {
-                    putExtra("ALARM_ID", alarm.id)
-                    putExtra("LOCK_DURATION_MINUTES", alarm.lockDurationMinutes)
-                    putExtra("LABEL", alarm.label)
-                    putExtra("FROM_ALARM", true)
+                    putExtra("ALARM_ID", alarmId)
+                    putExtra("LOCK_DURATION_MINUTES", lockDurationMinutes)
+                    putExtra("LABEL", label)
+                    putExtra("FROM_ALARM", fromAlarm)
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
                                 Intent.FLAG_ACTIVITY_CLEAR_TASK or
@@ -81,21 +125,12 @@ class AlarmReceiver : BroadcastReceiver() {
                 }
 
                 if (!serviceStarted) {
-                    postFallbackAlarmNotification(context, alarm.id, alarm.label, lockIntent)
+                    postFallbackAlarmNotification(context, alarmId, label, lockIntent)
                 }
             }
-
-            // Reschedule or disable based on repeat mode
-            if (alarm.isRepeatDaily) {
-                AlarmScheduler.scheduleAlarm(context, alarm)
-            } else {
-                val updated = alarm.copy(isEnabled = false)
-                alarmStore.updateAlarm(updated)
-            }
         }
-    }
 
-    private fun postFallbackAlarmNotification(
+        private fun postFallbackAlarmNotification(
         context: Context,
         alarmId: String,
         label: String,
@@ -109,22 +144,14 @@ class AlarmReceiver : BroadcastReceiver() {
             flags
         )
 
-        val channelId = "islamic_alarm_channel_v4"
+        val channelId = "islamic_alarm_channel_v5_silent"
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val alarmSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
-            ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val audioAttributes = android.media.AudioAttributes.Builder()
-                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
-                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-
             val channel = NotificationChannel(
                 channelId,
-                "Islamic Alarm Clock",
+                "Islamic Alarm Lock (Silent Ringtone)",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Prayer Time Lock Screen Alarm"
@@ -132,7 +159,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 vibrationPattern = longArrayOf(0, 500, 250, 500, 250, 500)
                 setBypassDnd(true)
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
-                setSound(alarmSoundUri, audioAttributes)
+                setSound(null, null)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -149,12 +176,13 @@ class AlarmReceiver : BroadcastReceiver() {
             .setContentText("ফোন লক হচ্ছে, নামাজের প্রস্তুতি নিন")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setSound(alarmSoundUri)
+            .setSilent(true)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setAutoCancel(true)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         notificationManager.notify(alarmId.hashCode(), notificationBuilder.build())
+        }
     }
 }

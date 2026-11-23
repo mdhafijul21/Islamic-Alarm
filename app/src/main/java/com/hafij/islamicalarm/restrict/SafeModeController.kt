@@ -53,7 +53,7 @@ class SafeModeController(
         } else {
             MaterialAlertDialogBuilder(activity)
                 .setTitle("সেফ মোড বন্ধ করবেন?")
-                .setMessage("বন্ধ করলে সার্চের ফিল্টার আর কাজ করবে না।")
+                .setMessage("বন্ধ করলে নিষিদ্ধ ভিডিও শনাক্ত ও অটো ব্লার-ব্যাক সুরক্ষা আর কাজ করবে না।")
                 .setPositiveButton("বন্ধ করুন") { _, _ ->
                     store.isEnabled = false
                     refresh()
@@ -80,7 +80,7 @@ class SafeModeController(
 
         MaterialAlertDialogBuilder(activity)
             .setTitle("নিজের শব্দ যোগ করুন")
-            .setMessage("সার্চ রেজাল্ট বা খোলা পেজে এই শব্দ/সাইট শনাক্ত হলে সেফ মোড সতর্ক করবে। শুধু টাইপ করলে চালু হবে না।")
+            .setMessage("শুধু সার্চ করলে নয়—যখন কোনো ভিডিও প্লেয়ার খুলবে এবং সেখানে এই শব্দ/সাইট থাকবে, তখন স্ক্রিন ব্লার করে অটো ব্যাক করবে।")
             .setView(box)
             .setPositiveButton("সংরক্ষণ করুন") { _, _ ->
                 val words = input.text.toString().split('\n', ',')

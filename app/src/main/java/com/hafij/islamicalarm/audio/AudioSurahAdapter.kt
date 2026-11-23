@@ -11,6 +11,7 @@ import java.io.File
 
 class AudioSurahAdapter(
     private var surahs: List<Surah>,
+    private val getReciterId: () -> String = { "mishary" },
     private val onPlayClick: (Surah) -> Unit,
     private val onDownloadClick: (Surah) -> Unit,
     private val onReadClick: (Surah) -> Unit
@@ -54,11 +55,10 @@ class AudioSurahAdapter(
             binding.tvAudioSurahNo.text = toBengaliNumber(surah.id)
             binding.tvAudioSurahNameBn.text = surah.nameBangla
             binding.tvAudioSurahNameAr.text = surah.nameArabic
-            binding.tvAudioSurahMeta.text = "${toBengaliNumber(surah.totalAyahs)} আয়াত • ${surah.revelationType} • পারা ${toBengaliNumber(surah.paraNumber)}"
+            binding.tvAudioSurahMeta.text =
+                "${toBengaliNumber(surah.totalAyahs)} আয়াত • ${surah.revelationType} • পারা ${toBengaliNumber(surah.paraNumber)}"
 
-            // Check offline cache
-            val localAudio = File(File(context.filesDir, "quran_audio"), "surah_${surah.id}.mp3")
-            val isDownloaded = localAudio.exists() && localAudio.length() > 1024
+            val isDownloaded = resolveLocalAudioFile(context, getReciterId(), surah.id) != null
 
             if (isDownloaded) {
                 binding.tvDownloadStatus.text = "অফলাইনে সংরক্ষিত ✅"
@@ -66,7 +66,7 @@ class AudioSurahAdapter(
                 binding.btnDownloadSurah.setImageResource(android.R.drawable.checkbox_on_background)
                 binding.btnDownloadSurah.setColorFilter(context.resources.getColor(R.color.secondary, context.theme))
             } else {
-                binding.tvDownloadStatus.text = "অনলাইন স্ট্রিমিং"
+                binding.tvDownloadStatus.text = "অফলাইন ভয়েস / ⬇️ সেভ"
                 binding.tvDownloadStatus.setTextColor(context.resources.getColor(R.color.text_secondary, context.theme))
                 binding.btnDownloadSurah.setImageResource(android.R.drawable.stat_sys_download)
                 binding.btnDownloadSurah.setColorFilter(context.resources.getColor(R.color.text_secondary, context.theme))
@@ -79,21 +79,10 @@ class AudioSurahAdapter(
                 binding.btnPlayAudioSurah.setImageResource(android.R.drawable.ic_media_play)
             }
 
-            binding.btnPlayAudioSurah.setOnClickListener {
-                onPlayClick(surah)
-            }
-
-            binding.root.setOnClickListener {
-                onPlayClick(surah)
-            }
-
-            binding.btnDownloadSurah.setOnClickListener {
-                onDownloadClick(surah)
-            }
-
-            binding.btnReadSurahMushaf.setOnClickListener {
-                onReadClick(surah)
-            }
+            binding.btnPlayAudioSurah.setOnClickListener { onPlayClick(surah) }
+            binding.root.setOnClickListener { onPlayClick(surah) }
+            binding.btnDownloadSurah.setOnClickListener { onDownloadClick(surah) }
+            binding.btnReadSurahMushaf.setOnClickListener { onReadClick(surah) }
         }
     }
 
@@ -109,5 +98,32 @@ class AudioSurahAdapter(
             }
         }
         return sb.toString()
+    }
+
+    companion object {
+        fun targetAudioFile(context: Context, reciterId: String, surahId: Int): File {
+            val dir = File(context.filesDir, "quran_audio")
+            if (!dir.exists()) dir.mkdirs()
+            return File(dir, "${reciterId}_surah_${surahId}.mp3")
+        }
+
+        fun resolveLocalAudioFile(context: Context, reciterId: String, surahId: Int): File? {
+            val dir = File(context.filesDir, "quran_audio")
+            val specific = File(dir, "${reciterId}_surah_${surahId}.mp3")
+            if (specific.exists() && specific.length() > 1024) return specific
+            if (reciterId == "mishary") {
+                val legacy = File(dir, "surah_${surahId}.mp3")
+                if (legacy.exists() && legacy.length() > 1024) return legacy
+            }
+            return null
+        }
+
+        fun countDownloadedForReciter(context: Context, reciterId: String): Int {
+            var count = 0
+            for (id in 1..114) {
+                if (resolveLocalAudioFile(context, reciterId, id) != null) count++
+            }
+            return count
+        }
     }
 }

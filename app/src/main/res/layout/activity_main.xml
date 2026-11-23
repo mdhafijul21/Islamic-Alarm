@@ -45,15 +45,41 @@
                 android:orientation="vertical"
                 android:padding="10dp">
 
-                <LinearLayout
-                    android:id="@+id/headerArtContainer"
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/headerArtCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_header_night"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="13dp"
-                    android:paddingTop="14dp"
-                    android:paddingBottom="10dp">
+                    android:layout_marginBottom="10dp"
+                    app:cardBackgroundColor="@color/header_teal_bottom"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="3dp"
+                    app:strokeWidth="0dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <ImageView
+                            android:id="@+id/ivHeaderTimeArt"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/img_header_night" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_header_scrim" />
+
+                        <LinearLayout
+                            android:id="@+id/headerArtContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="13dp"
+                            android:paddingTop="14dp"
+                            android:paddingBottom="10dp">
 
                         <TextView
                             android:id="@+id/tvHeaderTitle"
@@ -64,47 +90,80 @@
                             android:textSize="21sp"
                             android:textStyle="bold" />
 
+                        <!-- Hint shown right above the Location button when Location is not yet turned on & set -->
                         <TextView
-                            android:id="@+id/tvHeaderLocation"
+                            android:id="@+id/tvLocationPromptHint"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginTop="4dp"
+                            android:background="@drawable/bg_countdown_pill_clean"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp"
+                            android:text="📍 সঠিক সময়ের জন্য লোকেশন বাটন ক্লিক করুন"
                             android:textColor="@color/art_gold"
-                            android:textSize="13sp"
-                            tools:text="📍 ঢাকা জেলা" />
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:visibility="gone" />
 
-                        <!-- District & Hijri Date Bar -->
+                        <!-- District & Hijri Date Bar (raised directly below header title) -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:layout_marginBottom="10dp"
                             android:gravity="center_vertical"
                             android:orientation="horizontal">
 
-                            <!-- District Selector Button -->
+                            <!-- Clearly recognizable Location Button -->
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnSelectDistrict"
                                 style="@style/Widget.Material3.Button.TonalButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:maxWidth="172dp"
+                                android:minHeight="40dp"
                                 android:backgroundTint="@color/art_surface"
-                                android:text="📍 ঢাকা"
+                                android:ellipsize="end"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:maxLines="1"
+                                android:paddingHorizontal="10dp"
+                                android:text="ঢাকা জেলা ▾"
                                 android:textColor="@color/art_gold"
                                 android:textSize="11sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="12dp"
+                                app:icon="@drawable/ic_location_pin"
+                                app:iconGravity="textStart"
+                                app:iconPadding="4dp"
+                                app:iconSize="15dp"
+                                app:iconTint="@color/art_gold"
+                                app:strokeColor="@color/art_gold"
+                                app:strokeWidth="1.2dp" />
+
+                            <!-- Quick GPS Auto-Detect Button -->
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnQuickGpsLocation"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="40dp"
+                                android:layout_marginStart="5dp"
+                                android:minWidth="0dp"
+                                android:minHeight="40dp"
+                                android:backgroundTint="@color/art_surface"
+                                android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:paddingHorizontal="8dp"
+                                android:text="GPS"
+                                android:textColor="@color/art_gold"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
                                 app:cornerRadius="12dp"
                                 app:strokeColor="@color/art_border"
                                 app:strokeWidth="1dp" />
-
-                            <!-- Quick GPS Auto-Detect Button -->
-                            <ImageButton
-                                android:id="@+id/btnQuickGpsLocation"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:layout_marginStart="4dp"
-                                android:background="@drawable/bg_duration_chip_night"
-                                android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
-                                android:src="@android:drawable/ic_menu_mylocation"
-                                app:tint="@color/art_gold" />
 
                             <View
                                 android:layout_width="0dp"
@@ -126,15 +185,16 @@
 
                         </LinearLayout>
 
-                        <!-- Next Prayer Live Countdown Banner -->
+                        <!-- Next Prayer Live Countdown Banner (borderless, no rectangular outline) -->
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="-6dp"
-                            android:layout_marginBottom="12dp"
-                            app:cardBackgroundColor="#4D000000"
+                            android:layout_marginTop="2dp"
+                            android:layout_marginBottom="10dp"
+                            app:cardBackgroundColor="#33094A37"
                             app:cardCornerRadius="18dp"
-                            app:cardElevation="0dp">
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -165,9 +225,9 @@
                                     android:id="@+id/tvNextPrayerCountdown"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:background="@drawable/bg_challenge_badge_night"
-                                    android:paddingHorizontal="8dp"
+                                    android:layout_marginTop="4dp"
+                                    android:background="@drawable/bg_countdown_pill_clean"
+                                    android:paddingHorizontal="10dp"
                                     android:paddingVertical="3dp"
                                     android:textColor="@color/art_text"
                                     android:textSize="10sp"
@@ -179,7 +239,11 @@
                         </com.google.android.material.card.MaterialCardView>
 
 
-                </LinearLayout>
+                        </LinearLayout>
+
+                    </FrameLayout>
+
+                </com.google.android.material.card.MaterialCardView>
 
 
                 <!-- 5 Waqt Prayer Times Grid/Cards -->
@@ -573,12 +637,14 @@
 
                 </LinearLayout>
 
-                <!-- Auto Silent Card on Home -->
+                <!-- Auto Silent Card on Home (always active, hidden per user request) -->
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardAutoSilent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:layout_marginBottom="9dp"
+                    android:visibility="gone"
                     app:cardBackgroundColor="@color/surface"
                     app:cardCornerRadius="14dp"
                     app:cardElevation="2dp"
@@ -721,7 +787,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="3dp"
-                                android:text="রাতের শেষ তৃতীয়াংশের হিসাব ও এলার্ম"
+                                android:text="রাতের শেষ তৃতীয়াংশের নিখুঁত সময় ও হিসাব"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="10sp" />
 
@@ -907,94 +973,6 @@
 
                 </LinearLayout>
 
-                <!-- Grid Row 4: Audio Quran & Audio Azan -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <!-- Audio Quran 114 Surahs -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/cardFeatureAudioQuran"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_marginBottom="10dp"
-                        android:layout_weight="1"
-                        app:cardBackgroundColor="@color/surface"
-                        app:cardCornerRadius="14dp"
-                        app:cardElevation="2dp"
-                        app:strokeColor="@color/border"
-                        app:strokeWidth="1dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="🎧 অডিও কুরআন (১১৪ সুরা)"
-                                android:textColor="@color/secondary"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="3dp"
-                                android:text="৫ জন বিশ্বখ্যাত ক্বারীর কণ্ঠে সকল সুরার তিলাওয়াত"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="10sp" />
-
-                        </LinearLayout>
-
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <!-- Audio Azan & Alarm Tone -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/cardFeatureAzan"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_marginBottom="10dp"
-                        android:layout_weight="1"
-                        app:cardBackgroundColor="@color/surface"
-                        app:cardCornerRadius="14dp"
-                        app:cardElevation="2dp"
-                        app:strokeColor="@color/border"
-                        app:strokeWidth="1dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="🕌 অডিও আজান ও দোয়া"
-                                android:textColor="@color/secondary"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="3dp"
-                                android:text="মক্কা-মদিনার সুমধুর আজান ও এলার্ম টিউন সেট"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="10sp" />
-
-                        </LinearLayout>
-
-                    </com.google.android.material.card.MaterialCardView>
-
-                </LinearLayout>
-
             </LinearLayout>
 
         </androidx.core.widget.NestedScrollView>
@@ -1091,6 +1069,55 @@
                     android:text="পাঁচ ওয়াক্ত নামাজের এলার্ম সেট করুন"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardAlarmPermissionBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/surface_container"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/error"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:id="@+id/tvAlarmPermBannerTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/error"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvAlarmPermBannerMissing"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:lineSpacingExtra="2dp"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnGrantMissingAlarmPerms"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:minHeight="48dp"
+                            android:text="পারমিশন দিন"
+                            android:textColor="@color/white"
+                            app:backgroundTint="@color/secondary" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
@@ -1356,6 +1383,82 @@
 
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Auto Alarm Card ("অটো" button below 5 Waqt alarms) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardAutoAlarm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@color/surface"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="@color/secondary"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🤖 অটো"
+                                    android:textColor="@color/secondary"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="যোহর ১:২০ / জুমা ১২:৪৫ (২০ মি.) + আজান শুনে অটো এলার্ম"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="11sp" />
+
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnAutoAlarm"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
+                                android:text="অটো: বন্ধ"
+                                android:textColor="@color/secondary"
+                                android:textSize="12sp"
+                                app:backgroundTint="@color/surface_container"
+                                app:cornerRadius="20dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvAutoAlarmStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:lineSpacingExtra="2dp"
+                            android:text="বন্ধ আছে • চালু করলে প্রতিদিন দুপুর ১:২০ ও জুমায় ১২:৪৫ (২০ মি.) এবং অন্য ৪ ওয়াক্তে আজান শুনে ২০ মি. এলার্ম বাজবে।"
+                            android:textColor="@color/text_primary"
+                            android:textSize="11sp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- User Set Alarms Section -->
                 <TextView
                     android:layout_width="wrap_content"
@@ -1396,6 +1499,44 @@
                     android:layout_marginBottom="12dp"
                     android:nestedScrollingEnabled="false"
                     tools:listitem="@layout/item_alarm" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="8dp"
+                    app:cardBackgroundColor="@color/surface_container"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ℹ️ এলার্ম ও অটো চালু করলে কী হবে"
+                            android:textColor="@color/secondary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:lineSpacingExtra="3dp"
+                            android:text="• সেট করা এলার্ম বা অটো চালু করলে নির্ধারিত সময়ে ফোন সাইলেন্ট হবে এবং কাউন্টার শেষ না হওয়া পর্যন্ত ফুল-স্ক্রিন হার্ড লক থাকবে (রিংটোন বাজবে না)। জরুরি কল এলে রিসিভ করা যাবে।\n• 'অটো' চালু রাখলে প্রতিদিন দুপুর ১:২০ এবং জুমার দিন ১২:৪৫-এ ২০ মিনিটের এলার্ম আপনা-আপনি বাজবে।\n• ফজর, আসর, মাগরিব ও ইশার ওয়াক্তে মাইক্রোফোন অনুমতি দেওয়া থাকলে ওয়াক্তের সময় অনুযায়ী আজান শোনা মাত্রই সেই ওয়াক্তের নামে ২০ মিনিটের এলার্ম চালু হবে।"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11.5sp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
 
                 </LinearLayout>
 
@@ -1465,7 +1606,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="6dp"
-                        android:text="পাঁচটি স্লট"
+                        android:text="রেস্ট্রিক্ট সময়সূচী (১টি স্লট)"
                         android:textColor="@color/text_primary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
@@ -1475,6 +1616,44 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="8dp"
+                        app:cardBackgroundColor="@color/surface_container"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ℹ️ রেস্ট্রিক্ট মোড চালু করলে কী হবে"
+                                android:textColor="@color/secondary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:lineSpacingExtra="3dp"
+                                android:text="• সেট করা সময়ের ভেতরে আপনি বাছাই করা কোনো অ্যাপ বা ব্রাউজার খুললেই সাথে সাথে সেটি আটকে গিয়ে 'এখন বিরতির সময়' পর্দা দেখাবে।\n• নির্ধারিত মেয়াদ শেষ না হওয়া পর্যন্ত ঐ অ্যাপগুলো ব্যবহার করা যাবে না; তবে আপনার ফোনের বাকি দরকারি অ্যাপ ও কল স্বাভাবিক থাকবে।\n• সময় শেষ হলে স্বয়ংক্রিয়ভাবে অ্যাপগুলো আবার খুলে যাবে (কাজের জন্য অ্যাক্সেসিবিলিটি সার্ভিস চালু থাকতে হবে)।"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11.5sp" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
 
                 </LinearLayout>
 
@@ -1500,7 +1679,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="10dp"
-                        android:text="চালু থাকলে অ্যাপ বা ব্রাউজারে পর্নোগ্রাফি সার্চ আটকাবে"
+                        android:text="চালু থাকলে নিষিদ্ধ/অ্যাডাল্ট ভিডিও প্লেয়ার চালু হলে স্ক্রিন ব্লার করে অটো ব্যাক করবে"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -1600,13 +1779,42 @@
 
                     </com.google.android.material.card.MaterialCardView>
 
-                    <TextView
+                    <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:lineSpacingExtra="2dp"
-                        android:text="কীভাবে কাজ করে: সার্চ বক্স ও ঠিকানা বারের লেখা দেখে নিষিদ্ধ শব্দ পেলে লেখাটি মুছে সেফ মোড স্ক্রিন দেখায়। VPN বা যেকোনো ব্রাউজারে কাজ করে।\n\nসীমা: ছবি বা ভিডিও চেনে না, সরাসরি লিংকে বা ফিডে আসা কনটেন্ট আটকায় না, শব্দের তালিকা সম্পূর্ণ নয়। সেটিংসে সার্ভিস বন্ধ করলে সুরক্ষা থাকে না।"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
+                        android:layout_marginBottom="8dp"
+                        app:cardBackgroundColor="@color/surface_container"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ℹ️ সেফ মোড চালু করলে কী হবে"
+                                android:textColor="@color/secondary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:lineSpacingExtra="3dp"
+                                android:text="• পরিচিত ১৮০+ অ্যাডাল্ট/NSFW ওয়েবসাইটের কোনো লিংকে ঢুকলেই (ব্রাউজার বা VidMate/SnapTube-এর ইন-অ্যাপ ব্রাউজারে) সাথে সাথে স্ক্রিন ব্লার হয়ে স্বয়ংক্রিয়ভাবে ব্যাক চলে আসবে।\n• ব্রাউজার, VidMate, SnapTube, Telegram, TeraBox বা ভিডিও প্লেয়ারে ভিডিও চালু হয়ে তাতে অ্যাডাল্ট, NSFW বা আপনার যোগ করা নিষিদ্ধ শিরোনাম/ক্যাপশন/ফাইলের নাম থাকলেই সাথে সাথে ব্লার হয়ে ব্যাক করবে।\n• শুধু গুগল বা বিং-এ সাধারণ সার্চ করলে অযথা বন্ধ হবে না।\n\nসত্য সীমাবদ্ধতা: অ্যান্ড্রয়েডের নিরাপত্তানীতির কারণে কোনো সাধারণ অ্যাপ এনক্রিপ্টেড ভিডিওর ভেতরের ছবি সরাসরি দেখে চিনতে পারে না; ওয়েব ঠিকানা, ফাইলের নাম, চ্যানেল/ভিডিও শিরোনাম এবং ভিডিও প্লেয়ারের ওপর নির্ভর করে। শিরোনামবিহীন গোপন ভিডিও আটকাতে চাইলে রেস্ট্রিক্ট মোড ব্যবহার করুন।"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11.5sp" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
 
                 </LinearLayout>
 

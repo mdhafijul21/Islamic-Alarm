@@ -48,7 +48,7 @@ class AzanAudioActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         binding.switchAzanAlarm.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean(AzanData.PREF_AZAN_SOUND_ENABLED, isChecked).apply()
-            val msg = if (isChecked) "সালাতের এলার্মে আজান চালু করা হয়েছে" else "সালাতের এলার্মে সাধারণ অ্যালার্ম রিংটোন বাজবে"
+            val msg = if (isChecked) "সালাতের এলার্মে আজান চালু করা হয়েছে" else "সালাতের এলার্মে আজান বন্ধ করা হয়েছে (রিংটোন বাজবে না)"
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
     }

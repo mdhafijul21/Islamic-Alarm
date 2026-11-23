@@ -23,7 +23,13 @@ class MainBottomBar @JvmOverloads constructor(
 
     class BarItem(val itemId: Int)
 
-    private class Tab(val id: Int, val root: LinearLayout, val pill: FrameLayout, val label: TextView)
+    private class Tab(
+        val id: Int,
+        val root: LinearLayout,
+        val pill: FrameLayout,
+        val icon: ImageView,
+        val label: TextView
+    )
 
     private val tabs = mutableListOf<Tab>()
     private var listener: ((BarItem) -> Boolean)? = null
@@ -34,9 +40,12 @@ class MainBottomBar @JvmOverloads constructor(
         set(value) {
             if (value == currentId) return
             val tab = tabs.firstOrNull { it.id == value } ?: return
+            val previousId = currentId
+            currentId = tab.id
+            refreshVisuals()
             val accepted = listener?.invoke(BarItem(value)) ?: true
-            if (accepted) {
-                currentId = tab.id
+            if (!accepted) {
+                currentId = previousId
                 refreshVisuals()
             }
         }
@@ -100,13 +109,17 @@ class MainBottomBar @JvmOverloads constructor(
         root.addView(label)
         root.setOnClickListener { selectedItemId = id }
         addView(root)
-        tabs.add(Tab(id, root, pill, label))
+        tabs.add(Tab(id, root, pill, icon, label))
     }
 
     private fun refreshVisuals() {
+        val activeColor = ContextCompat.getColor(context, R.color.secondary)
+        val inactiveColor = ContextCompat.getColor(context, R.color.text_secondary)
         for (tab in tabs) {
             val selected = tab.id == currentId
             tab.pill.setBackgroundResource(if (selected) R.drawable.bg_nav_pill else 0)
+            tab.icon.setColorFilter(if (selected) activeColor else inactiveColor)
+            tab.label.setTextColor(if (selected) activeColor else inactiveColor)
             tab.label.setTypeface(null, if (selected) Typeface.BOLD else Typeface.NORMAL)
         }
     }

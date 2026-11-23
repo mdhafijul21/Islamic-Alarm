@@ -83,17 +83,51 @@
         android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Surah list counter -->
-        <TextView
-            android:id="@+id/tvSurahCountLabel"
-            android:layout_width="wrap_content"
+        <!-- Surah list counter + Offline Batch Download Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp">
+
+            <TextView
+                android:id="@+id/tvSurahCountLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📖 ১১৪ সুরা • অফলাইনে সংরক্ষিত: ০/১১৪"
+                android:textColor="@color/text_secondary"
+                android:textSize="11.5sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDownloadAllOffline"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="⬇️ সব অফলাইন সেভ"
+                android:textColor="@color/secondary"
+                android:textSize="11sp"
+                app:backgroundTint="@color/surface_container"
+                app:cornerRadius="12dp" />
+
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/pbBatchDownload"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginHorizontal="16dp"
             android:layout_marginBottom="4dp"
-            android:text="📖 মোট ১১৪টি সুরার অডিও তালিকা"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp" />
+            android:max="114"
+            android:progressTint="@color/secondary"
+            android:visibility="gone" />
 
         <!-- 114 Surahs RecyclerView -->
         <androidx.recyclerview.widget.RecyclerView

@@ -21,6 +21,7 @@ class DuasFragment : Fragment() {
     private var selectedCategory = DuaData.CATEGORY_ALL
     private var searchQuery = ""
     private val favoritesCategory = "পছন্দের দোয়া"
+    private var lastFavoriteSnapshot: Set<String>? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,13 +60,11 @@ class DuasFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbarDuas.setNavigationOnClickListener {
-            if (!handleBack()) {
-                (activity as? com.hafij.islamicalarm.MainActivity)?.goHome()
-            }
+            handleBack()
         }
 
         setupRecyclerViews()
-        setupCategories()
+        setupCategories(force = true)
         setupSearch()
         showCategories()
     }
@@ -81,8 +80,11 @@ class DuasFragment : Fragment() {
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
         if (!hidden && ::categoryAdapter.isInitialized) {
-            setupCategories()
-            if (binding.rvDuas.visibility == View.VISIBLE) filterList()
+            view?.post {
+                if (!isAdded || isHidden) return@post
+                setupCategories()
+                if (binding.rvDuas.visibility == View.VISIBLE) filterList()
+            }
         }
     }
 
@@ -100,7 +102,17 @@ class DuasFragment : Fragment() {
         binding.rvDuaCategories.adapter = categoryAdapter
     }
 
-    private fun setupCategories() {
+    private fun setupCategories(force: Boolean = false) {
+        val ctx = context ?: return
+        val favoriteIds = ctx
+            .getSharedPreferences("dua_favorites", Context.MODE_PRIVATE)
+            .getStringSet("ids", emptySet())
+            ?.toSet()
+            ?: emptySet()
+
+        if (!force && favoriteIds == lastFavoriteSnapshot) return
+        lastFavoriteSnapshot = favoriteIds
+
         val allDuas = DuaData.getDuasAndHadiths
         val categories = DuaData.getCategories.map { category ->
             val count = if (category == DuaData.CATEGORY_ALL) {
@@ -110,10 +122,6 @@ class DuasFragment : Fragment() {
             }
             DuaCategory(category, count, DuaCategoryArtwork.iconFor(category))
         }.toMutableList()
-
-        val favoriteIds = requireContext()
-            .getSharedPreferences("dua_favorites", Context.MODE_PRIVATE)
-            .getStringSet("ids", emptySet()) ?: emptySet()
 
         categories.add(
             1,
@@ -147,6 +155,7 @@ class DuasFragment : Fragment() {
     }
 
     private fun showCategories() {
+        binding.toolbarDuas.navigationIcon = null
         binding.rvDuaCategories.visibility = View.VISIBLE
         binding.rvDuas.visibility = View.GONE
         binding.tvDuaEmpty.visibility = View.GONE
@@ -158,6 +167,10 @@ class DuasFragment : Fragment() {
     }
 
     private fun showDuaList() {
+        binding.toolbarDuas.setNavigationIcon(R.drawable.ic_arrow_back_24)
+        binding.toolbarDuas.setNavigationIconTint(
+            androidx.core.content.ContextCompat.getColor(requireContext(), R.color.dua_primary)
+        )
         binding.rvDuaCategories.visibility = View.GONE
         binding.rvDuas.visibility = View.VISIBLE
         binding.tvDuaEmpty.visibility = View.GONE
