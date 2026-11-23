@@ -3,7 +3,7 @@ package com.hafij.islamicalarm.restrict
 import android.content.Context
 import java.util.Locale
 
-/** Safe mode on/off and the user's own blocked words/domains. */
+/** Safe mode on/off, DNS VPN / Incognito / SafeSearch flags, and the user's blocked words/domains. */
 class SafeModeStore(context: Context) {
 
     private val prefs = context.applicationContext
@@ -14,6 +14,43 @@ class SafeModeStore(context: Context) {
         set(value) {
             prefs.edit().putBoolean(KEY_ENABLED, value).apply()
         }
+
+    var isDnsVpnEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DNS_VPN_ENABLED, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_DNS_VPN_ENABLED, value).apply()
+        }
+
+    var isIncognitoBlockEnabled: Boolean
+        get() = prefs.getBoolean(KEY_INCOGNITO_BLOCK, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_INCOGNITO_BLOCK, value).apply()
+        }
+
+    var isSafeSearchEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SAFE_SEARCH, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_SAFE_SEARCH, value).apply()
+        }
+
+    var dnsBlockedCount: Int
+        get() = prefs.getInt(KEY_DNS_BLOCKED_COUNT, 0)
+        private set(value) {
+            prefs.edit().putInt(KEY_DNS_BLOCKED_COUNT, value).apply()
+        }
+
+    var lastBlockedDomain: String?
+        get() = prefs.getString(KEY_LAST_BLOCKED_DOMAIN, null)
+        private set(value) {
+            prefs.edit().putString(KEY_LAST_BLOCKED_DOMAIN, value).apply()
+        }
+
+    fun recordDnsBlock(domain: String) {
+        prefs.edit()
+            .putInt(KEY_DNS_BLOCKED_COUNT, dnsBlockedCount + 1)
+            .putString(KEY_LAST_BLOCKED_DOMAIN, domain)
+            .apply()
+    }
 
     fun getCustomWords(): List<String> {
         val raw = prefs.getString(KEY_WORDS, "") ?: ""
@@ -28,17 +65,25 @@ class SafeModeStore(context: Context) {
     companion object {
         private const val PREF_NAME = "safe_mode_prefs"
         private const val KEY_ENABLED = "enabled"
+        private const val KEY_DNS_VPN_ENABLED = "dns_vpn_enabled"
+        private const val KEY_INCOGNITO_BLOCK = "incognito_block_enabled"
+        private const val KEY_SAFE_SEARCH = "safe_search_enabled"
+        private const val KEY_DNS_BLOCKED_COUNT = "dns_blocked_count"
+        private const val KEY_LAST_BLOCKED_DOMAIN = "last_blocked_domain"
         private const val KEY_WORDS = "custom_words"
     }
 }
 
 /**
- * Built-in list of adult/NSFW video domains, TLDs, and phrases used by Safe mode.
+ * Built-in list of adult/NSFW video domains, TLDs, and phrases used by Safe mode
+ * (both in Accessibility URL/player checking and in [SafeDnsFilter]).
  *
  * Matching rules:
- *  - [matchesSiteUrl]: checks browser URL bars / page hosts (ignoring search engine queries
- *    such as google.com/search?q=...) so entering an adult/NSFW website triggers Safe Mode
- *    immediately without blocking plain Google searches.
+ *  - [isSearchEngineUrl]: identifies search result pages (Google, Bing, DuckDuckGo, Yahoo, etc.)
+ *    so searching with or without SafeSearch never triggers Safe Mode on search alone.
+ *  - [matchesDomainHost]: checks bare DNS hostnames cleanly for the system-wide Local VPN DNS blocker.
+ *  - [matchesSiteUrl]: checks browser URL bars / page hosts (ignoring search engine query URLs)
+ *    so entering an adult/NSFW website after clicking a search result triggers Safe Mode.
  *  - [matches]: checks non-editable page/video titles and descriptions when a video player
  *    or adult/NSFW video context is active.
  */
@@ -231,11 +276,63 @@ object SafeWords {
     }
 
     /**
+     * Returns true when [rawUrl] is a search engine results or home/query page (including SafeSearch).
+     * Searching itself never triggers Safe Mode — only clicking through onto an adult site or video does.
+     */
+    fun isSearchEngineUrl(rawUrl: String): Boolean {
+        if (rawUrl.isBlank()) return false
+        val trimmed = rawUrl.trim().lowercase(Locale.ROOT)
+        if (trimmed.contains(' ') && !trimmed.startsWith("http")) return false
+        val match = hostRegex.find(trimmed) ?: return false
+        val host = match.groupValues[1]
+        val rest = match.groupValues[2]
+        if (!host.contains('.')) return false
+
+        return (host.contains("google.") && (rest.startsWith("/search") || rest == "/" || rest.isEmpty() || rest.contains("safe=active"))) ||
+            (host.contains("bing.com") && (rest.startsWith("/search") || rest.startsWith("/videos/search") || rest.startsWith("/images/search"))) ||
+            (host.contains("duckduckgo.com") && (rest.startsWith("/?") || rest == "/" || rest.isEmpty())) ||
+            (host.contains("search.yahoo.com")) ||
+            (host.contains("yandex.") && rest.startsWith("/search")) ||
+            (host.contains("ecosia.org") && rest.startsWith("/search")) ||
+            (host.contains("youtube.com") && rest.startsWith("/results"))
+    }
+
+    /** Checks a bare DNS domain name (used by [SafeDnsFilter]). Never blocks search engines. */
+    fun matchesDomainHost(rawHost: String, custom: Collection<String> = emptyList()): Boolean {
+        val cleanHost = rawHost.trim().trimEnd('.').lowercase(Locale.ROOT)
+        if (!cleanHost.contains('.')) return false
+
+        // Keep standard search engines reachable so users can search with SafeSearch enforced upstream
+        if (cleanHost == "google.com" || cleanHost.endsWith(".google.com") ||
+            cleanHost == "bing.com" || cleanHost.endsWith(".bing.com") ||
+            cleanHost == "duckduckgo.com" || cleanHost.endsWith(".duckduckgo.com") ||
+            cleanHost == "yahoo.com" || cleanHost.endsWith(".yahoo.com")
+        ) {
+            return false
+        }
+
+        if (adultTlds.any { tld -> cleanHost.endsWith(".$tld") }) return true
+        if (exactHostDomains.any { dom -> cleanHost == dom || cleanHost.endsWith(".$dom") }) return true
+
+        val hostLabels = cleanHost.split('.')
+        if (exactDomainStems.any { stem -> hostLabels.any { it == stem } }) return true
+        if (explicitMirrorStems.any { stem -> hostLabels.any { it.contains(stem) } }) return true
+
+        for (c in custom) {
+            val clean = c.trim().lowercase(Locale.ROOT)
+            if (clean.length >= 3 && cleanHost.contains(clean)) return true
+        }
+        return false
+    }
+
+    /**
      * Checks whether a visible browser URL represents an actual adult/NSFW website
      * (excluding search engine result URLs like google.com/search?q=adult).
      */
     fun matchesSiteUrl(rawUrl: String, custom: Collection<String> = emptyList()): Boolean {
         if (rawUrl.isBlank()) return false
+        if (isSearchEngineUrl(rawUrl)) return false
+
         val trimmed = rawUrl.trim().lowercase(Locale.ROOT)
         if (trimmed.contains(' ') && !trimmed.startsWith("http")) return false
 
@@ -245,40 +342,18 @@ object SafeWords {
 
         if (!host.contains('.')) return false
 
-        val isSearchEngine = (host.contains("google.") && rest.startsWith("/search")) ||
-            (host.contains("bing.com") && rest.startsWith("/search")) ||
-            (host.contains("duckduckgo.com") && (rest.startsWith("/?") || rest == "/")) ||
-            (host.contains("search.yahoo.com")) ||
-            (host.contains("yandex.") && rest.startsWith("/search")) ||
-            (host.contains("ecosia.org") && rest.startsWith("/search")) ||
-            (host.contains("youtube.com") && rest.startsWith("/results"))
-        if (isSearchEngine) return false
-
         val decodedHost = decodeUrlSafely(host).lowercase(Locale.ROOT)
         val decodedRest = decodeUrlSafely(rest).lowercase(Locale.ROOT)
 
-        // 1. Adult TLD check (.xxx, .porn, .adult, .sex, .sexy, .webcam)
-        if (adultTlds.any { tld -> decodedHost.endsWith(".$tld") }) return true
+        if (matchesDomainHost(decodedHost, custom)) return true
 
-        // 2. Exact host match (e.g. porn.com, sex.com)
-        if (exactHostDomains.any { dom -> decodedHost == dom || decodedHost.endsWith(".$dom") }) return true
-
-        // 3. Domain label match across 220+ adult video, Bangla/Banglish, & cam sites
-        val hostLabels = decodedHost.split('.')
-        if (exactDomainStems.any { stem -> hostLabels.any { it == stem } }) {
-            return true
-        }
-        if (explicitMirrorStems.any { stem -> hostLabels.any { it.contains(stem) } }) {
-            return true
-        }
-
-        // 4. Explicit NSFW / Bangla / Banglish adult path slug on non-search websites
+        // Explicit NSFW / Bangla / Banglish adult path slug on non-search websites
         if (adultUrlPathPatterns.any { decodedRest.contains(it) }) return true
 
-        // 5. User custom blocked domains/keywords in URL
+        // User custom blocked keywords in path/URL
         for (c in custom) {
             val clean = c.trim().lowercase(Locale.ROOT)
-            if (clean.length >= 3 && (decodedHost.contains(clean) || decodedRest.contains(clean))) {
+            if (clean.length >= 3 && decodedRest.contains(clean)) {
                 return true
             }
         }

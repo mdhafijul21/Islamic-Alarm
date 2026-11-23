@@ -58,7 +58,7 @@ class MainBottomBar @JvmOverloads constructor(
         orientation = HORIZONTAL
         val defs = listOf(
             Triple(R.id.nav_prayer_times, R.drawable.ic_nav_home, "হোম"),
-            Triple(R.id.nav_alarm, R.drawable.ic_nav_alarm, "এলার্ম"),
+            Triple(R.id.nav_alarm, R.drawable.ic_nav_alarm, "সেফ মোড"),
             Triple(R.id.nav_quran, R.drawable.ic_nav_quran, "কুরআন"),
             Triple(R.id.nav_tasbih, R.drawable.ic_nav_tasbih, "তাসবিহ"),
             Triple(R.id.nav_duas, R.drawable.ic_nav_dua, "দোয়া"),

@@ -1,78 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widgetRoot"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/bg_widget_card"
-    android:orientation="vertical"
-    android:padding="12dp">
+    android:layout_height="match_parent">
 
     <LinearLayout
+        android:id="@+id/widgetRoot"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:layout_gravity="top"
+        android:background="@drawable/bg_widget_card"
+        android:orientation="vertical"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="7dp">
 
-        <ImageView
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:contentDescription="নামাজের সময়সূচী"
-            android:src="@drawable/ic_islamic_star_badge" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:contentDescription="নামাজের সময়সূচী"
+                android:src="@drawable/ic_islamic_star_badge" />
+
+            <TextView
+                android:id="@+id/tvWidgetLocation"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="ঢাকা জেলা • নামাজের সময়"
+                android:textColor="#F0E2BA"
+                android:textSize="10.5sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btnWidgetRefresh"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="রিফ্রেশ"
+                android:padding="3dp"
+                android:src="@android:drawable/ic_popup_sync" />
+
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/tvWidgetLocation"
-            android:layout_width="0dp"
+            android:id="@+id/tvWidgetNextPrayer"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
+            android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="ঢাকা জেলা • নামাজের সময়"
-            android:textColor="#F0E2BA"
-            android:textSize="11sp"
+            android:text="পরবর্তী নামাজ: আসর (০৪:৩০)"
+            android:textColor="#FFFFFF"
+            android:textSize="13.5sp"
             android:textStyle="bold" />
 
-        <ImageView
-            android:id="@+id/btnWidgetRefresh"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:contentDescription="রিফ্রেশ"
-            android:padding="4dp"
-            android:src="@android:drawable/ic_popup_sync" />
+        <Chronometer
+            android:id="@+id/chronometerWidgetCountdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:countDown="true"
+            android:textColor="#FFD97D"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvWidgetSehriIftar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="সাহরি: ০৪:২০ • ইফতার: ০৬:৩০"
+            android:textColor="#D5E8DF"
+            android:textSize="10sp" />
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvWidgetNextPrayer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:text="পরবর্তী নামাজ: আসর (০৪:৩০)"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp"
-        android:textStyle="bold" />
-
-    <Chronometer
-        android:id="@+id/chronometerWidgetCountdown"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:countDown="true"
-        android:textColor="#FFD97D"
-        android:textSize="18sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/tvWidgetSehriIftar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:text="সাহরি: ০৪:২০ • ইফতার: ০৬:৩০"
-        android:textColor="#D5E8DF"
-        android:textSize="10.5sp" />
-
-</LinearLayout>
+</FrameLayout>

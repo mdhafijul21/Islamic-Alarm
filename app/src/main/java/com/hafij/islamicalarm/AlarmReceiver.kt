@@ -34,6 +34,23 @@ class AlarmReceiver : BroadcastReceiver() {
             return
         }
 
+        if (intent.action == AutoAlarmManager.ACTION_AUTO_MAGHRIB_ALARM) {
+            if (!AutoAlarmManager.isAutoModeEnabled(context)) return
+            val label = intent.getStringExtra(AutoAlarmManager.EXTRA_AUTO_LABEL)
+                ?.takeIf { it.isNotBlank() }
+                ?: "মাগরিব সালাত (অটো)"
+            triggerLockSession(
+                context = context,
+                alarmId = "auto_maghrib_${System.currentTimeMillis() / 60000L}",
+                lockDurationMinutes = AutoAlarmManager.AUTO_DURATION_MINUTES,
+                label = label,
+                fromAlarm = true
+            )
+            // Schedule tomorrow's Maghrib based on saved district
+            AutoAlarmManager.scheduleNextMaghribAlarm(context)
+            return
+        }
+
         val alarmId = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_ID) ?: return
         val alarmStore = AlarmStore(context)
         val alarm = alarmStore.getAlarm(alarmId)

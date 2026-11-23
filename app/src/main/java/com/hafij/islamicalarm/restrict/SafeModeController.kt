@@ -1,5 +1,7 @@
 package com.hafij.islamicalarm.restrict
 
+import android.content.Intent
+import android.net.VpnService
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
@@ -10,10 +12,17 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.hafij.islamicalarm.databinding.ActivityMainBinding
 import com.hafij.islamicalarm.permissions.PermissionHelper
 
-/** The "সেফ মোড" tab: on/off switch, service status and the user's own blocked words. */
+/**
+ * Drives the "সেফ মোড" tab:
+ *  - Master Safe Mode switch (shows a notice dialog with "ওকে" to confirm turning off)
+ *  - System-wide Local DNS VPN switch (Cloudflare/AdGuard Family DNS + local blocklist)
+ *  - Incognito / Private Tab block toggle
+ *  - Custom blocked words/domains editor
+ */
 class SafeModeController(
     private val activity: AppCompatActivity,
-    private val binding: ActivityMainBinding
+    private val binding: ActivityMainBinding,
+    private val onRequestVpnConsent: (Intent) -> Unit = { intent -> activity.startActivity(intent) }
 ) {
 
     private val store = SafeModeStore(activity)
@@ -25,42 +34,147 @@ class SafeModeController(
         binding.btnSafeWords.setOnClickListener { showWordsDialog() }
     }
 
+    fun onVpnConsentResult() {
+        val stillNeedsPrep = try {
+            VpnService.prepare(activity) != null
+        } catch (_: Exception) {
+            true
+        }
+        if (!stillNeedsPrep) {
+            store.isEnabled = true
+            store.isDnsVpnEnabled = true
+            SafeDnsVpnService.start(activity)
+            Toast.makeText(activity, "✅ সিস্টেম-ওয়াইড সেফ DNS VPN চালু হয়েছে", Toast.LENGTH_SHORT).show()
+        } else {
+            store.isDnsVpnEnabled = false
+            Toast.makeText(activity, "VPN অনুমতি না দেওয়ায় লোকাল DNS ব্লকার চালু হয়নি", Toast.LENGTH_LONG).show()
+        }
+        refresh()
+    }
+
     fun refresh() {
         val serviceOn = PermissionHelper.isAccessibilityEnabled(activity)
 
-        // Set the switch without triggering its listener.
+        // Master Safe Mode switch
         binding.switchSafeMode.setOnCheckedChangeListener(null)
         binding.switchSafeMode.isChecked = store.isEnabled
         binding.switchSafeMode.setOnCheckedChangeListener { _, checked -> onToggle(checked) }
 
         binding.tvSafeStatus.text = when {
-            store.isEnabled && serviceOn -> "✅ সেফ মোড চালু আছে।"
+            store.isEnabled && serviceOn ->
+                "✅ সেফ মোড চালু আছে। সার্চ করলে অযথা বন্ধ হবে না—অ্যাডাল্ট সাইটে প্রবেশ বা ভিডিও চালু হলে সাথে সাথে ব্লার হয়ে ব্যাক এ আসবে।"
             store.isEnabled && !serviceOn ->
-                "⚠️ সেফ মোড চালু, কিন্তু অ্যাক্সেসিবিলিটি সার্ভিস বন্ধ, তাই কাজ করছে না। নিচের বাটনে সার্ভিস চালু করুন।"
+                "⚠️ সেফ মোড চালু, কিন্তু ইনকগনিটো ব্লক ও সাইট-ক্লিক সুরক্ষার জন্য অ্যাক্সেসিবিলিটি সার্ভিস চালু করুন।"
             else -> "সেফ মোড বন্ধ আছে।"
         }
         binding.btnSafeEnableService.visibility = if (serviceOn) View.GONE else View.VISIBLE
-        binding.tvSafeWordsCount.text = "আপনার যোগ করা শব্দ: " + store.getCustomWords().size + "টি"
+
+        // System-wide Local DNS VPN switch
+        binding.switchSafeDnsVpn.setOnCheckedChangeListener(null)
+        binding.switchSafeDnsVpn.isChecked = store.isEnabled && store.isDnsVpnEnabled
+        binding.switchSafeDnsVpn.setOnCheckedChangeListener { _, checked -> onToggleDnsVpn(checked) }
+
+        val needsVpnPrep = try {
+            VpnService.prepare(activity) != null
+        } catch (_: Exception) {
+            false
+        }
+        binding.tvSafeDnsStatus.text = when {
+            store.isEnabled && store.isDnsVpnEnabled && SafeDnsVpnService.isVpnRunning -> {
+                val base = "✅ সিস্টেম-ওয়াইড সেফ DNS VPN সক্রিয় (Family DNS) • ব্লক হয়েছে: ${store.dnsBlockedCount}টি"
+                val last = store.lastBlockedDomain
+                if (last.isNullOrBlank()) base else "$base • সর্বশেষ: $last"
+            }
+            store.isEnabled && store.isDnsVpnEnabled && needsVpnPrep ->
+                "⚠️ সেফ DNS VPN চালু করতে অনুমতির পপ-আপে 'OK' চাপুন।"
+            store.isEnabled && store.isDnsVpnEnabled ->
+                "✅ সেফ DNS VPN সক্রিয় • ব্লক হয়েছে: ${store.dnsBlockedCount}টি"
+            else ->
+                "বন্ধ আছে • চালু করলে ফোনের সব অ্যাপ ও ব্রাউজারে নেটওয়ার্ক পর্যায়ে অ্যাডাল্ট ডোমেইন ব্লক ও সেফ সার্চ সুরক্ষা কাজ করবে।"
+        }
+
+        // Incognito block switch
+        binding.switchIncognitoBlock.setOnCheckedChangeListener(null)
+        binding.switchIncognitoBlock.isChecked = store.isIncognitoBlockEnabled
+        binding.switchIncognitoBlock.setOnCheckedChangeListener { _, checked ->
+            store.isIncognitoBlockEnabled = checked
+            refresh()
+        }
+
+        binding.tvSafeWordsCount.text = "আপনার যোগ করা শব্দ/ওয়েবসাইট: " + store.getCustomWords().size + "টি"
     }
 
     private fun onToggle(checked: Boolean) {
         if (checked) {
             store.isEnabled = true
+            store.isDnsVpnEnabled = true
+            startOrRequestDnsVpn()
             if (!PermissionHelper.isAccessibilityEnabled(activity)) {
-                Toast.makeText(activity, "কাজ করতে অ্যাক্সেসিবিলিটি সার্ভিস চালু করুন", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    activity,
+                    "ইনকগনিটো ও সাইট-ক্লিক সুরক্ষার জন্য অ্যাক্সেসিবিলিটি সার্ভিস চালু করুন",
+                    Toast.LENGTH_LONG
+                ).show()
             }
             refresh()
         } else {
+            refresh()
             MaterialAlertDialogBuilder(activity)
-                .setTitle("সেফ মোড বন্ধ করবেন?")
-                .setMessage("বন্ধ করলে নিষিদ্ধ ভিডিও শনাক্ত ও অটো ব্লার-ব্যাক সুরক্ষা আর কাজ করবে না।")
-                .setPositiveButton("বন্ধ করুন") { _, _ ->
+                .setTitle("⚠️ সেফ মোড বন্ধ করার নোটিশ")
+                .setMessage(
+                    "সেফ মোড বন্ধ করলে নিচের সুরক্ষাগুলো বন্ধ হয়ে যাবে:\n" +
+                        "• সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN ব্লকার\n" +
+                        "• ব্রাউজারে ইনকগনিটো / প্রাইভেট ট্যাব ব্লক\n" +
+                        "• অ্যাডাল্ট সাইটে ক্লিক বা VidMate, SnapTube, Telegram-এ নিষিদ্ধ ভিডিও শনাক্ত করে ব্লার-ব্যাক\n\n" +
+                        "আপনি কি নিশ্চিতভাবে সেফ মোড বন্ধ করতে চান? বন্ধ করতে 'ওকে' চাপুন।"
+                )
+                .setPositiveButton("ওকে") { _, _ ->
                     store.isEnabled = false
+                    store.isDnsVpnEnabled = false
+                    SafeDnsVpnService.stop(activity)
                     refresh()
                 }
-                .setNegativeButton("চালু থাকুক") { _, _ -> refresh() }
+                .setNegativeButton("বাতিল") { _, _ -> refresh() }
                 .setOnCancelListener { refresh() }
                 .show()
+        }
+    }
+
+    private fun onToggleDnsVpn(checked: Boolean) {
+        if (checked) {
+            store.isEnabled = true
+            store.isDnsVpnEnabled = true
+            startOrRequestDnsVpn()
+            refresh()
+        } else {
+            refresh()
+            MaterialAlertDialogBuilder(activity)
+                .setTitle("⚠️ সেফ DNS / লোকাল VPN বন্ধ করবেন?")
+                .setMessage(
+                    "সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN বন্ধ করলে ব্রাউজার ও অন্যান্য অ্যাপে ডোমেইন পর্যায়ের অ্যাডাল্ট ব্লকিং ও Family SafeSearch সুরক্ষা কাজ করবে না।\n\n" +
+                        "বন্ধ করতে চাইলে 'ওকে' চাপুন।"
+                )
+                .setPositiveButton("ওকে") { _, _ ->
+                    store.isDnsVpnEnabled = false
+                    SafeDnsVpnService.stop(activity)
+                    refresh()
+                }
+                .setNegativeButton("বাতিল") { _, _ -> refresh() }
+                .setOnCancelListener { refresh() }
+                .show()
+        }
+    }
+
+    private fun startOrRequestDnsVpn() {
+        val prepIntent = try {
+            VpnService.prepare(activity)
+        } catch (_: Exception) {
+            null
+        }
+        if (prepIntent == null) {
+            SafeDnsVpnService.start(activity)
+        } else {
+            onRequestVpnConsent(prepIntent)
         }
     }
 
@@ -80,7 +194,7 @@ class SafeModeController(
 
         MaterialAlertDialogBuilder(activity)
             .setTitle("নিজের শব্দ যোগ করুন")
-            .setMessage("শুধু সার্চ করলে নয়—যখন কোনো ভিডিও প্লেয়ার খুলবে এবং সেখানে এই শব্দ/সাইট থাকবে, তখন স্ক্রিন ব্লার করে অটো ব্যাক করবে।")
+            .setMessage("সার্চ রেজাল্ট পেজে নয়—যখন কোনো ওয়েবসাইটে প্রবেশ করবেন বা ভিডিও প্লেয়ারে এই শব্দ/সাইট থাকবে, তখন স্ক্রিন ব্লার করে অটো ব্যাক করবে এবং DNS VPN ডোমেইনটি আটকাবে।")
             .setView(box)
             .setPositiveButton("সংরক্ষণ করুন") { _, _ ->
                 val words = input.text.toString().split('\n', ',')

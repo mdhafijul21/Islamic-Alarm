@@ -25,12 +25,17 @@ import java.util.Locale
  */
 class RestrictModeController(
     private val activity: AppCompatActivity,
-    private val binding: ActivityMainBinding
+    private val binding: ActivityMainBinding,
+    onRequestVpnConsent: (android.content.Intent) -> Unit = { intent -> activity.startActivity(intent) }
 ) {
 
     private val store = RestrictStore(activity)
-    private val safe = SafeModeController(activity, binding)
+    private val safe = SafeModeController(activity, binding, onRequestVpnConsent)
     private var currentTab = TAB_ALARM
+
+    fun onVpnConsentResult() {
+        safe.onVpnConsentResult()
+    }
 
     fun setup() {
         binding.tabAlarmMode.setOnClickListener { selectTab(TAB_ALARM) }

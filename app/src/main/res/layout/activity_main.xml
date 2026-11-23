@@ -1217,14 +1217,12 @@
 
                             </LinearLayout>
 
-                            <com.google.android.material.button.MaterialButton
+                            <androidx.appcompat.widget.SwitchCompat
                                 android:id="@+id/btnAlarmFajr"
-                                style="@style/Widget.Material3.Button.TextButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="⏰ এলার্ম"
-                                android:textColor="@color/secondary"
-                                android:textSize="10sp" />
+                                android:minHeight="48dp"
+                                app:trackTint="@color/switch_track" />
 
                         </LinearLayout>
 
@@ -1266,14 +1264,12 @@
 
                             </LinearLayout>
 
-                            <com.google.android.material.button.MaterialButton
+                            <androidx.appcompat.widget.SwitchCompat
                                 android:id="@+id/btnAlarmDhuhr"
-                                style="@style/Widget.Material3.Button.TextButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="⏰ এলার্ম"
-                                android:textColor="@color/secondary"
-                                android:textSize="10sp" />
+                                android:minHeight="48dp"
+                                app:trackTint="@color/switch_track" />
 
                         </LinearLayout>
 
@@ -1315,14 +1311,12 @@
 
                             </LinearLayout>
 
-                            <com.google.android.material.button.MaterialButton
+                            <androidx.appcompat.widget.SwitchCompat
                                 android:id="@+id/btnAlarmAsr"
-                                style="@style/Widget.Material3.Button.TextButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="⏰ এলার্ম"
-                                android:textColor="@color/secondary"
-                                android:textSize="10sp" />
+                                android:minHeight="48dp"
+                                app:trackTint="@color/switch_track" />
 
                         </LinearLayout>
 
@@ -1364,14 +1358,12 @@
 
                             </LinearLayout>
 
-                            <com.google.android.material.button.MaterialButton
+                            <androidx.appcompat.widget.SwitchCompat
                                 android:id="@+id/btnAlarmMaghrib"
-                                style="@style/Widget.Material3.Button.TextButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="⏰ এলার্ম"
-                                android:textColor="@color/secondary"
-                                android:textSize="10sp" />
+                                android:minHeight="48dp"
+                                app:trackTint="@color/switch_track" />
 
                         </LinearLayout>
 
@@ -1413,14 +1405,12 @@
 
                             </LinearLayout>
 
-                            <com.google.android.material.button.MaterialButton
+                            <androidx.appcompat.widget.SwitchCompat
                                 android:id="@+id/btnAlarmIsha"
-                                style="@style/Widget.Material3.Button.TextButton"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="⏰ এলার্ম"
-                                android:textColor="@color/secondary"
-                                android:textSize="10sp" />
+                                android:minHeight="48dp"
+                                app:trackTint="@color/switch_track" />
 
                         </LinearLayout>
 
@@ -1428,16 +1418,16 @@
 
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Auto Alarm Card ("অটো" button below 5 Waqt alarms) -->
+                <!-- Auto Alarm Card (Safe-Mode style toggle card below 5 Waqt alarms) -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardAutoAlarm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
                     app:cardBackgroundColor="@color/surface"
-                    app:cardCornerRadius="14dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="@color/secondary"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border"
                     app:strokeWidth="1dp">
 
                     <LinearLayout
@@ -1452,41 +1442,21 @@
                             android:gravity="center_vertical"
                             android:orientation="horizontal">
 
-                            <LinearLayout
+                            <TextView
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:orientation="vertical">
+                                android:text="অটো মোড চালু করুন"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
 
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="🤖 অটো"
-                                    android:textColor="@color/secondary"
-                                    android:textSize="15sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:text="যোহর ১:২০ / জুমা ১২:৪৫ (২০ মি.) + আজান শুনে অটো এলার্ম"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="11sp" />
-
-                            </LinearLayout>
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnAutoAlarm"
-                                style="@style/Widget.Material3.Button.TonalButton"
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchAutoAlarm"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:minHeight="48dp"
-                                android:text="অটো: বন্ধ"
-                                android:textColor="@color/secondary"
-                                android:textSize="12sp"
-                                app:backgroundTint="@color/surface_container"
-                                app:cornerRadius="20dp" />
+                                app:trackTint="@color/switch_track" />
 
                         </LinearLayout>
 
@@ -1496,9 +1466,9 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
                             android:lineSpacingExtra="2dp"
-                            android:text="বন্ধ আছে • চালু করলে প্রতিদিন দুপুর ১:২০ ও জুমায় ১২:৪৫ (২০ মি.) এবং অন্য ৪ ওয়াক্তে আজান শুনে ২০ মি. এলার্ম বাজবে।"
+                            android:text="বন্ধ আছে • চালু করলে প্রতিদিন যোহর (১:২০), জুমা (১২:৪৫) ও মাগরিব (২০ মি.) এবং আসর ও ইশার আজান শুনলেই ১৫ মি. এলার্ম বাজবে।"
                             android:textColor="@color/text_primary"
-                            android:textSize="11sp" />
+                            android:textSize="11.5sp" />
 
                     </LinearLayout>
 
@@ -1575,7 +1545,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:lineSpacingExtra="3dp"
-                            android:text="• সেট করা এলার্ম বা অটো চালু করলে নির্ধারিত সময়ে ফোন সাইলেন্ট হবে এবং কাউন্টার শেষ না হওয়া পর্যন্ত ফুল-স্ক্রিন হার্ড লক থাকবে (রিংটোন বাজবে না)। জরুরি কল এলে রিসিভ করা যাবে।\n• 'অটো' চালু রাখলে প্রতিদিন দুপুর ১:২০ এবং জুমার দিন ১২:৪৫-এ ২০ মিনিটের এলার্ম আপনা-আপনি বাজবে।\n• ফজর, আসর, মাগরিব ও ইশার ওয়াক্তে মাইক্রোফোন অনুমতি দেওয়া থাকলে ওয়াক্তের সময় অনুযায়ী আজান শোনা মাত্রই সেই ওয়াক্তের নামে ২০ মিনিটের এলার্ম চালু হবে।"
+                            android:text="• সেট করা এলার্ম বা অটো চালু করলে নির্ধারিত সময়ে ফোন সাইলেন্ট হবে এবং কাউন্টার শেষ না হওয়া পর্যন্ত ফুল-স্ক্রিন হার্ড লক থাকবে (রিংটোন বাজবে না)। জরুরি কল এলে রিসিভ করা যাবে।\n• 'অটো মোড' চালু রাখলে প্রতিদিন যোহর (১:২০), জুমা (১২:৪৫) ও মাগরিবের সময় ২০ মিনিটের এলার্ম এবং আসর ও ইশার আজান শোনা মাত্রই ১৫ মিনিটের অটো এলার্ম চালু হবে।"
                             android:textColor="@color/text_secondary"
                             android:textSize="11.5sp" />
 
@@ -1804,6 +1774,104 @@
                             android:orientation="vertical"
                             android:padding="12dp">
 
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="🌐 সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13.5sp"
+                                    android:textStyle="bold" />
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchSafeDnsVpn"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="48dp"
+                                    app:trackTint="@color/switch_track" />
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvSafeDnsStatus"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="সেফ DNS / লোকাল VPN বন্ধ আছে।"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11.5sp" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="10dp"
+                                android:background="@color/border" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="🕵️ ইনকগনিটো / প্রাইভেট ট্যাব ব্লক"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="13.5sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="গোপন ট্যাব খুললেই শনাক্ত করে ব্যাক এ নিয়ে আসবে"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="11sp" />
+
+                                </LinearLayout>
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchIncognitoBlock"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="48dp"
+                                    app:trackTint="@color/switch_track" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        app:cardBackgroundColor="@color/surface"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
                             <TextView
                                 android:id="@+id/tvSafeWordsCount"
                                 android:layout_width="match_parent"
@@ -1853,7 +1921,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:lineSpacingExtra="3dp"
-                                android:text="• পরিচিত ১৮০+ অ্যাডাল্ট/NSFW ওয়েবসাইটের কোনো লিংকে ঢুকলেই (ব্রাউজার বা VidMate/SnapTube-এর ইন-অ্যাপ ব্রাউজারে) সাথে সাথে স্ক্রিন ব্লার হয়ে স্বয়ংক্রিয়ভাবে ব্যাক চলে আসবে।\n• ব্রাউজার, VidMate, SnapTube, Telegram, TeraBox বা ভিডিও প্লেয়ারে ভিডিও চালু হয়ে তাতে অ্যাডাল্ট, NSFW বা আপনার যোগ করা নিষিদ্ধ শিরোনাম/ক্যাপশন/ফাইলের নাম থাকলেই সাথে সাথে ব্লার হয়ে ব্যাক করবে।\n• শুধু গুগল বা বিং-এ সাধারণ সার্চ করলে অযথা বন্ধ হবে না।\n\nসত্য সীমাবদ্ধতা: অ্যান্ড্রয়েডের নিরাপত্তানীতির কারণে কোনো সাধারণ অ্যাপ এনক্রিপ্টেড ভিডিওর ভেতরের ছবি সরাসরি দেখে চিনতে পারে না; ওয়েব ঠিকানা, ফাইলের নাম, চ্যানেল/ভিডিও শিরোনাম এবং ভিডিও প্লেয়ারের ওপর নির্ভর করে। শিরোনামবিহীন গোপন ভিডিও আটকাতে চাইলে রেস্ট্রিক্ট মোড ব্যবহার করুন।"
+                                android:text="• সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN চালু থাকলে ব্রাউজার ও সব অ্যাপে অ্যাডাল্ট/NSFW ডোমেইন নেটওয়ার্ক পর্যায়ে আটকে যায় এবং Family DNS-এ সেফ সার্চ কার্যকর হয়।\n• ইনকগনিটো বা প্রাইভেট ট্যাব খুললেই শনাক্ত করে অটো ব্যাক করায়।\n• সার্চ করার সময়ই (Google/Bing/SafeSearch) অযথা বন্ধ হবে না; রেজাল্ট আসার পর কোনো অ্যাডাল্ট সাইটে ক্লিক করলে বা VidMate, SnapTube, Telegram ও প্লেয়ারে অ্যাডাল্ট ভিডিও চালু হলে শনাক্ত করে স্ক্রিন ব্লার করে অটো ব্যাক এ আসবে।\n• বন্ধ করতে চাইলে একটি সতর্কবার্তা নোটিশ আসবে এবং 'ওকে' চাপলে বন্ধ হবে।"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11.5sp" />
 

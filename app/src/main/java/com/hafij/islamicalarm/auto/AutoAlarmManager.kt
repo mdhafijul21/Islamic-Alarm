@@ -1,13 +1,9 @@
 package com.hafij.islamicalarm.auto
 
-import android.Manifest
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.core.content.ContextCompat
 import com.hafij.islamicalarm.AlarmReceiver
 import com.hafij.islamicalarm.prayertimes.CalculationMethod
 import com.hafij.islamicalarm.prayertimes.District
@@ -24,10 +20,15 @@ data class DhuhrJumuahTarget(
     val isFriday: Boolean
 )
 
+data class MaghribAutoTarget(
+    val triggerAtMillis: Long,
+    val label: String,
+    val formattedTime: String
+)
+
 data class ActiveAzanWindow(
     val waqtKey: String,
     val waqtLabelBn: String,
-    val dateKey: String,
     val windowStartMillis: Long,
     val windowEndMillis: Long
 )
@@ -35,22 +36,23 @@ data class ActiveAzanWindow(
 /**
  * Coordinates the "অটো" Alarm mode:
  *  1) Exact daily 20-minute lock alarm at 1:20 PM (Sat-Thu) and 12:45 PM (Friday / Jumu'ah).
- *  2) Time-windowed Azan detection for Fajr, Asr, Maghrib, and Isha (20-minute lock labeled
- *     with whichever Waqt matches the current prayer window when Azan is heard).
+ *  2) Exact daily 20-minute lock alarm at the calculated Maghrib prayer time for the user's district.
+ *  3) Passive Azan listener during Asr and Isha windows, triggering a 15-minute lock alarm
+ *     as soon as Azan is heard (requires RECORD_AUDIO permission).
  */
 object AutoAlarmManager {
 
     const val ACTION_AUTO_DHUHR_ALARM = "com.hafij.islamicalarm.ACTION_AUTO_DHUHR_ALARM"
+    const val ACTION_AUTO_MAGHRIB_ALARM = "com.hafij.islamicalarm.ACTION_AUTO_MAGHRIB_ALARM"
     const val EXTRA_AUTO_LABEL = "extra_auto_label"
     const val AUTO_DURATION_MINUTES = 20
+    const val AZAN_DURATION_MINUTES = 15
 
     private const val PREF_NAME = "islamic_auto_alarm_prefs"
     private const val KEY_AUTO_ENABLED = "auto_mode_enabled"
-    private const val KEY_LAST_TRIGGER_PREFIX = "last_triggered_"
+    private const val KEY_TRIGGERED_PREFIX = "azan_triggered_"
     private const val AUTO_DHUHR_REQ_CODE = 884201
-
-    private const val WINDOW_BEFORE_MS = 15 * 60_000L
-    private const val WINDOW_AFTER_MS = 45 * 60_000L
+    private const val AUTO_MAGHRIB_REQ_CODE = 884203
 
     fun isAutoModeEnabled(context: Context): Boolean =
         context.applicationContext
@@ -63,38 +65,99 @@ object AutoAlarmManager {
             .edit()
             .putBoolean(KEY_AUTO_ENABLED, enabled)
             .apply()
-        syncAutoMode(context)
+        syncAutoMode(context, fromForeground = true)
     }
 
     fun hasRecordAudioPermission(context: Context): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-            PackageManager.PERMISSION_GRANTED
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.RECORD_AUDIO
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    private fun dateKey(now: Calendar): String =
+        "${now.get(Calendar.YEAR)}-${now.get(Calendar.MONTH) + 1}-${now.get(Calendar.DAY_OF_MONTH)}"
+
+    fun hasTriggeredWaqtOnDate(
+        context: Context,
+        waqtKey: String,
+        now: Calendar = Calendar.getInstance()
+    ): Boolean {
+        val prefs = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return prefs.getString("$KEY_TRIGGERED_PREFIX$waqtKey", null) == dateKey(now)
+    }
+
+    fun markWaqtTriggeredOnDate(
+        context: Context,
+        waqtKey: String,
+        now: Calendar = Calendar.getInstance()
+    ) {
+        context.applicationContext
+            .getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString("$KEY_TRIGGERED_PREFIX$waqtKey", dateKey(now))
+            .apply()
+    }
 
     /**
-     * Synchronizes both the fixed 1:20 PM / 12:45 PM alarm and the microphone Azan listener service
-     * according to [isAutoModeEnabled]. Returns true if listener started or is not needed.
+     * Returns an active Azan-listening window ONLY for Asr and Isha (`[start - 15m, start + 45m]`).
+     * Fajr, Dhuhr/Jumuah, and Maghrib never use microphone listening.
+     */
+    fun findListeningWaqtWindow(
+        now: Calendar,
+        district: District
+    ): ActiveAzanWindow? {
+        val schedule = PrayerTimeCalculator.calculate(now, district)
+        val nowMs = now.timeInMillis
+        val candidates = listOf(
+            Triple("asr", "আসর সালাত (আজান শনাক্ত)", schedule.asrCal.timeInMillis),
+            Triple("isha", "ইশা সালাত (আজান শনাক্ত)", schedule.ishaCal.timeInMillis)
+        )
+        for ((key, label, baseMs) in candidates) {
+            val start = baseMs - 15L * 60_000L
+            val end = baseMs + 45L * 60_000L
+            if (nowMs in start..end) {
+                return ActiveAzanWindow(
+                    waqtKey = key,
+                    waqtLabelBn = label,
+                    windowStartMillis = start,
+                    windowEndMillis = end
+                )
+            }
+        }
+        return null
+    }
+
+    /**
+     * Synchronizes Dhuhr/Jumuah exact alarm, Maghrib exact alarm, and Asr/Isha Azan listener
+     * according to [isAutoModeEnabled].
      */
     fun syncAutoMode(context: Context, fromForeground: Boolean = true): Boolean {
         val appCtx = context.applicationContext
         if (!isAutoModeEnabled(appCtx)) {
             cancelDhuhrOrJumuahAlarm(appCtx)
+            cancelMaghribAlarm(appCtx)
             AzanListenerService.stop(appCtx)
             return true
         }
 
         scheduleNextDhuhrOrJumuahAlarm(appCtx)
-
-        if (hasRecordAudioPermission(appCtx)) {
-            return AzanListenerService.start(appCtx, fromForeground)
+        scheduleNextMaghribAlarm(appCtx)
+        if (hasRecordAudioPermission(appCtx) &&
+            (fromForeground || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        ) {
+            AzanListenerService.start(appCtx)
         }
-        return false
+        return true
     }
 
     fun rescheduleOnBoot(context: Context) {
         if (!isAutoModeEnabled(context)) return
         scheduleNextDhuhrOrJumuahAlarm(context)
-        if (hasRecordAudioPermission(context)) {
-            AzanListenerService.start(context, fromForeground = false)
+        scheduleNextMaghribAlarm(context)
+        if (hasRecordAudioPermission(context) &&
+            android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        ) {
+            AzanListenerService.start(context)
         }
     }
 
@@ -134,17 +197,83 @@ object AutoAlarmManager {
         )
     }
 
+    fun computeNextMaghribTarget(
+        district: District,
+        now: Calendar = Calendar.getInstance()
+    ): MaghribAutoTarget {
+        val todaySchedule = PrayerTimeCalculator.calculate(now, district)
+        val todayMaghrib = (todaySchedule.maghribCal.clone() as Calendar).apply {
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        val targetCal = if (todayMaghrib.timeInMillis > now.timeInMillis) {
+            todayMaghrib
+        } else {
+            val tomorrow = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
+            val tomorrowSchedule = PrayerTimeCalculator.calculate(tomorrow, district)
+            (tomorrowSchedule.maghribCal.clone() as Calendar).apply {
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+        }
+
+        val timeFmt = SimpleDateFormat("hh:mm a", Locale.ENGLISH)
+        return MaghribAutoTarget(
+            triggerAtMillis = targetCal.timeInMillis,
+            label = "মাগরিব সালাত (অটো)",
+            formattedTime = timeFmt.format(targetCal.timeInMillis)
+        )
+    }
+
+    fun computeNextMaghribTarget(
+        context: Context,
+        now: Calendar = Calendar.getInstance()
+    ): MaghribAutoTarget {
+        val district = loadSavedDistrict(context)
+        return computeNextMaghribTarget(district, now)
+    }
+
     fun scheduleNextDhuhrOrJumuahAlarm(context: Context, now: Calendar = Calendar.getInstance()): Long {
         val target = computeNextDhuhrOrJumuahTarget(now)
+        scheduleExactAutoAlarm(
+            context = context,
+            action = ACTION_AUTO_DHUHR_ALARM,
+            requestCode = AUTO_DHUHR_REQ_CODE,
+            triggerAtMillis = target.triggerAtMillis,
+            label = target.label
+        )
+        return target.triggerAtMillis
+    }
+
+    fun scheduleNextMaghribAlarm(context: Context, now: Calendar = Calendar.getInstance()): Long {
+        val target = computeNextMaghribTarget(context, now)
+        scheduleExactAutoAlarm(
+            context = context,
+            action = ACTION_AUTO_MAGHRIB_ALARM,
+            requestCode = AUTO_MAGHRIB_REQ_CODE,
+            triggerAtMillis = target.triggerAtMillis,
+            label = target.label
+        )
+        return target.triggerAtMillis
+    }
+
+    private fun scheduleExactAutoAlarm(
+        context: Context,
+        action: String,
+        requestCode: Int,
+        triggerAtMillis: Long,
+        label: String
+    ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = ACTION_AUTO_DHUHR_ALARM
-            putExtra(EXTRA_AUTO_LABEL, target.label)
+            this.action = action
+            putExtra(EXTRA_AUTO_LABEL, label)
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            AUTO_DHUHR_REQ_CODE,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -153,88 +282,47 @@ object AutoAlarmManager {
             ?: Intent()
         val showPendingIntent = PendingIntent.getActivity(
             context,
-            AUTO_DHUHR_REQ_CODE + 1,
+            requestCode + 1,
             showIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         try {
-            val info = AlarmManager.AlarmClockInfo(target.triggerAtMillis, showPendingIntent)
+            val info = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent)
             alarmManager.setAlarmClock(info, pendingIntent)
         } catch (e: SecurityException) {
             try {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
-                    target.triggerAtMillis,
+                    triggerAtMillis,
                     pendingIntent
                 )
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             }
         }
-        return target.triggerAtMillis
     }
 
     fun cancelDhuhrOrJumuahAlarm(context: Context) {
+        cancelAutoAlarm(context, ACTION_AUTO_DHUHR_ALARM, AUTO_DHUHR_REQ_CODE)
+    }
+
+    fun cancelMaghribAlarm(context: Context) {
+        cancelAutoAlarm(context, ACTION_AUTO_MAGHRIB_ALARM, AUTO_MAGHRIB_REQ_CODE)
+    }
+
+    private fun cancelAutoAlarm(context: Context, action: String, requestCode: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = ACTION_AUTO_DHUHR_ALARM
+            this.action = action
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            AUTO_DHUHR_REQ_CODE,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         alarmManager.cancel(pendingIntent)
         pendingIntent.cancel()
-    }
-
-    /**
-     * Returns the current Azan listening window if [now] falls within
-     * [waqtStart - 15 min, waqtStart + 45 min] for Fajr, Asr, Maghrib, or Isha.
-     * (Dhuhr / Jumu'ah uses the fixed 1:20 PM / 12:45 PM scheduled alarm instead.)
-     */
-    fun findListeningWaqtWindow(
-        now: Calendar,
-        district: District
-    ): ActiveAzanWindow? {
-        val schedule = PrayerTimeCalculator.calculate(now, district)
-        val nowMs = now.timeInMillis
-        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(now.time)
-
-        val candidates = listOf(
-            Triple("fajr", "ফজর সালাত (আজান শনাক্ত)", schedule.fajrCal.timeInMillis),
-            Triple("asr", "আসর সালাত (আজান শনাক্ত)", schedule.asrCal.timeInMillis),
-            Triple("maghrib", "মাগরিব সালাত (আজান শনাক্ত)", schedule.maghribCal.timeInMillis),
-            Triple("isha", "ইশা সালাত (আজান শনাক্ত)", schedule.ishaCal.timeInMillis)
-        )
-
-        for ((key, label, startMs) in candidates) {
-            val wStart = startMs - WINDOW_BEFORE_MS
-            val wEnd = startMs + WINDOW_AFTER_MS
-            if (nowMs in wStart..wEnd) {
-                return ActiveAzanWindow(
-                    waqtKey = key,
-                    waqtLabelBn = label,
-                    dateKey = dateKey,
-                    windowStartMillis = wStart,
-                    windowEndMillis = wEnd
-                )
-            }
-        }
-        return null
-    }
-
-    fun hasTriggeredWaqtOnDate(context: Context, waqtKey: String, dateKey: String): Boolean {
-        val prefs = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_LAST_TRIGGER_PREFIX + waqtKey, null) == dateKey
-    }
-
-    fun markWaqtTriggeredOnDate(context: Context, waqtKey: String, dateKey: String) {
-        context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY_LAST_TRIGGER_PREFIX + waqtKey, dateKey)
-            .apply()
     }
 
     fun loadSavedDistrict(context: Context): District {
@@ -277,17 +365,20 @@ object AutoAlarmManager {
     }
 
     fun buildStatusSummary(context: Context): String {
+        val district = loadSavedDistrict(context)
+        val now = Calendar.getInstance()
+        val nextMaghrib = computeNextMaghribTarget(district, now)
         if (!isAutoModeEnabled(context)) {
-            return "বন্ধ আছে • চালু করলে প্রতিদিন দুপুর ১:২০ ও জুমায় ১২:৪৫ (২০ মি.) এবং অন্য ৪ ওয়াক্তে আজান শুনে ২০ মি. এলার্ম বাজবে।"
+            return "বন্ধ আছে • চালু করলে প্রতিদিন যোহর (১:২০), জুমা (১২:৪৫) ও মাগরিব (${nextMaghrib.formattedTime}) ২০ মি. এবং আসর ও ইশার আজান শুনলেই ১৫ মি. এলার্ম বাজবে।"
         }
-        val next = computeNextDhuhrOrJumuahTarget()
+        val next = computeNextDhuhrOrJumuahTarget(now)
         val timeFmt = SimpleDateFormat("hh:mm a", Locale.ENGLISH)
         val nextDayText = if (next.isFriday) "জুমা" else "যোহর"
-        val micStatus = if (hasRecordAudioPermission(context)) {
-            "মাইক্রোফোন আজান শনাক্ত চালু (ফজর/আসর/মাগরিব/ইশা)"
+        val micPart = if (hasRecordAudioPermission(context)) {
+            " • আসর/ইশা আজান শনাক্ত (১৫ মি.) সক্রিয়"
         } else {
-            "মাইক্রোফোন অনুমতি না থাকায় শুধু যোহর/জুমা (${timeFmt.format(next.triggerAtMillis)}) চলবে"
+            " • আসর/ইশার জন্য মাইক্রোফোন অনুমতি দিন"
         }
-        return "✅ চালু আছে • পরবর্তী $nextDayText: ${timeFmt.format(next.triggerAtMillis)} (২০ মি.) • $micStatus"
+        return "✅ চালু আছে • পরবর্তী $nextDayText: ${timeFmt.format(next.triggerAtMillis)} ও মাগরিব: ${nextMaghrib.formattedTime} (২০ মি.)$micPart"
     }
 }

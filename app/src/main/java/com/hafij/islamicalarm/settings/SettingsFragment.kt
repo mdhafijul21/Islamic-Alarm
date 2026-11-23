@@ -52,7 +52,16 @@ class SettingsFragment : Fragment() {
 
     private val micLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { refreshPermissions(force = true) }
+    ) { granted ->
+        refreshPermissions(force = true)
+        if (granted) {
+            context?.let { ctx ->
+                if (com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(ctx)) {
+                    com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(ctx, fromForeground = true)
+                }
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,

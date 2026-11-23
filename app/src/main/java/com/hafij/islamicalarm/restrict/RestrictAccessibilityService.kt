@@ -24,13 +24,13 @@ import android.widget.TextView
 /**
  * Watches foreground packages for Restrict Mode and monitors browsers,
  * video downloaders (VidMate, SnapTube), Telegram, and video players for Safe Mode:
- *  - Entering any known adult/NSFW site (in browsers OR VidMate/SnapTube/Telegram WebViews)
- *    triggers Safe Mode immediately.
- *  - Launching a video player / media viewer (including Telegram PhotoViewer, VidMate,
- *    SnapTube, MX Player, VLC, HTML5 video) with adult/NSFW or user-blocked keywords
- *    triggers Safe Mode with full-screen blur + automatic Back/Home exit.
- *  - Plainly searching "adult" or "nsfw" on a search engine (without opening an adult URL
- *    or video) does NOT trigger Safe Mode.
+ *  - Searching in SafeSearch / Google / Bing never triggers Safe Mode prematurely;
+ *    only after clicking a result and opening an adult/NSFW domain or video player
+ *    does Safe Mode activate, blur, and return Back.
+ *  - When Incognito Block is enabled, opening an Incognito/Private browser tab triggers
+ *    Safe Mode and exits Incognito immediately.
+ *  - Launching a video player / media viewer (Telegram PhotoViewer, VidMate, SnapTube,
+ *    MX Player, VLC, HTML5 video) with adult/NSFW or user-blocked keywords triggers blur + Back.
  */
 class RestrictAccessibilityService : AccessibilityService() {
 
@@ -135,9 +135,9 @@ class RestrictAccessibilityService : AccessibilityService() {
     }
 
     // ------------------------------------------------------------------
-    // Safe Mode: triggers on entering an adult/NSFW domain OR when a video
-    // player opens (browsers, VidMate, SnapTube, Telegram, TeraBox, players)
-    // with adult/NSFW/blocked context. Never triggers just from plain search.
+    // Safe Mode: triggers on Incognito tabs (when enabled), clicking into
+    // an adult/NSFW domain, or launching an adult video player. Never
+    // triggers prematurely on Search / SafeSearch result pages.
     // ------------------------------------------------------------------
 
     private fun scheduleSafeScan(pkg: String, delayMs: Long, urgent: Boolean) {
@@ -155,38 +155,61 @@ class RestrictAccessibilityService : AccessibilityService() {
             val tick = SystemClock.elapsedRealtime()
             if (tick - lastSafeAt < SAFE_COOLDOWN_MS) return@Runnable
 
-            if (shouldTriggerSafeOnWindows(pkg)) {
-                onSafeViolation(pkg)
+            val violation = detectSafeViolation(pkg)
+            if (violation != ViolationType.NONE) {
+                onSafeViolation(pkg, violation)
             }
         }
         pendingScanRunnable = runnable
         handler.postDelayed(runnable, delayMs)
     }
 
-    private fun shouldTriggerSafeOnWindows(pkg: String): Boolean {
+    internal enum class ViolationType {
+        NONE,
+        ADULT_SITE_OR_VIDEO,
+        INCOGNITO
+    }
+
+    private fun detectSafeViolation(pkg: String): ViolationType {
         val custom = safeStore.getCustomWords()
         val roots = collectPackageRoots(pkg)
-        if (roots.isEmpty()) return false
+        if (roots.isEmpty()) return ViolationType.NONE
 
-        // Merge analysis across all interactive windows of this app (so e.g. Telegram's
-        // floating PhotoViewer video window combines with captions or URL bars cleanly)
+        val isMediaApp = isMediaOrSocialVideoApp(pkg)
+        val isBrowser = isBrowserApp(pkg)
+        val incognitoEnabled = safeStore.isIncognitoBlockEnabled
+
+        var anyIncognito = false
+        var anySearchResultsPage = false
         var anyAdultUrl = false
         var anyVideoPlayer = false
         var anyBlockedText = false
 
-        val isMediaApp = isMediaOrSocialVideoApp(pkg)
         for (r in roots) {
-            val analysis = inspectScreenTree(r, custom, isMediaApp)
-            if (analysis.hasAdultUrl) {
-                anyAdultUrl = true
-                break
-            }
+            val analysis = inspectScreenTree(
+                root = r,
+                custom = custom,
+                isMediaApp = isMediaApp,
+                isBrowser = isBrowser,
+                checkIncognito = incognitoEnabled
+            )
+            if (analysis.hasIncognitoUi) anyIncognito = true
+            if (analysis.hasSearchResultsUrl) anySearchResultsPage = true
+            if (analysis.hasAdultUrl) anyAdultUrl = true
             if (analysis.hasVideoPlayer) anyVideoPlayer = true
             if (analysis.hasBlockedText) anyBlockedText = true
-            if (anyVideoPlayer && anyBlockedText) break
         }
 
-        return anyAdultUrl || (anyVideoPlayer && anyBlockedText)
+        if (anyIncognito) return ViolationType.INCOGNITO
+        // If user is currently viewing a Search / SafeSearch results page and hasn't clicked
+        // through to an adult website or started an embedded video player, do NOT block yet.
+        if (anySearchResultsPage && !anyAdultUrl && !anyVideoPlayer) {
+            return ViolationType.NONE
+        }
+        if (anyAdultUrl || (anyVideoPlayer && anyBlockedText)) {
+            return ViolationType.ADULT_SITE_OR_VIDEO
+        }
+        return ViolationType.NONE
     }
 
     private fun collectPackageRoots(pkg: String): List<AccessibilityNodeInfo> {
@@ -213,7 +236,17 @@ class RestrictAccessibilityService : AccessibilityService() {
     internal fun shouldTriggerSafeVideoBlock(root: AccessibilityNodeInfo): Boolean {
         val custom = safeStore.getCustomWords()
         val pkg = root.packageName?.toString().orEmpty()
-        val analysis = inspectScreenTree(root, custom, isMediaOrSocialVideoApp(pkg))
+        val analysis = inspectScreenTree(
+            root = root,
+            custom = custom,
+            isMediaApp = isMediaOrSocialVideoApp(pkg),
+            isBrowser = isBrowserApp(pkg),
+            checkIncognito = safeStore.isIncognitoBlockEnabled
+        )
+        if (analysis.hasIncognitoUi) return true
+        if (analysis.hasSearchResultsUrl && !analysis.hasAdultUrl && !analysis.hasVideoPlayer) {
+            return false
+        }
         return analysis.hasAdultUrl || (analysis.hasVideoPlayer && analysis.hasBlockedText)
     }
 
@@ -222,16 +255,25 @@ class RestrictAccessibilityService : AccessibilityService() {
         return MEDIA_VIDEO_PACKAGE_HINTS.any { lower.contains(it) }
     }
 
+    private fun isBrowserApp(pkg: String): Boolean {
+        val lower = pkg.lowercase()
+        return BROWSER_PACKAGE_HINTS.any { lower.contains(it) }
+    }
+
     private data class ScreenAnalysis(
         val hasVideoPlayer: Boolean,
         val hasAdultUrl: Boolean,
-        val hasBlockedText: Boolean
+        val hasSearchResultsUrl: Boolean,
+        val hasBlockedText: Boolean,
+        val hasIncognitoUi: Boolean
     )
 
     private fun inspectScreenTree(
         root: AccessibilityNodeInfo,
         custom: Collection<String>,
-        isMediaApp: Boolean
+        isMediaApp: Boolean,
+        isBrowser: Boolean,
+        checkIncognito: Boolean
     ): ScreenAnalysis {
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         queue.add(root)
@@ -240,7 +282,9 @@ class RestrictAccessibilityService : AccessibilityService() {
         var hasSeekBar = false
         var hasTimestampText = false
         var hasAdultUrl = false
+        var hasSearchResultsUrl = false
         var hasBlockedText = false
+        var hasIncognitoUi = false
         val rect = Rect()
 
         while (queue.isNotEmpty() && visited < MAX_SCAN_NODES) {
@@ -259,6 +303,17 @@ class RestrictAccessibilityService : AccessibilityService() {
                 ?.toString()
                 ?.lowercase()
                 .orEmpty()
+
+            // 0. Incognito / Private browsing check (inside browser packages)
+            if (checkIncognito && isBrowser && !hasIncognitoUi) {
+                if (INCOGNITO_ID_HINTS.any { viewId.contains(it) } ||
+                    (!node.isEditable && INCOGNITO_TEXT_HINTS.any {
+                        textLower.contains(it) || descLower.contains(it)
+                    })
+                ) {
+                    hasIncognitoUi = true
+                }
+            }
 
             // 1. Detect video player / video surface / HTML5 video / Telegram PhotoViewer / VidMate / SnapTube player
             if (!hasVideoPlayer) {
@@ -286,21 +341,22 @@ class RestrictAccessibilityService : AccessibilityService() {
 
             // 2. Address bar & WebView URL check (browsers + VidMate / SnapTube / Telegram in-app browser)
             val isUrlBar = URL_BAR_ID_HINTS.any { viewId.contains(it) }
-            if (!hasAdultUrl && text.isNotBlank()) {
-                if (isUrlBar && !node.isFocused) {
-                    if (SafeWords.matchesSiteUrl(text, custom)) {
-                        hasAdultUrl = true
-                    }
-                } else if (!node.isEditable && text.length in 5..350 && looksLikeUrlText(text)) {
-                    node.getBoundsInScreen(rect)
-                    val topLimit = if (isMediaApp) 720 else 440
-                    if ((isMediaApp || rect.top in 0..topLimit) && SafeWords.matchesSiteUrl(text, custom)) {
+            if (isUrlBar && !node.isFocused) {
+                val urlCandidate = if (text.isNotBlank()) text else desc
+                if (urlCandidate.isNotBlank()) {
+                    if (SafeWords.isSearchEngineUrl(urlCandidate)) {
+                        hasSearchResultsUrl = true
+                    } else if (!hasAdultUrl && SafeWords.matchesSiteUrl(urlCandidate, custom)) {
                         hasAdultUrl = true
                     }
                 }
-            }
-            if (!hasAdultUrl && isUrlBar && !node.isFocused && desc.isNotBlank()) {
-                if (SafeWords.matchesSiteUrl(desc, custom)) {
+            } else if (!hasAdultUrl && !hasSearchResultsUrl && !node.isEditable && text.length in 5..350 && looksLikeUrlText(text)) {
+                node.getBoundsInScreen(rect)
+                val topLimit = if (isMediaApp) 720 else 440
+                if ((isMediaApp || rect.top in 0..topLimit) &&
+                    !SafeWords.isSearchEngineUrl(text) &&
+                    SafeWords.matchesSiteUrl(text, custom)
+                ) {
                     hasAdultUrl = true
                 }
             }
@@ -320,6 +376,12 @@ class RestrictAccessibilityService : AccessibilityService() {
             }
         }
 
+        // If the browser's own URL bar says we're on a search results page (Google / Bing / SafeSearch),
+        // snippet URLs shown inside search results must NOT mark the page as an adult site until clicked.
+        if (hasSearchResultsUrl) {
+            hasAdultUrl = false
+        }
+
         if (!hasVideoPlayer && ((hasSeekBar && hasTimestampText) || (isMediaApp && DURATION_PAIR_REGEX.containsMatchIn(root.text?.toString().orEmpty())))) {
             hasVideoPlayer = true
         }
@@ -331,7 +393,9 @@ class RestrictAccessibilityService : AccessibilityService() {
         return ScreenAnalysis(
             hasVideoPlayer = hasVideoPlayer,
             hasAdultUrl = hasAdultUrl,
-            hasBlockedText = hasBlockedText
+            hasSearchResultsUrl = hasSearchResultsUrl,
+            hasBlockedText = hasBlockedText,
+            hasIncognitoUi = hasIncognitoUi
         )
     }
 
@@ -343,21 +407,21 @@ class RestrictAccessibilityService : AccessibilityService() {
             DOMAIN_LIKE_REGEX.containsMatchIn(t)
     }
 
-    private fun onSafeViolation(pkg: String) {
+    private fun onSafeViolation(pkg: String, reason: ViolationType) {
         lastSafeAt = SystemClock.elapsedRealtime()
         pendingScanRunnable?.let { handler.removeCallbacks(it) }
         pendingScanRunnable = null
 
         if (Settings.canDrawOverlays(this)) {
-            showBlurOverlay()
+            showBlurOverlay(reason)
             performGlobalAction(GLOBAL_ACTION_BACK)
             handler.postDelayed({
-                if (safeStore.isEnabled && shouldTriggerSafeOnWindows(pkg)) {
+                if (safeStore.isEnabled && detectSafeViolation(pkg) != ViolationType.NONE) {
                     performGlobalAction(GLOBAL_ACTION_BACK)
                 }
             }, SECOND_BACK_CHECK_MS)
             handler.postDelayed({
-                if (safeStore.isEnabled && shouldTriggerSafeOnWindows(pkg)) {
+                if (safeStore.isEnabled && detectSafeViolation(pkg) != ViolationType.NONE) {
                     performGlobalAction(GLOBAL_ACTION_HOME)
                 }
             }, HOME_FALLBACK_CHECK_MS)
@@ -380,7 +444,7 @@ class RestrictAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun showBlurOverlay() {
+    private fun showBlurOverlay(reason: ViolationType) {
         removeBlurOverlay()
         try {
             val density = resources.displayMetrics.density
@@ -403,7 +467,11 @@ class RestrictAccessibilityService : AccessibilityService() {
                 gravity = Gravity.CENTER
             }
             val tvTitle = TextView(this).apply {
-                text = "সেফ মোড সক্রিয়"
+                text = if (reason == ViolationType.INCOGNITO) {
+                    "ইনকগনিটো ব্লক সক্রিয়"
+                } else {
+                    "সেফ মোড সক্রিয়"
+                }
                 textSize = 22f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -411,7 +479,11 @@ class RestrictAccessibilityService : AccessibilityService() {
                 setPadding(0, (10 * density).toInt(), 0, (6 * density).toInt())
             }
             val tvSubtitle = TextView(this).apply {
-                text = "অনুপযুক্ত সাইট বা ভিডিও শনাক্ত হওয়ায় স্ক্রিন ব্লার করে ফিরে যাওয়া হচ্ছে..."
+                text = if (reason == ViolationType.INCOGNITO) {
+                    "গোপন/ইনকগনিটো ট্যাব শনাক্ত হওয়ায় স্ক্রিন ব্লার করে ফিরে যাওয়া হচ্ছে..."
+                } else {
+                    "অনুপযুক্ত সাইট বা ভিডিও শনাক্ত হওয়ায় স্ক্রিন ব্লার করে ফিরে যাওয়া হচ্ছে..."
+                }
                 textSize = 14f
                 setTextColor(Color.argb(235, 220, 245, 235))
                 gravity = Gravity.CENTER
@@ -492,6 +564,25 @@ class RestrictAccessibilityService : AccessibilityService() {
         private val DURATION_PAIR_REGEX = Regex("\\b\\d{1,2}:\\d{2}\\s*/\\s*\\d{1,2}:\\d{2}\\b")
         private val VIDEO_EXT_REGEX = Regex("\\.(mp4|mkv|webm|avi|mov|flv|m3u8)\\b")
         private val DOMAIN_LIKE_REGEX = Regex("^[a-z0-9-]+(\\.[a-z0-9-]+)+(/.*)?$")
+
+        private val BROWSER_PACKAGE_HINTS = listOf(
+            "chrome", "browser", "firefox", "fenix", "brave", "opera",
+            "emmx", "duckduckgo", "kiwi", "sbrowser", "ucmobile", "vivaldi",
+            "yandex", "heytap", "coloros.browser", "mi.globalbrowser", "mint"
+        )
+
+        private val INCOGNITO_ID_HINTS = listOf(
+            "incognito_icon", "incognito_ntp", "close_all_incognito",
+            "incognito_mode", "private_browsing_indicator", "secret_mode_indicator"
+        )
+
+        private val INCOGNITO_TEXT_HINTS = listOf(
+            "you've gone incognito", "you’ve gone incognito",
+            "new incognito tab", "incognito tab", "close incognito tabs",
+            "inprivate browsing", "new inprivate tab",
+            "private browsing mode", "secret mode turned on",
+            "ইনকগনিটো ট্যাব", "আপনি ইনকগনিটোতে আছেন"
+        )
 
         private val MEDIA_VIDEO_PACKAGE_HINTS = listOf(
             "vidmate", "snaptube", "dayuwuxian", "telegram", "nekogram",

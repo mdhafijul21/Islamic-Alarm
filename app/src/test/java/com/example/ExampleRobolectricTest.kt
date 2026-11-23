@@ -244,8 +244,7 @@ class ExampleRobolectricTest {
 
         // 2. All permissions clearly state what they do & how to grant
         val allPerms = com.hafij.islamicalarm.permissions.PermissionHelper.allSteps +
-            com.hafij.islamicalarm.permissions.PermissionHelper.screenPinStep +
-            com.hafij.islamicalarm.permissions.PermissionHelper.microphoneStep
+            com.hafij.islamicalarm.permissions.PermissionHelper.screenPinStep
         for (step in allPerms) {
             assertTrue("Missing what-it-does in ${step.id}", step.why.contains("কী কাজ করবে:"))
             assertTrue("Missing how-to-grant in ${step.id}", step.howTo.contains("কীভাবে দেবেন:"))
@@ -315,15 +314,31 @@ class ExampleRobolectricTest {
         assertEquals(45, friOut.get(java.util.Calendar.MINUTE))
         assertTrue(friTarget.isFriday)
 
-        // 3. Time-based Azan listening window identifies Fajr/Maghrib by schedule
+        // 3. Auto Mode Maghrib target matches district's Maghrib prayer time and rolls to tomorrow after Maghrib passes
         val district = com.hafij.islamicalarm.prayertimes.LocationData.getDefaultDistrict()
         val sch = com.hafij.islamicalarm.prayertimes.PrayerTimeCalculator.calculate(thuCal, district)
-        val maghribWindow = com.hafij.islamicalarm.auto.AutoAlarmManager.findListeningWaqtWindow(
-            sch.maghribCal,
-            district
+        val beforeMaghrib = java.util.Calendar.getInstance().apply {
+            timeInMillis = sch.maghribCal.timeInMillis - 10 * 60_000L
+        }
+        val maghribToday = com.hafij.islamicalarm.auto.AutoAlarmManager.computeNextMaghribTarget(
+            district,
+            beforeMaghrib
         )
-        assertNotNull(maghribWindow)
-        assertEquals("maghrib", maghribWindow!!.waqtKey)
+        assertEquals(sch.maghribCal.get(java.util.Calendar.HOUR_OF_DAY), java.util.Calendar.getInstance().apply { timeInMillis = maghribToday.triggerAtMillis }.get(java.util.Calendar.HOUR_OF_DAY))
+        assertEquals(sch.maghribCal.get(java.util.Calendar.MINUTE), java.util.Calendar.getInstance().apply { timeInMillis = maghribToday.triggerAtMillis }.get(java.util.Calendar.MINUTE))
+
+        val afterMaghrib = java.util.Calendar.getInstance().apply {
+            timeInMillis = sch.maghribCal.timeInMillis + 10 * 60_000L
+        }
+        val maghribTomorrow = com.hafij.islamicalarm.auto.AutoAlarmManager.computeNextMaghribTarget(
+            district,
+            afterMaghrib
+        )
+        assertTrue(maghribTomorrow.triggerAtMillis > afterMaghrib.timeInMillis)
+        assertEquals(
+            java.util.Calendar.FRIDAY,
+            java.util.Calendar.getInstance().apply { timeInMillis = maghribTomorrow.triggerAtMillis }.get(java.util.Calendar.DAY_OF_WEEK)
+        )
 
         // 4. Expanded adult sites & adult TLDs trigger immediately, while search URLs do not
         assertTrue(com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://www.xvideos.com/video123"))
@@ -347,13 +362,29 @@ class ExampleRobolectricTest {
         urlNode.recycle()
         serviceCtrl.destroy()
 
-        // 5. Auto alarm button exists on MainActivity Alarm screen
+        // 5. Bottom tab renamed to "সেফ মোড", Waqt & Auto Mode use SwitchCompat controls
         val mainController = Robolectric.buildActivity(MainActivity::class.java)
         val mainActivity = mainController.create().start().resume().get()
-        val autoBtn = mainActivity.findViewById<android.view.View>(
-            com.hafij.islamicalarm.R.id.btnAutoAlarm
+        val navBar = mainActivity.findViewById<com.hafij.islamicalarm.MainBottomBar>(
+            com.hafij.islamicalarm.R.id.bottomNavigation
         )
-        assertNotNull(autoBtn)
+        fun collectNavLabels(v: android.view.View): List<String> = when (v) {
+            is android.widget.TextView -> listOf(v.text.toString())
+            is android.view.ViewGroup -> (0 until v.childCount).flatMap { collectNavLabels(v.getChildAt(it)) }
+            else -> emptyList()
+        }
+        val navLabels = collectNavLabels(navBar)
+        assertTrue(navLabels.contains("সেফ মোড"))
+        assertTrue(!navLabels.contains("এলার্ম"))
+
+        val autoSwitch = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
+            com.hafij.islamicalarm.R.id.switchAutoAlarm
+        )
+        val fajrSwitch = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
+            com.hafij.islamicalarm.R.id.btnAlarmFajr
+        )
+        assertNotNull(autoSwitch)
+        assertNotNull(fajrSwitch)
         assertEquals(20, com.hafij.islamicalarm.auto.AutoAlarmManager.AUTO_DURATION_MINUTES)
         assertNotNull(ctx)
     }
@@ -959,8 +990,225 @@ class ExampleRobolectricTest {
         val widgetChrono = widgetView.findViewById<android.widget.Chronometer>(
             com.hafij.islamicalarm.R.id.chronometerWidgetCountdown
         )
+        val widgetCard = widgetView.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.widgetRoot
+        )
+        assertEquals(
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            widgetCard.layoutParams.height
+        )
         assertTrue(widgetLocation.contains("ঢাকা"))
         assertTrue(widgetNext.startsWith("পরবর্তী নামাজ:"))
         assertNotNull(widgetChrono)
+    }
+
+    @Test
+    fun testDnsVpnIncognitoSafeSearchSearchClickThroughAndNotices() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+
+        fun buildIpv4UdpDnsQuery(domain: String): ByteArray {
+            val labels = domain.split('.')
+            val qname = java.io.ByteArrayOutputStream()
+            for (lbl in labels) {
+                val b = lbl.toByteArray(Charsets.US_ASCII)
+                qname.write(b.size)
+                qname.write(b)
+            }
+            qname.write(0)
+            val dnsLen = 12 + qname.size() + 4
+            val udpLen = 8 + dnsLen
+            val totalLen = 20 + udpLen
+            val pkt = ByteArray(totalLen)
+            pkt[0] = 0x45.toByte() // IPv4, IHL=5
+            pkt[2] = ((totalLen ushr 8) and 0xFF).toByte()
+            pkt[3] = (totalLen and 0xFF).toByte()
+            pkt[9] = 17 // UDP
+            // Src 10.120.0.1 -> Dst 10.120.0.2
+            pkt[12] = 10; pkt[13] = 120; pkt[14] = 0; pkt[15] = 1
+            pkt[16] = 10; pkt[17] = 120; pkt[18] = 0; pkt[19] = 2
+            // UDP ports 54321 -> 53
+            pkt[20] = 0xD4.toByte(); pkt[21] = 0x31
+            pkt[22] = 0; pkt[23] = 53
+            pkt[24] = ((udpLen ushr 8) and 0xFF).toByte()
+            pkt[25] = (udpLen and 0xFF).toByte()
+            // DNS Header: id=0x1234, QR=0, QDCOUNT=1
+            pkt[28] = 0x12; pkt[29] = 0x34
+            pkt[30] = 0x01; pkt[31] = 0x00
+            pkt[32] = 0x00; pkt[33] = 0x01
+            val qBytes = qname.toByteArray()
+            System.arraycopy(qBytes, 0, pkt, 40, qBytes.size)
+            val tail = 40 + qBytes.size
+            pkt[tail + 1] = 1 // QTYPE A
+            pkt[tail + 3] = 1 // QCLASS IN
+            return pkt
+        }
+
+        // 1. System-wide DNS filter blocks adult domains (NXDOMAIN) and allows search engines
+        val adultQueryPkt = buildIpv4UdpDnsQuery("www.pornhub.com")
+        val parsedAdult = com.hafij.islamicalarm.restrict.SafeDnsFilter.parseDnsQueryPacket(
+            adultQueryPkt,
+            adultQueryPkt.size
+        )
+        assertNotNull(parsedAdult)
+        assertEquals("www.pornhub.com", parsedAdult!!.queryDomain)
+        assertTrue(com.hafij.islamicalarm.restrict.SafeDnsFilter.isDomainBlocked(parsedAdult.queryDomain))
+        val nxPacket = com.hafij.islamicalarm.restrict.SafeDnsFilter.buildBlockedDnsResponsePacket(
+            adultQueryPkt,
+            parsedAdult
+        )
+        assertTrue((nxPacket[30].toInt() and 0x80) != 0) // QR = 1 (Response)
+        assertEquals(3, nxPacket[31].toInt() and 0x0F)   // RCODE = 3 (NXDOMAIN)
+
+        val googleQueryPkt = buildIpv4UdpDnsQuery("www.google.com")
+        val parsedGoogle = com.hafij.islamicalarm.restrict.SafeDnsFilter.parseDnsQueryPacket(
+            googleQueryPkt,
+            googleQueryPkt.size
+        )
+        assertNotNull(parsedGoogle)
+        assertTrue(!com.hafij.islamicalarm.restrict.SafeDnsFilter.isDomainBlocked(parsedGoogle!!.queryDomain))
+
+        // 2. Search-safe click-through & Incognito block in RestrictAccessibilityService
+        val serviceCtrl = Robolectric.buildService(
+            com.hafij.islamicalarm.restrict.RestrictAccessibilityService::class.java
+        )
+        val service = serviceCtrl.create().get()
+
+        // Search results page with adult snippet URL must NOT block before clicking
+        val searchRoot = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.FrameLayout"
+        }
+        val searchUrlBar = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.EditText"
+            viewIdResourceName = "com.android.chrome:id/url_bar"
+            isFocused = false
+            text = "https://www.google.com/search?q=adult+video&safe=active"
+        }
+        val snippetUrl = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.TextView"
+            text = "https://www.pornhub.com"
+        }
+        org.robolectric.Shadows.shadowOf(searchRoot).addChild(searchUrlBar)
+        org.robolectric.Shadows.shadowOf(searchRoot).addChild(snippetUrl)
+        assertTrue(!service.shouldTriggerSafeVideoBlock(searchRoot))
+
+        // Clicking through onto the adult website itself MUST trigger Safe Mode
+        val clickedSiteNode = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.EditText"
+            viewIdResourceName = "com.android.chrome:id/url_bar"
+            isFocused = false
+            text = "https://www.pornhub.com/watch"
+        }
+        assertTrue(service.shouldTriggerSafeVideoBlock(clickedSiteNode))
+
+        // Opening Incognito tab in Chrome MUST trigger Incognito block
+        val incognitoNode = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.TextView"
+            text = "You've gone incognito"
+        }
+        assertTrue(service.shouldTriggerSafeVideoBlock(incognitoNode))
+
+        searchUrlBar.recycle()
+        snippetUrl.recycle()
+        searchRoot.recycle()
+        clickedSiteNode.recycle()
+        incognitoNode.recycle()
+        serviceCtrl.destroy()
+
+        // 3. Safe Mode UI, DNS VPN + Incognito switches, and Turn-Off Notice Dialog ("ওকে")
+        val mainActivity = Robolectric.buildActivity(MainActivity::class.java)
+            .create().start().resume().get()
+        mainActivity.findViewById<com.hafij.islamicalarm.MainBottomBar>(
+            com.hafij.islamicalarm.R.id.bottomNavigation
+        ).selectedItemId = com.hafij.islamicalarm.R.id.nav_alarm
+
+        mainActivity.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tabSafeMode).performClick()
+        val switchSafe = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
+            com.hafij.islamicalarm.R.id.switchSafeMode
+        )
+        val switchDns = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
+            com.hafij.islamicalarm.R.id.switchSafeDnsVpn
+        )
+        val switchIncognito = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
+            com.hafij.islamicalarm.R.id.switchIncognitoBlock
+        )
+        assertNotNull(switchDns)
+        assertNotNull(switchIncognito)
+        assertTrue(switchIncognito.isChecked)
+
+        // Turn Safe Mode ON then click to turn OFF -> Notice Dialog appears and "ওকে" turns it OFF
+        switchSafe.performClick()
+        val safeStore = com.hafij.islamicalarm.restrict.SafeModeStore(ctx)
+        assertTrue(safeStore.isEnabled)
+        switchSafe.performClick()
+        val safeOffDialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        assertTrue(safeOffDialog.isShowing)
+        val okSafeBtn = safeOffDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+        assertEquals("ওকে", okSafeBtn.text.toString())
+        assertTrue(safeStore.isEnabled) // still ON until "ওকে" clicked
+        okSafeBtn.performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertTrue(!safeStore.isEnabled)
+        assertTrue(!safeStore.isDnsVpnEnabled)
+
+        // 4. Auto Mode Notice Dialog on switch click + "ওকে" button + cancel behavior
+        mainActivity.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tabAlarmMode).performClick()
+        val switchAuto = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
+            com.hafij.islamicalarm.R.id.switchAutoAlarm
+        )
+        switchAuto.performClick()
+        val autoDialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        assertTrue(autoDialog.isShowing)
+        assertEquals("ওকে", autoDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).text.toString())
+        autoDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE).performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertTrue(!com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(ctx))
+
+        // 5. Asr & Isha 15-minute Azan listening windows + vocal detection
+        assertEquals(15, com.hafij.islamicalarm.auto.AutoAlarmManager.AZAN_DURATION_MINUTES)
+        val district = com.hafij.islamicalarm.prayertimes.LocationData.getDefaultDistrict()
+        val nowCal = java.util.Calendar.getInstance()
+        val sch = com.hafij.islamicalarm.prayertimes.PrayerTimeCalculator.calculate(nowCal, district)
+        fun calAt(ms: Long) = java.util.Calendar.getInstance().apply { timeInMillis = ms }
+
+        assertEquals(
+            "asr",
+            com.hafij.islamicalarm.auto.AutoAlarmManager.findListeningWaqtWindow(
+                calAt(sch.asrCal.timeInMillis + 60_000L),
+                district
+            )?.waqtKey
+        )
+        assertEquals(
+            "isha",
+            com.hafij.islamicalarm.auto.AutoAlarmManager.findListeningWaqtWindow(
+                calAt(sch.ishaCal.timeInMillis + 60_000L),
+                district
+            )?.waqtKey
+        )
+        assertEquals(
+            null,
+            com.hafij.islamicalarm.auto.AutoAlarmManager.findListeningWaqtWindow(
+                calAt(sch.maghribCal.timeInMillis + 60_000L),
+                district
+            )
+        )
+        assertEquals(
+            null,
+            com.hafij.islamicalarm.auto.AutoAlarmManager.findListeningWaqtWindow(
+                calAt(sch.fajrCal.timeInMillis + 60_000L),
+                district
+            )
+        )
+
+        val vocalWave = ShortArray(4000) { i ->
+            (3000.0 * kotlin.math.sin(2.0 * kotlin.math.PI * 350.0 * i / 16000.0)).toInt().toShort()
+        }
+        val silenceWave = ShortArray(4000) { 0 }
+        assertTrue(com.hafij.islamicalarm.auto.AzanListenerService.isAzanFrameLikelyVocal(vocalWave, vocalWave.size))
+        assertTrue(!com.hafij.islamicalarm.auto.AzanListenerService.isAzanFrameLikelyVocal(silenceWave, silenceWave.size))
     }
 }

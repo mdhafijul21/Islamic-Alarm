@@ -66,26 +66,6 @@ class MainActivity : AppCompatActivity() {
     private var permDialog: androidx.appcompat.app.AlertDialog? = null
     private var autoDetectTried = false
 
-    private val recordAudioPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this, fromForeground = true)
-            Toast.makeText(
-                this,
-                "✅ মাইক্রোফোন অনুমতি মিলেছে! ফজর/আসর/মাগরিব/ইশায় আজান শুনলেই ২০ মি. অটো এলার্ম বাজবে।",
-                Toast.LENGTH_LONG
-            ).show()
-        } else {
-            Toast.makeText(
-                this,
-                "মাইক্রোফোন অনুমতি না থাকায় শুধু যোহর (১:২০) ও জুমা (১২:৪৫) অটো এলার্ম চলবে।",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-        refreshAutoAlarmUi()
-    }
-
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* the wizard moves on in onResume */ }
@@ -99,6 +79,36 @@ class MainActivity : AppCompatActivity() {
                 "এলার্ম চলাকালীন কল রিসিভ করতে ফোন পারমিশন আবশ্যক",
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    private val recordAudioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            if (com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)) {
+                com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this, fromForeground = true)
+            }
+            Toast.makeText(
+                this,
+                "✅ আসর ও ইশার ওয়াক্তে আজান শনাক্তের জন্য মাইক্রোফোন অনুমতি চালু হয়েছে।",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(
+                this,
+                "মাইক্রোফোন অনুমতি ছাড়া আসর ও ইশার আজান শনাক্ত হবে না; শুধু যোহর, জুমা ও মাগরিব অটো চলবে।",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        refreshAutoAlarmUi()
+    }
+
+    private val vpnConsentLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (::restrictController.isInitialized) {
+            restrictController.onVpnConsentResult()
         }
     }
 
@@ -158,7 +168,11 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupPrayerTimesHub()
         setupBottomNavigation()
-        restrictController = com.hafij.islamicalarm.restrict.RestrictModeController(this, binding)
+        restrictController = com.hafij.islamicalarm.restrict.RestrictModeController(
+            activity = this,
+            binding = binding,
+            onRequestVpnConsent = { vpnIntent -> vpnConsentLauncher.launch(vpnIntent) }
+        )
         restrictController.setup()
         handleOpenTabIntent(intent)
 
@@ -232,6 +246,19 @@ class MainActivity : AppCompatActivity() {
         if (com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)) {
             com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this, fromForeground = true)
         }
+        val safeStore = com.hafij.islamicalarm.restrict.SafeModeStore(this)
+        if (safeStore.isEnabled && safeStore.isDnsVpnEnabled &&
+            !com.hafij.islamicalarm.restrict.SafeDnsVpnService.isVpnRunning
+        ) {
+            val prep = try {
+                android.net.VpnService.prepare(this)
+            } catch (_: Exception) {
+                null
+            }
+            if (prep == null) {
+                com.hafij.islamicalarm.restrict.SafeDnsVpnService.start(this)
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -300,6 +327,10 @@ class MainActivity : AppCompatActivity() {
             }
             .apply()
         com.hafij.islamicalarm.widget.IslamicAlarmWidget.refreshAllWidgets(this)
+        if (com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)) {
+            com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this)
+        }
+        refreshAutoAlarmUi()
     }
 
     private fun autoDetectLocationAndSetPrayerTimes(showToast: Boolean = true) {
@@ -515,10 +546,10 @@ class MainActivity : AppCompatActivity() {
             runAlarmPermissionWizard()
         }
 
-        binding.btnAutoAlarm.setOnClickListener {
-            onAutoAlarmButtonClicked()
-        }
         refreshAutoAlarmUi()
+        binding.cardAutoAlarm.setOnClickListener {
+            binding.switchAutoAlarm.toggle()
+        }
 
         // District / Location Selector
         binding.btnSelectDistrict.setOnClickListener {
@@ -565,55 +596,84 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, com.hafij.islamicalarm.ramadan.RamadanActivity::class.java))
         }
 
-        // Waqt Alarm quick buttons
-        binding.btnAlarmFajr.setOnClickListener {
-            currentSchedule?.let { sch ->
-                showQuickAlarmDialog(
-                    sch.fajrCal.get(Calendar.HOUR_OF_DAY),
-                    sch.fajrCal.get(Calendar.MINUTE),
-                    "ফজর সালাত"
-                )
+        // Waqt Alarm toggle switches
+        syncWaqtAlarmSwitches()
+    }
+
+    private data class WaqtSwitchSpec(
+        val switchView: androidx.appcompat.widget.SwitchCompat,
+        val shortNameBn: String,
+        val label: String,
+        val timeProvider: (PrayerSchedule) -> Pair<Int, Int>
+    )
+
+    private fun waqtSwitchSpecs(): List<WaqtSwitchSpec> = listOf(
+        WaqtSwitchSpec(binding.btnAlarmFajr, "ফজর", "ফজর সালাত") {
+            it.fajrCal.get(Calendar.HOUR_OF_DAY) to it.fajrCal.get(Calendar.MINUTE)
+        },
+        WaqtSwitchSpec(binding.btnAlarmDhuhr, "যোহর", "যোহর সালাত") {
+            it.dhuhrCal.get(Calendar.HOUR_OF_DAY) to it.dhuhrCal.get(Calendar.MINUTE)
+        },
+        WaqtSwitchSpec(binding.btnAlarmAsr, "আসর", "আসর সালাত") {
+            it.asrCal.get(Calendar.HOUR_OF_DAY) to it.asrCal.get(Calendar.MINUTE)
+        },
+        WaqtSwitchSpec(binding.btnAlarmMaghrib, "মাগরিব", "মাগরিব সালাত ও ইফতার") {
+            it.maghribCal.get(Calendar.HOUR_OF_DAY) to it.maghribCal.get(Calendar.MINUTE)
+        },
+        WaqtSwitchSpec(binding.btnAlarmIsha, "ইশা", "ইশা ও তারাবিহ/বিতর") {
+            it.ishaCal.get(Calendar.HOUR_OF_DAY) to it.ishaCal.get(Calendar.MINUTE)
+        }
+    )
+
+    private fun syncWaqtAlarmSwitches() {
+        if (!::binding.isInitialized || !::alarmStore.isInitialized) return
+        val alarms = alarmStore.getAlarms()
+        for (spec in waqtSwitchSpecs()) {
+            val isOn = alarms.any { it.label == spec.label && it.isEnabled }
+            spec.switchView.setOnCheckedChangeListener(null)
+            spec.switchView.isChecked = isOn
+            spec.switchView.setOnCheckedChangeListener { _, checked ->
+                onWaqtAlarmSwitchToggled(spec, checked)
             }
         }
+    }
 
-        binding.btnAlarmDhuhr.setOnClickListener {
-            currentSchedule?.let { sch ->
-                showQuickAlarmDialog(
-                    sch.dhuhrCal.get(Calendar.HOUR_OF_DAY),
-                    sch.dhuhrCal.get(Calendar.MINUTE),
-                    "যোহর সালাত"
-                )
+    private fun onWaqtAlarmSwitchToggled(spec: WaqtSwitchSpec, checked: Boolean) {
+        if (checked) {
+            if (!ensureAlarmPermissionsBeforeSetting()) {
+                syncWaqtAlarmSwitches()
+                return
             }
-        }
-
-        binding.btnAlarmAsr.setOnClickListener {
-            currentSchedule?.let { sch ->
-                showQuickAlarmDialog(
-                    sch.asrCal.get(Calendar.HOUR_OF_DAY),
-                    sch.asrCal.get(Calendar.MINUTE),
-                    "আসর সালাত"
-                )
+            val existing = alarmStore.getAlarms().firstOrNull { it.label == spec.label }
+            if (existing != null) {
+                val updated = existing.copy(isEnabled = true)
+                alarmStore.updateAlarm(updated)
+                val triggerMillis = AlarmScheduler.scheduleAlarm(this, updated)
+                Toast.makeText(
+                    this,
+                    AlarmScheduler.getFormattedNextRingTime(this, triggerMillis),
+                    Toast.LENGTH_LONG
+                ).show()
+                loadAlarms()
+            } else {
+                val schedule = currentSchedule
+                if (schedule != null) {
+                    val (hour, minute) = spec.timeProvider(schedule)
+                    showQuickAlarmDialog(hour, minute, spec.label)
+                } else {
+                    syncWaqtAlarmSwitches()
+                }
             }
-        }
-
-        binding.btnAlarmMaghrib.setOnClickListener {
-            currentSchedule?.let { sch ->
-                showQuickAlarmDialog(
-                    sch.maghribCal.get(Calendar.HOUR_OF_DAY),
-                    sch.maghribCal.get(Calendar.MINUTE),
-                    "মাগরিব সালাত ও ইফতার"
-                )
+        } else {
+            val matching = alarmStore.getAlarms().filter { it.label == spec.label && it.isEnabled }
+            for (alarm in matching) {
+                AlarmScheduler.cancelAlarm(this, alarm.id)
+                alarmStore.updateAlarm(alarm.copy(isEnabled = false))
             }
-        }
-
-        binding.btnAlarmIsha.setOnClickListener {
-            currentSchedule?.let { sch ->
-                showQuickAlarmDialog(
-                    sch.ishaCal.get(Calendar.HOUR_OF_DAY),
-                    sch.ishaCal.get(Calendar.MINUTE),
-                    "ইশা ও তারাবিহ/বিতর"
-                )
+            if (matching.isNotEmpty()) {
+                Toast.makeText(this, "${spec.shortNameBn} এলার্ম বন্ধ করা হয়েছে", Toast.LENGTH_SHORT).show()
             }
+            loadAlarms()
         }
     }
 
@@ -858,52 +918,54 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun onAutoAlarmButtonClicked() {
-        val currentlyEnabled = com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)
-        if (currentlyEnabled) {
+    private fun onAutoAlarmSwitchChanged(checked: Boolean) {
+        if (!checked) {
             com.hafij.islamicalarm.auto.AutoAlarmManager.setAutoModeEnabled(this, false)
             refreshAutoAlarmUi()
             Toast.makeText(this, "অটো এলার্ম বন্ধ করা হয়েছে", Toast.LENGTH_SHORT).show()
             return
         }
 
-        if (!ensureAlarmPermissionsBeforeSetting()) return
-
-        com.hafij.islamicalarm.auto.AutoAlarmManager.setAutoModeEnabled(this, true)
+        // Keep the switch visually OFF until user reads the notice and taps "ওকে"
         refreshAutoAlarmUi()
-
-        if (!com.hafij.islamicalarm.auto.AutoAlarmManager.hasRecordAudioPermission(this)) {
-            MaterialAlertDialogBuilder(this)
-                .setTitle("🎙️ আজান শুনতে মাইক্রোফোন অনুমতি")
-                .setMessage(
-                    "কী কাজ করবে: প্রতিদিন দুপুর ১:২০ ও জুমায় ১২:৪৫-এ অটো এলার্ম ইতিমধ্যে চালু হয়েছে। " +
-                        "ফজর, আসর, মাগরিব ও ইশায় আজান শোনা মাত্র ২০ মিনিটের অটো এলার্ম চালাতে মাইক্রোফোন অনুমতি প্রয়োজন।\n\n" +
-                        "কীভাবে দেবেন: নিচের 'অনুমতি দিন' চেপে পপ-আপে 'While using the app' বা 'Allow' নির্বাচন করুন।"
-                )
-                .setPositiveButton("অনুমতি দিন") { _, _ ->
-                    recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        MaterialAlertDialogBuilder(this)
+            .setTitle("🤖 অটো মোড — কীভাবে কাজ করে")
+            .setMessage(
+                "অটো মোড চালু করলে যা হবে:\n" +
+                    "• প্রতিদিন যোহর (দুপুর ১:২০), জুমার দিন (১২:৪৫) ও আপনার এলাকার মাগরিবের সময় ২০ মিনিটের অটো এলার্ম আপনা-আপনি সেট হয়ে চালু হবে।\n" +
+                    "• আসর ও ইশার ওয়াক্তে আজান শোনা মাত্রই ১৫ মিনিটের জন্য এলার্ম সেট হয়ে চালু হবে (এর জন্য মাইক্রোফোন অনুমতি প্রয়োজন)।\n\n" +
+                    "চালু করতে 'ওকে' চাপুন।"
+            )
+            .setPositiveButton("ওকে") { _, _ ->
+                if (!ensureAlarmPermissionsBeforeSetting()) {
+                    refreshAutoAlarmUi()
+                    return@setPositiveButton
                 }
-                .setNegativeButton("শুধু যোহর/জুমা চলুক", null)
-                .show()
-        } else {
-            Toast.makeText(
-                this,
-                "✅ অটো মোড চালু: যোহর ১:২০ / জুমা ১২:৪৫ ও আজান শনাক্ত এলার্ম সক্রিয়।",
-                Toast.LENGTH_LONG
-            ).show()
-        }
+                com.hafij.islamicalarm.auto.AutoAlarmManager.setAutoModeEnabled(this, true)
+                refreshAutoAlarmUi()
+                if (!com.hafij.islamicalarm.auto.AutoAlarmManager.hasRecordAudioPermission(this)) {
+                    recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                } else {
+                    Toast.makeText(
+                        this,
+                        "✅ অটো মোড চালু: যোহর/জুমা/মাগরিব (২০ মি.) ও আসর/ইশা আজান শনাক্ত (১৫ মি.) সক্রিয়।",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            .setNegativeButton("বাতিল") { _, _ -> refreshAutoAlarmUi() }
+            .setOnCancelListener { refreshAutoAlarmUi() }
+            .show()
     }
 
     private fun refreshAutoAlarmUi() {
         if (!::binding.isInitialized) return
         val enabled = com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)
-        binding.btnAutoAlarm.text = if (enabled) "অটো: চালু" else "অটো: বন্ধ"
-        binding.btnAutoAlarm.setTextColor(
-            ContextCompat.getColor(this, if (enabled) R.color.white else R.color.secondary)
-        )
-        binding.btnAutoAlarm.backgroundTintList = android.content.res.ColorStateList.valueOf(
-            ContextCompat.getColor(this, if (enabled) R.color.secondary else R.color.surface_container)
-        )
+        binding.switchAutoAlarm.setOnCheckedChangeListener(null)
+        binding.switchAutoAlarm.isChecked = enabled
+        binding.switchAutoAlarm.setOnCheckedChangeListener { _, checked ->
+            onAutoAlarmSwitchChanged(checked)
+        }
         binding.tvAutoAlarmStatus.text =
             com.hafij.islamicalarm.auto.AutoAlarmManager.buildStatusSummary(this)
     }
@@ -1052,6 +1114,7 @@ class MainActivity : AppCompatActivity() {
             binding.layoutEmptyState.visibility = View.GONE
             binding.rvAlarms.visibility = View.VISIBLE
         }
+        syncWaqtAlarmSwitches()
     }
 
     private fun showAddOrEditAlarmDialog(existingAlarm: AlarmItem?) {
@@ -1164,6 +1227,9 @@ class MainActivity : AppCompatActivity() {
             dialog.dismiss()
         }
 
+        dialog.setOnDismissListener {
+            syncWaqtAlarmSwitches()
+        }
         dialog.show()
     }
 
