@@ -4,23 +4,35 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import java.util.Locale
 
 /**
  * Inspects Android's native Private DNS (API 28+) and active external VPNs so Safe Mode can:
  *  - Avoid disconnecting an external VPN the user is currently using
  *  - Skip launching the local VPN tunnel when a Family-Safe Private DNS is already configured
- *  - Help users copy and configure a Family-Safe Private DNS hostname in Android Settings
- *    (which requires zero VPN icon and leaves the single VPN slot free for other VPN apps).
+ *  - Attempt direct Private DNS configuration when WRITE_SECURE_SETTINGS is available, and
+ *    gracefully report Android's OS security restriction on unprivileged devices.
  */
 object SafeDnsHelper {
 
     const val HOST_ADGUARD_FAMILY = "family.adguard-dns.com"
     const val HOST_CLOUDFLARE_FAMILY = "family.cloudflare-dns.com"
+
+    private const val PRIVATE_DNS_MODE_KEY = "private_dns_mode"
+    private const val PRIVATE_DNS_SPECIFIER_KEY = "private_dns_specifier"
+    private const val PRIVATE_DNS_MODE_PROVIDER_HOSTNAME = "hostname"
+
+    enum class DirectApplyResult {
+        APPLIED,
+        REQUIRES_SYSTEM_SETTINGS,
+        UNSUPPORTED
+    }
 
     private val KNOWN_FAMILY_DNS_HOSTS = listOf(
         "family.adguard-dns.com",
@@ -71,6 +83,45 @@ object SafeDnsHelper {
                 serverName = null,
                 isFamilySafe = false
             )
+        }
+    }
+
+    /**
+     * Attempts to write Android's global Private DNS settings directly inside the app.
+     * Standard Android security restricts Settings.Global writes unless WRITE_SECURE_SETTINGS
+     * is granted on the device; returns [DirectApplyResult.REQUIRES_SYSTEM_SETTINGS] otherwise.
+     */
+    fun applyPrivateDnsDirectly(
+        context: Context,
+        hostname: String = HOST_ADGUARD_FAMILY
+    ): DirectApplyResult {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return DirectApplyResult.UNSUPPORTED
+        }
+        val hasPerm = ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.WRITE_SECURE_SETTINGS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!hasPerm) {
+            return DirectApplyResult.REQUIRES_SYSTEM_SETTINGS
+        }
+        return try {
+            val cr = context.contentResolver
+            val okSpec = Settings.Global.putString(cr, PRIVATE_DNS_SPECIFIER_KEY, hostname)
+            val okMode = Settings.Global.putString(
+                cr,
+                PRIVATE_DNS_MODE_KEY,
+                PRIVATE_DNS_MODE_PROVIDER_HOSTNAME
+            )
+            if (okSpec && okMode) {
+                DirectApplyResult.APPLIED
+            } else {
+                DirectApplyResult.REQUIRES_SYSTEM_SETTINGS
+            }
+        } catch (_: SecurityException) {
+            DirectApplyResult.REQUIRES_SYSTEM_SETTINGS
+        } catch (_: Throwable) {
+            DirectApplyResult.REQUIRES_SYSTEM_SETTINGS
         }
     }
 

@@ -493,8 +493,31 @@ class ExampleRobolectricTest {
         val hintView = mainActivity.findViewById<android.widget.TextView>(
             com.hafij.islamicalarm.R.id.tvLocationPromptHint
         )
+        val locationRow = mainActivity.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.layoutHomeLocationRow
+        )
         assertEquals(android.view.View.VISIBLE, hintView.visibility)
         assertTrue(hintView.text.toString().contains("সঠিক সময়ের জন্য GPS বাটন ক্লিক করুন"))
+        val headerContainer = mainActivity.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.headerArtContainer
+        )
+        headerContainer.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.AT_MOST)
+        )
+        headerContainer.layout(0, 0, headerContainer.measuredWidth, headerContainer.measuredHeight)
+        assertTrue(
+            "GPS prompt hint should sit strictly above the location selector row",
+            hintView.top < locationRow.top
+        )
+        val countdownBanner = mainActivity.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.layoutCountdownBanner
+        )
+        val countdownText = mainActivity.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.tvNextPrayerCountdown
+        )
+        assertEquals(null, countdownBanner.background)
+        assertEquals(null, countdownText.background)
 
         val cardAutoSilent = mainActivity.findViewById<android.view.View>(
             com.hafij.islamicalarm.R.id.cardAutoSilent
@@ -1525,7 +1548,7 @@ class ExampleRobolectricTest {
             type = com.hafij.islamicalarm.prayertimes.LocationType.CUSTOM_GPS,
             parentBn = "ঢাকা"
         )
-        assertEquals("📍 উত্তর বাড্ডা, ঢাকা", customGps.displayName)
+        assertEquals("📍 উত্তর বাড্ডা", customGps.displayName)
 
         val addr = android.location.Address(java.util.Locale("bn", "BD")).apply {
             thoroughfare = "কলেজ রোড"
@@ -1634,10 +1657,14 @@ class ExampleRobolectricTest {
         assertTrue(safeDnsNote.text.toString().contains("DNS-only টানেল (10.120.0.2)"))
         assertTrue(safeDnsNote.text.toString().contains("IP Address বা লোকেশন বদলায় না"))
 
-        // 6. Private DNS helper & external VPN co-existence checks
+        // 6. Private DNS helper, direct-apply boundary check & external VPN co-existence
         assertTrue(com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("family.adguard-dns.com"))
         assertTrue(com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("family.cloudflare-dns.com"))
         assertTrue(!com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("dns.google"))
+        assertEquals(
+            com.hafij.islamicalarm.restrict.SafeDnsHelper.DirectApplyResult.REQUIRES_SYSTEM_SETTINGS,
+            com.hafij.islamicalarm.restrict.SafeDnsHelper.applyPrivateDnsDirectly(ctx)
+        )
 
         navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_alarm
         mainAct.supportFragmentManager.executePendingTransactions()
@@ -1648,24 +1675,300 @@ class ExampleRobolectricTest {
         assertTrue(tvPrivateDns.text.toString().isNotBlank())
 
         mainAct.findViewById<android.view.View>(
-            com.hafij.islamicalarm.R.id.btnCopyPrivateDns
-        ).performClick()
-        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        assertEquals(
-            com.hafij.islamicalarm.restrict.SafeDnsHelper.HOST_ADGUARD_FAMILY,
-            clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-        )
-
-        mainAct.findViewById<android.view.View>(
             com.hafij.islamicalarm.R.id.btnSetupPrivateDns
         ).performClick()
         val privateDnsDialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
         assertTrue(privateDnsDialog.isShowing)
         assertTrue(
             privateDnsDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).text.toString()
-                .contains("সেটিংসে যান")
+                .contains("সেফ DNS চালু করুন")
         )
         privateDnsDialog.dismiss()
+
+        mainCtrl.pause().stop().destroy()
+    }
+
+    @Test
+    fun testPermissionGuideImagesHomeHeaderLocationPrecisionMapSearchAndAudioQuran() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+
+        // 1. Permission Helper guide image mappings (distinct, permission-specific drawables)
+        val screenPinRes = com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
+            com.hafij.islamicalarm.permissions.PermissionHelper.ID_SCREEN_PIN
+        )
+        val accessRes = com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
+            com.hafij.islamicalarm.permissions.PermissionHelper.ID_ACCESSIBILITY
+        )
+        val overlayRes = com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
+            com.hafij.islamicalarm.permissions.PermissionHelper.ID_OVERLAY
+        )
+        val batteryRes = com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
+            com.hafij.islamicalarm.permissions.PermissionHelper.ID_BATTERY
+        )
+        val autostartRes = com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
+            com.hafij.islamicalarm.permissions.PermissionHelper.ID_AUTOSTART
+        )
+        assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_screen_pin, screenPinRes)
+        assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_accessibility, accessRes)
+        assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_overlay, overlayRes)
+        assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_battery, batteryRes)
+        assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_autostart, autostartRes)
+        assertEquals(5, setOf(screenPinRes, accessRes, overlayRes, batteryRes, autostartRes).size)
+        assertEquals(
+            null,
+            com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
+                com.hafij.islamicalarm.permissions.PermissionHelper.ID_PHONE
+            )
+        )
+
+        // 2. Settings > Permissions renders BOTH text explanation and clickable zoomable guide image,
+        // Home location button shrinks/expands dynamically (WRAP_CONTENT), and Quran cards are unified color
+        val mainCtrl = Robolectric.buildActivity(MainActivity::class.java).create().start().resume()
+        val mainAct = mainCtrl.get()
+        assertEquals(
+            android.view.View.GONE,
+            mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tvHeaderTitle).visibility
+        )
+        val btnSelectDistrict = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnSelectDistrict)
+        assertEquals(android.view.View.VISIBLE, btnSelectDistrict.visibility)
+        assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, btnSelectDistrict.layoutParams.width)
+        assertEquals(
+            android.view.View.VISIBLE,
+            mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tvNextPrayerSunTimes).visibility
+        )
+
+        val navBar = mainAct.findViewById<com.hafij.islamicalarm.MainBottomBar>(
+            com.hafij.islamicalarm.R.id.bottomNavigation
+        )
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_quran
+        mainAct.supportFragmentManager.executePendingTransactions()
+        val quranCardIds = listOf(
+            com.hafij.islamicalarm.R.id.cardCatSurah,
+            com.hafij.islamicalarm.R.id.cardCatPara,
+            com.hafij.islamicalarm.R.id.cardCatSearch,
+            com.hafij.islamicalarm.R.id.cardCatParaSearch,
+            com.hafij.islamicalarm.R.id.cardCatAudioQuran,
+            com.hafij.islamicalarm.R.id.cardCatMeaning
+        )
+        val quranColors = quranCardIds.map { id ->
+            mainAct.findViewById<com.google.android.material.card.MaterialCardView>(id).cardBackgroundColor.defaultColor
+        }
+        assertEquals(1, quranColors.toSet().size)
+
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_settings
+        mainAct.supportFragmentManager.executePendingTransactions()
+        mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.rowCatPermissionsHeader).performClick()
+        val permRows = mainAct.findViewById<android.widget.LinearLayout>(
+            com.hafij.islamicalarm.R.id.layoutPermRows
+        )
+        assertTrue(permRows.childCount >= 10)
+
+        var visibleGuideCount = 0
+        val rowTitles = mutableListOf<String>()
+        for (i in 0 until permRows.childCount) {
+            val child = permRows.getChildAt(i)
+            val title = child.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvPermTitle)?.text?.toString().orEmpty()
+            rowTitles.add(title)
+            val card = child.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.cardPermGuidePreview)
+            val desc = child.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvPermDesc)
+            if (card != null && card.visibility == android.view.View.VISIBLE) {
+                visibleGuideCount++
+                assertTrue(desc.text.toString().isNotBlank())
+                if (visibleGuideCount == 1) {
+                    card.performClick()
+                    val zoomDialog = org.robolectric.shadows.ShadowDialog.getLatestDialog()
+                    assertNotNull(zoomDialog)
+                    assertTrue(zoomDialog.isShowing)
+                    assertNotNull(zoomDialog.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.ivPermGuideFull))
+                    zoomDialog.dismiss()
+                }
+            }
+        }
+        assertEquals(5, visibleGuideCount)
+        assertTrue(rowTitles.any { it.contains("অ্যাক্সেসিবিলিটি") })
+        assertTrue(rowTitles.any { it.contains("অটোস্টার্ট") })
+        assertTrue(rowTitles.any { it.contains("স্ক্রিন পিনিং") })
+
+        // Verify Restrict Mode tab also shows the zoomable Accessibility guide image
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_alarm
+        mainAct.supportFragmentManager.executePendingTransactions()
+        mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tabRestrictMode).performClick()
+        val restrictGuideCard = mainAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.cardRestrictPermGuide
+        )
+        assertEquals(android.view.View.VISIBLE, restrictGuideCard.visibility)
+        restrictGuideCard.performClick()
+        val restrictZoomDialog = org.robolectric.shadows.ShadowDialog.getLatestDialog()
+        assertNotNull(restrictZoomDialog)
+        assertTrue(restrictZoomDialog.isShowing)
+        restrictZoomDialog.dismiss()
+
+        mainCtrl.pause().stop().destroy()
+
+        // 3. LocationHelper granularity ranking: micro-level spot ALWAYS beats broad district/thana
+        val broadNominatim = com.hafij.islamicalarm.prayertimes.LocationHelper.extractExactPlaceFromNominatimJson(
+            """
+            {"address":{"suburb":"বাড্ডা থানা","city":"ঢাকা","country":"বাংলাদেশ"}}
+            """.trimIndent()
+        )
+        assertNotNull(broadNominatim)
+        assertEquals(
+            com.hafij.islamicalarm.prayertimes.LocationHelper.GRANULARITY_BROAD,
+            broadNominatim!!.granularityTier
+        )
+
+        val microGeo = com.hafij.islamicalarm.prayertimes.LocationHelper.ResolvedSpot(
+            spotBn = "উত্তর বাড্ডা",
+            parentBn = "ঢাকা",
+            granularityTier = com.hafij.islamicalarm.prayertimes.LocationHelper.GRANULARITY_MICRO
+        )
+        val merged = com.hafij.islamicalarm.prayertimes.LocationHelper.mergeResolvedSpots(
+            primary = broadNominatim,
+            secondary = microGeo
+        )
+        assertEquals("উত্তর বাড্ডা", merged!!.spotBn)
+
+        val photonReverse = com.hafij.islamicalarm.prayertimes.LocationHelper.extractExactPlaceFromPhotonJson(
+            """
+            {"features":[{"properties":{"name":"বায়তুল আমান মসজিদ","street":"জামগড়া রোড","district":"সাভার","city":"ঢাকা","country":"Bangladesh"}}]}
+            """.trimIndent()
+        )
+        assertEquals("বায়তুল আমান মসজিদ", photonReverse!!.spotBn)
+        assertEquals(
+            com.hafij.islamicalarm.prayertimes.LocationHelper.GRANULARITY_MICRO,
+            photonReverse.granularityTier
+        )
+
+        val photonSearch = com.hafij.islamicalarm.prayertimes.LocationHelper.parsePhotonSearchJson(
+            """
+            {"features":[{"geometry":{"coordinates":[90.4267,23.7806]},"properties":{"name":"Uttar Badda","city":"Dhaka","country":"Bangladesh"}}]}
+            """.trimIndent()
+        )
+        assertEquals(1, photonSearch.size)
+        assertEquals("Uttar Badda", photonSearch[0].nameBn)
+
+        val openMeteoSearch = com.hafij.islamicalarm.prayertimes.LocationHelper.parseOpenMeteoSearchJson(
+            """
+            {"results":[{"name":"Madinah","latitude":24.4686,"longitude":39.6142,"admin1":"Medina Region","country":"Saudi Arabia","timezone":"Asia/Riyadh"}]}
+            """.trimIndent()
+        )
+        assertEquals(1, openMeteoSearch.size)
+        assertEquals("Madinah", openMeteoSearch[0].nameBn)
+        assertEquals(com.hafij.islamicalarm.prayertimes.CalculationMethod.UMM_AL_QURA, openMeteoSearch[0].method)
+
+        // MapPickerActivity exposes search bar + zoom controls + confirm button
+        val mapCtrl = Robolectric.buildActivity(
+            com.hafij.islamicalarm.prayertimes.MapPickerActivity::class.java
+        ).create().start().resume()
+        val mapAct = mapCtrl.get()
+        assertNotNull(mapAct.findViewById<android.widget.EditText>(com.hafij.islamicalarm.R.id.etMapSearch))
+        assertNotNull(mapAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnMapSearch))
+        assertNotNull(mapAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnZoomIn))
+        assertNotNull(mapAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnZoomOut))
+        mapCtrl.pause().stop().destroy()
+
+        // 4. AudioQuranActivity renders clear Surah Bangla/Arabic/Ayah count & action buttons
+        val audioCtrl = Robolectric.buildActivity(
+            com.hafij.islamicalarm.audio.AudioQuranActivity::class.java
+        ).create().start().resume()
+        val audioAct = audioCtrl.get()
+        val rvAudio = audioAct.findViewById<androidx.recyclerview.widget.RecyclerView>(
+            com.hafij.islamicalarm.R.id.rvAudioSurahs
+        )
+        rvAudio.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY)
+        )
+        rvAudio.layout(0, 0, 1080, 1920)
+        val firstRow = rvAudio.findViewHolderForAdapterPosition(0)!!.itemView
+        assertTrue(
+            firstRow.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvAudioSurahNameBn)
+                .text.toString().contains("আল-ফাতিহা")
+        )
+        assertEquals(
+            "الفاتحة",
+            firstRow.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvAudioSurahNameAr)
+                .text.toString()
+        )
+        assertTrue(
+            firstRow.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvAudioSurahMeta)
+                .text.toString().contains("৭ আয়াত")
+        )
+        assertTrue(
+            firstRow.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.btnPlayAudioSurah)
+                .text.toString().contains("শুনুন")
+        )
+        audioCtrl.pause().stop().destroy()
+    }
+
+    @Test
+    fun testDailyHadithHomeSectionAndRepository() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+
+        // 1. JSON API payload parsing (fawazahmed0/hadith-api format)
+        val sampleJson = """
+            {
+              "metadata": {"name": "Sahih al Bukhari"},
+              "hadiths": [{
+                "hadithnumber": 527,
+                "arabicnumber": 527,
+                "text": "কোন আমলটি আল্লাহর নিকট সবচেয়ে প্রিয়? তিনি বললেন: সময়মতো সালাত আদায় করা।",
+                "grades": [{"name": "Al-Albani", "grade": "Sahih"}]
+              }]
+            }
+        """.trimIndent()
+        val parsed = com.hafij.islamicalarm.hadith.DailyHadithRepository.parseHadithApiJson(sampleJson)
+        assertNotNull(parsed)
+        assertEquals("527", parsed!!.hadithNumber)
+        assertEquals("সহিহ", parsed.grade)
+        assertTrue(parsed.text.contains("সময়মতো সালাত"))
+
+        // 2. Daily rotation picks distinct authentic Hadiths across consecutive dates
+        val day1Hadith = com.hafij.islamicalarm.hadith.DailyHadithRepository.getInstantHadithForDate(
+            ctx,
+            dateKey = "2026-11-25",
+            offset = 0
+        )
+        val day2Hadith = com.hafij.islamicalarm.hadith.DailyHadithRepository.getInstantHadithForDate(
+            ctx,
+            dateKey = "2026-11-26",
+            offset = 0
+        )
+        assertTrue(day1Hadith.bengaliText.isNotBlank())
+        assertTrue(day1Hadith.referenceBn.isNotBlank())
+        assertTrue(day1Hadith.id != day2Hadith.id)
+
+        val apiDay1 = com.hafij.islamicalarm.hadith.DailyHadithRepository.selectTargetForDate("2026-11-25", 0)
+        val apiDay2 = com.hafij.islamicalarm.hadith.DailyHadithRepository.selectTargetForDate("2026-11-26", 0)
+        assertTrue(apiDay1 != apiDay2)
+
+        // 3. Home Page displays Daily Hadith card, Arabic + Bengali text, Reference, Copy & Share & Next buttons
+        val mainCtrl = Robolectric.buildActivity(MainActivity::class.java).create().start().resume()
+        val mainAct = mainCtrl.get()
+        val cardDailyHadith = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.cardDailyHadith)
+        val tvRef = mainAct.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvDailyHadithReference)
+        val tvBn = mainAct.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvDailyHadithTranslation)
+        val btnCopy = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnDailyHadithCopy)
+        val btnShare = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnDailyHadithShare)
+        val btnNext = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnDailyHadithNext)
+
+        assertEquals(android.view.View.VISIBLE, cardDailyHadith.visibility)
+        assertTrue(tvRef.text.toString().isNotBlank())
+        assertTrue(tvBn.text.toString().isNotBlank())
+        assertNotNull(btnCopy)
+        assertNotNull(btnShare)
+        assertNotNull(btnNext)
+
+        val initialText = tvBn.text.toString()
+        btnNext.performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        val rotatedText = tvBn.text.toString()
+        assertTrue(rotatedText.isNotBlank())
+        assertTrue(initialText != rotatedText)
+
+        btnCopy.performClick()
+        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        assertTrue(clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.contains(rotatedText) == true)
 
         mainCtrl.pause().stop().destroy()
     }

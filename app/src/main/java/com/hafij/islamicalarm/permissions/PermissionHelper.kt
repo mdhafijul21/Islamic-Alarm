@@ -14,6 +14,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.restrict.RestrictAccessibilityService
 import java.util.Locale
 
@@ -48,7 +49,8 @@ object PermissionHelper {
     private const val KEY_AUTOSTART_DONE = "autostart_done"
 
     private val autostartOems = listOf(
-        "xiaomi", "redmi", "oppo", "vivo", "realme", "huawei", "honor", "asus", "letv"
+        "xiaomi", "redmi", "poco", "oppo", "oneplus", "vivo", "iqoo",
+        "realme", "huawei", "honor", "asus", "letv", "tecno", "infinix", "itel"
     )
 
     val allSteps: List<PermStep> = listOf(
@@ -128,6 +130,10 @@ object PermissionHelper {
         "কীভাবে দেবেন: 'চালু করুন' বাটনে চেপে পপ-আপে 'While using the app' বা 'Allow' নির্বাচন করুন।"
     )
 
+    val autostartStep: PermStep by lazy { allSteps.first { it.id == ID_AUTOSTART } }
+
+    val accessibilityStep: PermStep by lazy { allSteps.first { it.id == ID_ACCESSIBILITY } }
+
     fun applicableSteps(ctx: Context): List<PermStep> = allSteps.filter { isApplicable(it.id) }
 
     /**
@@ -169,6 +175,26 @@ object PermissionHelper {
 
     /** Permissions the app can not detect (autostart, screen pinning). */
     fun isDetectable(id: String): Boolean = id != ID_AUTOSTART && id != ID_SCREEN_PIN
+
+    /** Visual settings-screen guide drawable matching each Android permission, if available. */
+    fun guideImageResFor(id: String): Int? = when (id) {
+        ID_SCREEN_PIN -> R.drawable.guide_perm_screen_pin
+        ID_ACCESSIBILITY -> R.drawable.guide_perm_accessibility
+        ID_OVERLAY -> R.drawable.guide_perm_overlay
+        ID_BATTERY -> R.drawable.guide_perm_battery
+        ID_AUTOSTART -> R.drawable.guide_perm_autostart
+        else -> null
+    }
+
+    /** Short Bangla caption explaining what to look for inside the screenshot guide. */
+    fun guideHintFor(id: String): String? = when (id) {
+        ID_SCREEN_PIN -> "ছবিতে দেখানো মতো Security > Screen pinning এবং পরের অপশনটি চালু রাখুন।"
+        ID_ACCESSIBILITY -> "ছবিতে দেখানো মতো Accessibility > Downloaded apps থেকে 'Islamic Alarm - রেস্ট্রিক্ট মোড' চালু করুন।"
+        ID_OVERLAY -> "ছবিতে সবুজ বক্সে দেখানো App info পেজের 'Display over other apps' সুইচটি চালু করুন।"
+        ID_BATTERY -> "ছবিতে সবুজ বক্সে দেখানো Foreground activity ও Background activity সুইচ চালু রাখুন।"
+        ID_AUTOSTART -> "ছবিতে দেখানো মতো App info > Battery usage (✅) থেকে 'Allow auto launch' সুইচটি চালু করুন।"
+        else -> null
+    }
 
     fun isGranted(ctx: Context, id: String): Boolean = when (id) {
         ID_LOCATION ->
@@ -288,14 +314,15 @@ object PermissionHelper {
         val m = Build.MANUFACTURER.lowercase(Locale.ENGLISH)
         val list = mutableListOf<Intent>()
         when {
-            m.contains("xiaomi") || m.contains("redmi") -> list.add(
+            m.contains("xiaomi") || m.contains("redmi") || m.contains("poco") -> list.add(
                 Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"))
             )
-            m.contains("oppo") || m.contains("realme") -> {
+            m.contains("oppo") || m.contains("realme") || m.contains("oneplus") -> {
                 list.add(Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")))
+                list.add(Intent().setComponent(ComponentName("com.oplus.battery", "com.oplus.powermanager.fuelgaue.PowerControlActivity")))
                 list.add(Intent().setComponent(ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity")))
             }
-            m.contains("vivo") -> {
+            m.contains("vivo") || m.contains("iqoo") -> {
                 list.add(Intent().setComponent(ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager")))
                 list.add(Intent().setComponent(ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")))
             }
@@ -305,6 +332,9 @@ object PermissionHelper {
             }
             m.contains("asus") -> list.add(
                 Intent().setComponent(ComponentName("com.asus.mobilemanager", "com.asus.mobilemanager.entry.FunctionActivity"))
+            )
+            m.contains("tecno") || m.contains("infinix") || m.contains("itel") -> list.add(
+                Intent().setComponent(ComponentName("com.transsion.phonemaster", "com.cyin.himgr.autostart.AutoStartActivity"))
             )
             m.contains("letv") -> list.add(
                 Intent().setComponent(ComponentName("com.letv.android.letvsafe", "com.letv.android.letvsafe.AutostartManageActivity"))

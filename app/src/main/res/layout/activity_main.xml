@@ -77,30 +77,110 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:paddingHorizontal="11dp"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="6dp">
+                            android:paddingHorizontal="12dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="10dp">
 
+                        <!-- Hidden legacy title view preserved only for view-binding stability -->
+                        <TextView
+                            android:id="@+id/tvHeaderTitle"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:visibility="gone" />
+
+                        <!-- Top Header Controls: GPS prompt hint ABOVE Location Row, Bell top-right, Date below -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
+                            android:gravity="top"
                             android:orientation="horizontal">
 
-                            <TextView
-                                android:id="@+id/tvHeaderTitle"
+                            <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="নামাজের সময়সূচী"
-                                android:textColor="@color/art_text"
-                                android:textSize="17sp"
-                                android:textStyle="bold" />
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/tvLocationPromptHint"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginBottom="5dp"
+                                    android:background="@drawable/bg_countdown_pill_clean"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:paddingHorizontal="9dp"
+                                    android:paddingVertical="4dp"
+                                    android:text="📍 সঠিক সময়ের জন্য GPS বাটন ক্লিক করুন"
+                                    android:textColor="@color/art_gold"
+                                    android:textSize="10.5sp"
+                                    android:textStyle="bold"
+                                    android:visibility="gone" />
+
+                                <LinearLayout
+                                    android:id="@+id/layoutHomeLocationRow"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnSelectDistrict"
+                                        style="@style/Widget.Material3.Button.TonalButton"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="40dp"
+                                        android:backgroundTint="@color/art_surface"
+                                        android:ellipsize="end"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:maxLines="1"
+                                        android:maxWidth="215dp"
+                                        android:minHeight="40dp"
+                                        android:minWidth="0dp"
+                                        android:paddingHorizontal="12dp"
+                                        android:text="ঢাকা জেলা ▾"
+                                        android:textColor="@color/art_gold"
+                                        android:textSize="12sp"
+                                        android:textStyle="bold"
+                                        app:cornerRadius="12dp"
+                                        app:icon="@drawable/ic_location_pin"
+                                        app:iconGravity="textStart"
+                                        app:iconPadding="5dp"
+                                        app:iconSize="15dp"
+                                        app:iconTint="@color/art_gold"
+                                        app:strokeColor="@color/art_gold"
+                                        app:strokeWidth="1.2dp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnQuickGpsLocation"
+                                        style="@style/Widget.Material3.Button.TonalButton"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="40dp"
+                                        android:layout_marginStart="6dp"
+                                        android:backgroundTint="@color/art_surface"
+                                        android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:minWidth="56dp"
+                                        android:minHeight="40dp"
+                                        android:paddingHorizontal="10dp"
+                                        android:text="📍 GPS"
+                                        android:textColor="@color/art_gold"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold"
+                                        app:cornerRadius="12dp"
+                                        app:strokeColor="@color/art_border"
+                                        app:strokeWidth="1dp" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
 
                             <FrameLayout
                                 android:id="@+id/btnHomeNotifications"
                                 android:layout_width="48dp"
-                                android:layout_height="40dp"
+                                android:layout_height="48dp"
+                                android:layout_marginStart="4dp"
                                 android:background="?attr/selectableItemBackgroundBorderless"
                                 android:clickable="true"
                                 android:contentDescription="ইসলামিক নোটিফিকেশন"
@@ -119,8 +199,8 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="16dp"
                                     android:layout_gravity="top|end"
-                                    android:layout_marginTop="4dp"
-                                    android:layout_marginEnd="4dp"
+                                    android:layout_marginTop="6dp"
+                                    android:layout_marginEnd="6dp"
                                     android:background="@drawable/bg_notification_badge"
                                     android:gravity="center"
                                     android:minWidth="16dp"
@@ -135,167 +215,94 @@
 
                         </LinearLayout>
 
-                        <!-- Hint shown right above the GPS button when Location is not yet turned on & set -->
+                        <!-- Sub-row: Hijri/Bangla/English date badge cleanly below the location row -->
                         <TextView
-                            android:id="@+id/tvLocationPromptHint"
+                            android:id="@+id/tvMainHijriDate"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:background="@drawable/bg_countdown_pill_clean"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="3dp"
-                            android:text="📍 সঠিক সময়ের জন্য GPS বাটন ক্লিক করুন"
+                            android:layout_marginTop="5dp"
+                            android:background="@drawable/bg_challenge_badge_night"
+                            android:gravity="start"
+                            android:lineSpacingExtra="1.5dp"
+                            android:paddingHorizontal="9dp"
+                            android:paddingVertical="4dp"
                             android:textColor="@color/art_gold"
-                            android:textSize="11sp"
+                            android:textSize="9sp"
                             android:textStyle="bold"
-                            android:visibility="gone" />
+                            tools:text="২৯ সফর, ১৪৪৮ হিজরি • ২৫ নভেম্বর, ১০ অগ্রহায়ণ, ১৪৩৩ বঙ্গাব্দ" />
 
-                        <!-- District & Hijri Date Bar (compact) -->
+                        <!-- Vertical breather over the mosque dome artwork so countdown & sun times sit cleanly lower -->
+                        <Space
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp" />
+
+                        <!-- Next Prayer Live Countdown + Sunrise/Sunset Banner (transparent overlay over clear artwork) -->
                         <LinearLayout
+                            android:id="@+id/layoutCountdownBanner"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:layout_marginBottom="5dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="8dp">
 
-                            <!-- Clearly recognizable Location Button -->
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnSelectDistrict"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="34dp"
-                                android:maxWidth="172dp"
-                                android:minHeight="34dp"
-                                android:backgroundTint="@color/art_surface"
-                                android:ellipsize="end"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:maxLines="1"
-                                android:paddingHorizontal="9dp"
-                                android:text="ঢাকা জেলা ▾"
-                                android:textColor="@color/art_gold"
-                                android:textSize="10.5sp"
-                                android:textStyle="bold"
-                                app:cornerRadius="10dp"
-                                app:icon="@drawable/ic_location_pin"
-                                app:iconGravity="textStart"
-                                app:iconPadding="4dp"
-                                app:iconSize="14dp"
-                                app:iconTint="@color/art_gold"
-                                app:strokeColor="@color/art_gold"
-                                app:strokeWidth="1.2dp" />
-
-                            <!-- Quick GPS Auto-Detect Button -->
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnQuickGpsLocation"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="34dp"
-                                android:layout_marginStart="5dp"
-                                android:minWidth="0dp"
-                                android:minHeight="34dp"
-                                android:backgroundTint="@color/art_surface"
-                                android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:paddingHorizontal="8dp"
-                                android:text="GPS"
-                                android:textColor="@color/art_gold"
-                                android:textSize="10sp"
-                                android:textStyle="bold"
-                                app:cornerRadius="10dp"
-                                app:strokeColor="@color/art_border"
-                                app:strokeWidth="1dp" />
-
-                            <View
-                                android:layout_width="0dp"
-                                android:layout_height="1dp"
-                                android:layout_weight="1" />
-
-                            <!-- Hijri + Gregorian + Bangla Date Badge (compact, 2 small lines) -->
                             <TextView
-                                android:id="@+id/tvMainHijriDate"
+                                android:id="@+id/tvCurrentWaqtStatus"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:background="@drawable/bg_challenge_badge_night"
-                                android:gravity="end"
-                                android:lineSpacingExtra="1dp"
-                                android:paddingHorizontal="7dp"
-                                android:paddingVertical="4dp"
-                                android:textColor="@color/art_gold"
-                                android:textSize="8sp"
+                                android:shadowColor="#E6000000"
+                                android:shadowDx="0"
+                                android:shadowDy="1.5"
+                                android:shadowRadius="6"
+                                android:textColor="@color/art_text_secondary"
+                                android:textSize="11sp"
                                 android:textStyle="bold"
-                                tools:text="২৯ সফর, ১৪৪৮ হিজরি\n২৫ নভেম্বর, ১০ অগ্রহায়ণ, ১৪৩৩ বঙ্গাব্দ" />
+                                tools:text="যোহরের ওয়াক্ত চলছে" />
+
+                            <TextView
+                                android:id="@+id/tvNextPrayerTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:shadowColor="#E6000000"
+                                android:shadowDx="0"
+                                android:shadowDy="1.5"
+                                android:shadowRadius="6"
+                                android:textColor="@color/art_gold"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                tools:text="পরবর্তী নামাজ: আসর (০৪:৩৫)" />
+
+                            <TextView
+                                android:id="@+id/tvNextPrayerCountdown"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:shadowColor="#E6000000"
+                                android:shadowDx="0"
+                                android:shadowDy="1.5"
+                                android:shadowRadius="6"
+                                android:textColor="@color/art_text"
+                                android:textSize="11.5sp"
+                                android:textStyle="bold"
+                                tools:text="বাকি ১ ঘণ্টা ২৫ মিনিট ৩০ সেকেন্ড" />
+
+                            <!-- Sunrise / Sunset, right under the live countdown -->
+                            <TextView
+                                android:id="@+id/tvNextPrayerSunTimes"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:shadowColor="#E6000000"
+                                android:shadowDx="0"
+                                android:shadowDy="1.5"
+                                android:shadowRadius="6"
+                                android:textColor="@color/art_gold"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                tools:text="🌅 সূর্যোদয়: ০৬:২৩   🌇 সূর্যাস্ত: ০৫:১৩" />
 
                         </LinearLayout>
-
-                        <!-- Next Prayer Live Countdown Banner (compact) -->
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="0dp"
-                            android:layout_marginBottom="4dp"
-                            app:cardBackgroundColor="#40102018"
-                            app:cardCornerRadius="14dp"
-                            app:cardElevation="0dp"
-                            app:strokeWidth="0dp">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:gravity="center"
-                                android:orientation="vertical"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="5dp">
-
-                                <TextView
-                                    android:id="@+id/tvCurrentWaqtStatus"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:textColor="@color/art_text_secondary"
-                                    android:textSize="9.5sp"
-                                    tools:text="যোহরের ওয়াক্ত চলছে" />
-
-                                <TextView
-                                    android:id="@+id/tvNextPrayerTitle"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="1dp"
-                                    android:textColor="@color/art_gold"
-                                    android:textSize="13.5sp"
-                                    android:textStyle="bold"
-                                    tools:text="পরবর্তী নামাজ: আসর (০৪:৩৫)" />
-
-                                <TextView
-                                    android:id="@+id/tvNextPrayerCountdown"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:background="@drawable/bg_countdown_pill_clean"
-                                    android:paddingHorizontal="9dp"
-                                    android:paddingVertical="2dp"
-                                    android:textColor="@color/art_text"
-                                    android:textSize="9.5sp"
-                                    android:textStyle="bold"
-                                    tools:text="বাকি ১ ঘণ্টা ২৫ মিনিট ৩০ সেকেন্ড" />
-
-                                <!-- Sunrise / Sunset, right under the live countdown -->
-                                <TextView
-                                    android:id="@+id/tvNextPrayerSunTimes"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="3dp"
-                                    android:textColor="@color/art_text_secondary"
-                                    android:textSize="9.5sp"
-                                    tools:text="🌅 সূর্যোদয়: ০৬:২৩   🌇 সূর্যাস্ত: ০৫:১৩" />
-
-                            </LinearLayout>
-
-                        </com.google.android.material.card.MaterialCardView>
-
 
                         </LinearLayout>
 
@@ -752,6 +759,242 @@
                             android:layout_height="wrap_content"
                             app:thumbTint="@color/secondary"
                             app:trackTint="@color/switch_track" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Daily Authentic Hadith Card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="6dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="📜 আজকের সহিহ হাদিস"
+                        android:textColor="@color/secondary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvDailyHadithSourceBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_challenge_badge"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="3dp"
+                        android:text="দৈনিক বাণী"
+                        android:textColor="@color/secondary"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDailyHadith"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="@color/surface"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="@color/dua_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Top Reference & Grade Strip -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@color/dua_soft_green"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="14dp"
+                            android:paddingVertical="9dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/tvDailyHadithTopic"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="নিয়তের বিশুদ্ধতা"
+                                    android:textColor="@color/secondary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvDailyHadithReference"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="সহিহুল বুখারী • হাদিস নং ১"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="10.5sp" />
+
+                            </LinearLayout>
+
+                            <ProgressBar
+                                android:id="@+id/pbDailyHadithLoading"
+                                style="?android:attr/progressBarStyleSmall"
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_marginEnd="6dp"
+                                android:indeterminateTint="@color/secondary"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/tvDailyHadithGrade"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_challenge_badge"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="3dp"
+                                android:text="সহিহ"
+                                android:textColor="@color/secondary"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <!-- Hadith Body: Arabic + Bengali Translation -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="14dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/tvDailyHadithArabic"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="8dp"
+                                android:gravity="end"
+                                android:lineSpacingMultiplier="1.35"
+                                android:textColor="@color/secondary"
+                                android:textSize="15.5sp"
+                                tools:text="إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى" />
+
+                            <TextView
+                                android:id="@+id/tvDailyHadithTranslation"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:lineSpacingExtra="3dp"
+                                android:maxLines="6"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12.5sp"
+                                tools:text="সকল কাজের ফলাফল নিয়তের ওপর নির্ভরশীল; আর প্রত্যেক মানুষ তাই পাবে, যা সে নিয়ত করেছে।" />
+
+                            <TextView
+                                android:id="@+id/tvDailyHadithExpandHint"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="সম্পূর্ণ পড়ুন ▾"
+                                android:textColor="@color/secondary"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:visibility="gone" />
+
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/divider" />
+
+                        <!-- Action Row: Copy | Share | Another Hadith -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="4dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDailyHadithCopy"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="0dp"
+                                android:layout_height="48dp"
+                                android:layout_weight="1"
+                                android:contentDescription="হাদিস কপি করুন"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minHeight="48dp"
+                                android:text="কপি"
+                                android:textColor="@color/secondary"
+                                android:textSize="11.5sp"
+                                android:textStyle="bold"
+                                app:icon="@drawable/ic_content_copy"
+                                app:iconGravity="textStart"
+                                app:iconPadding="5dp"
+                                app:iconSize="15dp"
+                                app:iconTint="@color/secondary" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDailyHadithShare"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="0dp"
+                                android:layout_height="48dp"
+                                android:layout_weight="1"
+                                android:contentDescription="হাদিস শেয়ার করুন"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minHeight="48dp"
+                                android:text="শেয়ার"
+                                android:textColor="@color/secondary"
+                                android:textSize="11.5sp"
+                                android:textStyle="bold"
+                                app:icon="@drawable/ic_share"
+                                app:iconGravity="textStart"
+                                app:iconPadding="5dp"
+                                app:iconSize="15dp"
+                                app:iconTint="@color/secondary" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDailyHadithNext"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="0dp"
+                                android:layout_height="48dp"
+                                android:layout_weight="1"
+                                android:contentDescription="আরেকটি সহিহ হাদিস দেখুন"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minHeight="48dp"
+                                android:text="নতুন হাদিস"
+                                android:textColor="@color/secondary"
+                                android:textSize="11.5sp"
+                                android:textStyle="bold"
+                                app:icon="@drawable/ic_arrow_forward"
+                                app:iconGravity="textEnd"
+                                app:iconPadding="4dp"
+                                app:iconSize="14dp"
+                                app:iconTint="@color/secondary" />
+
+                        </LinearLayout>
 
                     </LinearLayout>
 
@@ -1626,6 +1869,50 @@
                                 android:textColor="@color/primary"
                                 app:backgroundTint="@color/secondary" />
 
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/cardRestrictPermGuide"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:foreground="?attr/selectableItemBackground"
+                                android:visibility="gone"
+                                app:cardBackgroundColor="@color/surface_container"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@color/secondary"
+                                app:strokeWidth="1dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="8dp">
+
+                                    <ImageView
+                                        android:id="@+id/ivRestrictPermGuide"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="136dp"
+                                        android:adjustViewBounds="true"
+                                        android:contentDescription="রেস্ট্রিক্ট মোড চালুর গাইড ছবি (বড় করতে ট্যাপ করুন)"
+                                        android:scaleType="fitCenter"
+                                        android:src="@drawable/guide_perm_accessibility" />
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="6dp"
+                                        android:gravity="center"
+                                        android:text="ছবিতে দেখানো মতো Accessibility > Downloaded apps থেকে 'Islamic Alarm - রেস্ট্রিক্ট মোড' চালু করুন।\n🔍 বড় করে দেখতে ছবিতে ট্যাপ করুন"
+                                        android:textColor="@color/secondary"
+                                        android:textSize="11.5sp"
+                                        android:textStyle="bold" />
+
+                                </LinearLayout>
+
+                            </com.google.android.material.card.MaterialCardView>
+
                         </LinearLayout>
 
                     </com.google.android.material.card.MaterialCardView>
@@ -1767,6 +2054,50 @@
                                 android:textColor="@color/primary"
                                 app:backgroundTint="@color/secondary" />
 
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/cardSafePermGuide"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:foreground="?attr/selectableItemBackground"
+                                android:visibility="gone"
+                                app:cardBackgroundColor="@color/surface_container"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@color/secondary"
+                                app:strokeWidth="1dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="8dp">
+
+                                    <ImageView
+                                        android:id="@+id/ivSafePermGuide"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="136dp"
+                                        android:adjustViewBounds="true"
+                                        android:contentDescription="সেফ ও রেস্ট্রিক্ট মোড অ্যাক্সেসিবিলিটি গাইড ছবি (বড় করতে ট্যাপ করুন)"
+                                        android:scaleType="fitCenter"
+                                        android:src="@drawable/guide_perm_accessibility" />
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="6dp"
+                                        android:gravity="center"
+                                        android:text="ছবিতে দেখানো মতো Accessibility > Downloaded apps থেকে 'Islamic Alarm - রেস্ট্রিক্ট মোড' চালু করুন।\n🔍 বড় করে দেখতে ছবিতে ট্যাপ করুন"
+                                        android:textColor="@color/secondary"
+                                        android:textSize="11.5sp"
+                                        android:textStyle="bold" />
+
+                                </LinearLayout>
+
+                            </com.google.android.material.card.MaterialCardView>
+
                         </LinearLayout>
 
                     </com.google.android.material.card.MaterialCardView>
@@ -1865,35 +2196,16 @@
                                         android:textColor="@color/text_secondary"
                                         android:textSize="11sp" />
 
-                                    <LinearLayout
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnSetupPrivateDns"
+                                        style="@style/Widget.Material3.Button.OutlinedButton"
                                         android:layout_width="match_parent"
                                         android:layout_height="wrap_content"
                                         android:layout_marginTop="8dp"
-                                        android:orientation="horizontal">
-
-                                        <com.google.android.material.button.MaterialButton
-                                            android:id="@+id/btnSetupPrivateDns"
-                                            style="@style/Widget.Material3.Button.OutlinedButton"
-                                            android:layout_width="0dp"
-                                            android:layout_height="wrap_content"
-                                            android:layout_weight="1"
-                                            android:minHeight="48dp"
-                                            android:text="Private DNS সেট করুন"
-                                            android:textColor="@color/secondary"
-                                            android:textSize="12sp" />
-
-                                        <com.google.android.material.button.MaterialButton
-                                            android:id="@+id/btnCopyPrivateDns"
-                                            style="@style/Widget.Material3.Button.OutlinedButton"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:layout_marginStart="8dp"
-                                            android:minHeight="48dp"
-                                            android:text="📋 কপি"
-                                            android:textColor="@color/text_primary"
-                                            android:textSize="12sp" />
-
-                                    </LinearLayout>
+                                        android:minHeight="48dp"
+                                        android:text="সরাসরি Private DNS চালু করুন"
+                                        android:textColor="@color/secondary"
+                                        android:textSize="12sp" />
 
                                 </LinearLayout>
 
@@ -2013,7 +2325,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:lineSpacingExtra="3dp"
-                                android:text="• এই অ্যাপের সেফ DNS কোনো বিদেশি সার্ভারে আপনার ইন্টারনেট ডেটা পাঠায় না; এটি ফোনের ভেতরেই একটি লোকাল (On-Device) DNS-only টানেল (10.120.0.2) তৈরি করে। তাই আপনার মূল ইন্টারনেটের স্পিড কমে না এবং আপনার প্রকৃত IP Address বা লোকেশন বদলায় না।\n• সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN চালু থাকলে ব্রাউজার ও সব অ্যাপে অ্যাডাল্ট/NSFW ডোমেইন নেটওয়ার্ক পর্যায়ে আটকে যায় এবং Family DNS-এ সেফ সার্চ কার্যকর হয়।\n• ইনকগনিটো বা প্রাইভেট ট্যাব খুললেই শনাক্ত করে অটো ব্যাক করায় (ব্রাউজারের ৩-ডট মেনুতে ক্লিক করলে বন্ধ হবে না)।\n• সার্চ করার সময় বা সাধারণ ওয়েবসাইটে অযথা বন্ধ হবে না; অ্যাডাল্ট সাইটে ক্লিক করলে বা VidMate, SnapTube, Telegram ও ভিডিও প্লেয়ারে নিষিদ্ধ ভিডিও চালু হলে শনাক্ত করে স্ক্রিন ব্লার করে অটো ব্যাক এ আসবে।\n• VPN চিহ্ন ছাড়াই DNS ব্লকিং ও অন্য VPN-ও একসাথে চালাতে চাইলে উপরের 'Private DNS সেট করুন' বাটন দিয়ে family.adguard-dns.com সেট করুন—সেক্ষেত্রে লোকাল VPN ছাড়াই DNS সুরক্ষা ও অন্য VPN একসাথে চলবে।\n• বন্ধ করতে চাইলে একটি সতর্কবার্তা নোটিশ আসবে এবং 'ওকে' চাপলে বন্ধ হবে।"
+                                android:text="• এই অ্যাপের সেফ DNS কোনো বিদেশি সার্ভারে আপনার ইন্টারনেট ডেটা পাঠায় না; এটি ফোনের ভেতরেই একটি লোকাল (On-Device) DNS-only টানেল (10.120.0.2) তৈরি করে। তাই আপনার মূল ইন্টারনেটের স্পিড কমে না এবং আপনার প্রকৃত IP Address বা লোকেশন বদলায় না।\n• সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN চালু থাকলে ব্রাউজার ও সব অ্যাপে অ্যাডাল্ট/NSFW ডোমেইন নেটওয়ার্ক পর্যায়ে আটকে যায় এবং Family DNS-এ সেফ সার্চ কার্যকর হয়।\n• ইনকগনিটো বা প্রাইভেট ট্যাব খুললেই শনাক্ত করে অটো ব্যাক করায় (ব্রাউজারের ৩-ডট মেনুতে ক্লিক করলে বন্ধ হবে না)।\n• সার্চ করার সময় বা সাধারণ ওয়েবসাইটে অযথা বন্ধ হবে না; অ্যাডাল্ট সাইটে ক্লিক করলে বা VidMate, SnapTube, Telegram ও ভিডিও প্লেয়ারে নিষিদ্ধ ভিডিও চালু হলে শনাক্ত করে স্ক্রিন ব্লার করে অটো ব্যাক এ আসবে।\n• VPN চিহ্ন ছাড়াই DNS ব্লকিং ও অন্য VPN-ও একসাথে চালাতে চাইলে উপরের 'সরাসরি Private DNS চালু করুন' বাটনে চাপ দিন—সিস্টেম পারমিশন থাকলে সরাসরি সেট হবে, আর না থাকলে অ্যাপের ভেতর থেকেই লোকাল সেফ DNS চালু করা যাবে।\n• বন্ধ করতে চাইলে একটি সতর্কবার্তা নোটিশ আসবে এবং 'ওকে' চাপলে বন্ধ হবে।"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11.5sp" />
 

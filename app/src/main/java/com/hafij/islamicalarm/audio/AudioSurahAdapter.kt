@@ -53,30 +53,44 @@ class AudioSurahAdapter(
             val context = binding.root.context
 
             binding.tvAudioSurahNo.text = toBengaliNumber(surah.id)
-            binding.tvAudioSurahNameBn.text = surah.nameBangla
+            binding.tvAudioSurahNameBn.text = "${toBengaliNumber(surah.id)}. ${surah.nameBangla}"
             binding.tvAudioSurahNameAr.text = surah.nameArabic
             binding.tvAudioSurahMeta.text =
-                "${toBengaliNumber(surah.totalAyahs)} আয়াত • ${surah.revelationType} • পারা ${toBengaliNumber(surah.paraNumber)}"
+                "মোট ${toBengaliNumber(surah.totalAyahs)} আয়াত • ${surah.revelationType} • পারা ${toBengaliNumber(surah.paraNumber)}"
+            binding.tvAudioSurahMeaning.text = "অর্থ: ${surah.meaningBangla}"
 
             val isDownloaded = resolveLocalAudioFile(context, getReciterId(), surah.id) != null
+            val secondaryColor = context.resources.getColor(R.color.secondary, context.theme)
+            val surfaceContainerColor = context.resources.getColor(R.color.surface_container, context.theme)
+            val textPrimaryColor = context.resources.getColor(R.color.text_primary, context.theme)
+            val textSecondaryColor = context.resources.getColor(R.color.text_secondary, context.theme)
+            val goldAccentColor = context.resources.getColor(R.color.gold_accent, context.theme)
 
             if (isDownloaded) {
-                binding.tvDownloadStatus.text = "অফলাইনে সংরক্ষিত ✅"
-                binding.tvDownloadStatus.setTextColor(context.resources.getColor(R.color.secondary, context.theme))
-                binding.btnDownloadSurah.setImageResource(android.R.drawable.checkbox_on_background)
-                binding.btnDownloadSurah.setColorFilter(context.resources.getColor(R.color.secondary, context.theme))
+                binding.tvDownloadStatus.text = "অফলাইন ✅"
+                binding.tvDownloadStatus.setTextColor(secondaryColor)
+                binding.btnDownloadSurah.text = "✅ সেভড"
+                binding.btnDownloadSurah.setTextColor(secondaryColor)
+                binding.btnDownloadSurah.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(surfaceContainerColor)
             } else {
-                binding.tvDownloadStatus.text = "অফলাইন ভয়েস / ⬇️ সেভ"
-                binding.tvDownloadStatus.setTextColor(context.resources.getColor(R.color.text_secondary, context.theme))
-                binding.btnDownloadSurah.setImageResource(android.R.drawable.stat_sys_download)
-                binding.btnDownloadSurah.setColorFilter(context.resources.getColor(R.color.text_secondary, context.theme))
+                binding.tvDownloadStatus.text = "অনলাইন"
+                binding.tvDownloadStatus.setTextColor(textSecondaryColor)
+                binding.btnDownloadSurah.text = "⬇️ সেভ"
+                binding.btnDownloadSurah.setTextColor(textPrimaryColor)
+                binding.btnDownloadSurah.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(surfaceContainerColor)
             }
 
             val isThisPlaying = (surah.id == currentlyPlayingSurahId && isPlaying)
             if (isThisPlaying) {
-                binding.btnPlayAudioSurah.setImageResource(android.R.drawable.ic_media_pause)
+                binding.btnPlayAudioSurah.text = "⏸ থামান"
+                binding.btnPlayAudioSurah.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(goldAccentColor)
             } else {
-                binding.btnPlayAudioSurah.setImageResource(android.R.drawable.ic_media_play)
+                binding.btnPlayAudioSurah.text = "▶ শুনুন"
+                binding.btnPlayAudioSurah.backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(secondaryColor)
             }
 
             binding.btnPlayAudioSurah.setOnClickListener { onPlayClick(surah) }

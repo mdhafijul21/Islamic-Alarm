@@ -70,13 +70,31 @@ class AudioQuranActivity : AppCompatActivity() {
         val savedReciterId = prefs.getString("selected_reciter_id", "mishary") ?: "mishary"
         currentReciter = ReciterData.reciters.find { it.id == savedReciterId } ?: ReciterData.getDefaultReciter()
 
+        val chipBgStates = android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(
+                resources.getColor(R.color.secondary, theme),
+                resources.getColor(R.color.surface, theme)
+            )
+        )
+        val chipTextStates = android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(
+                resources.getColor(R.color.white, theme),
+                resources.getColor(R.color.text_primary, theme)
+            )
+        )
+
         ReciterData.reciters.forEach { reciter ->
             val chip = Chip(this).apply {
                 text = "${reciter.nameBn} (${reciter.style})"
                 isCheckable = true
                 isChecked = (reciter.id == currentReciter.id)
-                setChipBackgroundColorResource(R.color.surface)
-                setTextColor(resources.getColor(R.color.text_primary, theme))
+                chipBackgroundColor = chipBgStates
+                setTextColor(chipTextStates)
+                checkedIconTint = android.content.res.ColorStateList.valueOf(
+                    resources.getColor(R.color.white, theme)
+                )
             }
             chip.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked) {

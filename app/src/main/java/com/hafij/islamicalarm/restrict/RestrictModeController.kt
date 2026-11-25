@@ -44,6 +44,13 @@ class RestrictModeController(
         binding.btnRestrictEnableService.setOnClickListener {
             PermissionHelper.openSettings(activity, PermissionHelper.ID_ACCESSIBILITY)
         }
+        binding.cardRestrictPermGuide.setOnClickListener {
+            com.hafij.islamicalarm.permissions.PermissionImageZoomDialog.show(
+                activity,
+                PermissionHelper.accessibilityStep,
+                R.drawable.guide_perm_accessibility
+            )
+        }
         safe.setup()
         selectTab(TAB_ALARM)
     }
@@ -82,11 +89,13 @@ class RestrictModeController(
         if (enabled) {
             binding.tvRestrictServiceStatus.text = "✅ অ্যাক্সেসিবিলিটি সার্ভিস চালু আছে। রেস্ট্রিক্ট মোড কাজ করবে।"
             binding.btnRestrictEnableService.visibility = View.GONE
+            binding.cardRestrictPermGuide.visibility = View.GONE
         } else {
             binding.tvRestrictServiceStatus.text =
                 "❌ রেস্ট্রিক্ট মোড কাজ করতে অ্যাক্সেসিবিলিটি সার্ভিস চালু করতে হবে। " +
                     "সুইচ ধূসর হলে: ফোনের Settings > Apps > Islamic Alarm > উপরের ⋮ মেনু > 'Allow restricted settings' দিয়ে আবার চেষ্টা করুন।"
             binding.btnRestrictEnableService.visibility = View.VISIBLE
+            binding.cardRestrictPermGuide.visibility = View.VISIBLE
         }
 
         val container = binding.layoutRestrictSlots

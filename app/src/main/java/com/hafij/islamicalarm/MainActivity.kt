@@ -66,6 +66,10 @@ class MainActivity : AppCompatActivity() {
     private val skippedAlarmPermSteps = mutableSetOf<String>()
     private var permDialog: androidx.appcompat.app.AlertDialog? = null
     private var autoDetectTried = false
+    private var currentDailyHadith: com.hafij.islamicalarm.hadith.DailyHadith? = null
+    private var dailyHadithOffset: Int = 0
+    private var dailyHadithExpanded: Boolean = false
+    private var lastLoadedHadithDateKey: String? = null
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -275,6 +279,12 @@ class MainActivity : AppCompatActivity() {
             runHomePermissionWizard()
         }
         updatePrayerTimes(force = true)
+        val todayKey = com.hafij.islamicalarm.hadith.DailyHadithRepository.todayDateKey()
+        if (lastLoadedHadithDateKey != todayKey) {
+            dailyHadithOffset = 0
+            dailyHadithExpanded = false
+            loadDailyHadith(forceNetwork = false)
+        }
         loadAlarms()
         refreshOccasionNotificationsAndBadge()
         if (com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)) {
@@ -590,7 +600,19 @@ class MainActivity : AppCompatActivity() {
             binding.switchAutoAlarm.toggle()
         }
 
-        // District / Location Selector
+        // District / Location Selector (dynamic wrap_content width capped cleanly before GPS button)
+        binding.layoutHomeLocationRow.addOnLayoutChangeListener { row, _, _, _, _, _, _, _, _ ->
+            val rowWidth = row.width
+            val gpsWidth = binding.btnQuickGpsLocation.width
+            if (rowWidth > 0 && gpsWidth > 0) {
+                val marginBuffer = (8 * resources.displayMetrics.density).toInt()
+                val minWidthPx = (108 * resources.displayMetrics.density).toInt()
+                val availableMax = (rowWidth - gpsWidth - marginBuffer).coerceAtLeast(minWidthPx)
+                if (binding.btnSelectDistrict.maxWidth != availableMax) {
+                    binding.btnSelectDistrict.maxWidth = availableMax
+                }
+            }
+        }
         binding.btnSelectDistrict.setOnClickListener {
             showDistrictSelectionDialog()
         }
@@ -634,6 +656,9 @@ class MainActivity : AppCompatActivity() {
         binding.cardFeatureRamadan.setOnClickListener {
             startActivity(Intent(this, com.hafij.islamicalarm.ramadan.RamadanActivity::class.java))
         }
+
+        // Daily Authentic Hadith Card
+        setupDailyHadithCard()
 
         // Waqt Alarm toggle switches
         syncWaqtAlarmSwitches()
@@ -1352,6 +1377,33 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    private fun buildPermissionStepDialogView(step: com.hafij.islamicalarm.permissions.PermStep): View {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_permission_step, null)
+        val tvMessage = dialogView.findViewById<android.widget.TextView>(R.id.tvPermDialogMessage)
+        val cardGuide = dialogView.findViewById<View>(R.id.cardPermDialogGuide)
+        val ivGuide = dialogView.findViewById<android.widget.ImageView>(R.id.ivPermDialogGuide)
+        val tvHint = dialogView.findViewById<android.widget.TextView>(R.id.tvPermDialogGuideHint)
+
+        tvMessage.text = step.why + "\n\n" + step.howTo
+        val guideRes = PermissionHelper.guideImageResFor(step.id)
+        if (guideRes != null) {
+            cardGuide.visibility = View.VISIBLE
+            ivGuide.setImageResource(guideRes)
+            val hint = PermissionHelper.guideHintFor(step.id)
+            tvHint.text = if (!hint.isNullOrBlank()) {
+                "$hint\n🔍 বড় করে দেখতে ছবিতে ট্যাপ করুন"
+            } else {
+                "🖼️ ছবি বড় করে দেখতে ট্যাপ করুন 🔍"
+            }
+            cardGuide.setOnClickListener {
+                com.hafij.islamicalarm.permissions.PermissionImageZoomDialog.show(this, step, guideRes)
+            }
+        } else {
+            cardGuide.visibility = View.GONE
+        }
+        return dialogView
+    }
+
     private fun runHomePermissionWizard() {
         if (isFinishing || isDestroyed) return
         if (permDialog?.isShowing == true) return
@@ -1370,7 +1422,7 @@ class MainActivity : AppCompatActivity() {
         val number = steps.indexOf(next) + 1
         permDialog = MaterialAlertDialogBuilder(this)
             .setTitle("অনুমতি $number/${steps.size}: ${next.title}")
-            .setMessage(next.why + "\n\n" + next.howTo)
+            .setView(buildPermissionStepDialogView(next))
             .setPositiveButton("অনুমতি দিন") { _, _ ->
                 skippedHomePermSteps.add(next.id)
                 requestPermissionStep(next.id)
@@ -1396,7 +1448,7 @@ class MainActivity : AppCompatActivity() {
         val number = steps.indexOf(next) + 1
         permDialog = MaterialAlertDialogBuilder(this)
             .setTitle("এলার্ম অনুমতি $number/${steps.size}: ${next.title}")
-            .setMessage(next.why + "\n\n" + next.howTo)
+            .setView(buildPermissionStepDialogView(next))
             .setPositiveButton("অনুমতি দিন") { _, _ ->
                 skippedAlarmPermSteps.add(next.id)
                 if (next.id == PermissionHelper.ID_AUTOSTART) {
@@ -1645,6 +1697,115 @@ class MainActivity : AppCompatActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             phoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
+        }
+    }
+
+    private fun setupDailyHadithCard() {
+        val toggleExpand = {
+            dailyHadithExpanded = !dailyHadithExpanded
+            applyHadithExpansionUi()
+        }
+        binding.cardDailyHadith.setOnClickListener { toggleExpand() }
+        binding.tvDailyHadithExpandHint.setOnClickListener { toggleExpand() }
+
+        binding.btnDailyHadithCopy.setOnClickListener {
+            val hadith = currentDailyHadith ?: return@setOnClickListener
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(
+                android.content.ClipData.newPlainText(
+                    "Daily Hadith",
+                    com.hafij.islamicalarm.hadith.DailyHadithRepository.formatShareText(hadith)
+                )
+            )
+            Toast.makeText(this, "সহিহ হাদিস কপি করা হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.btnDailyHadithShare.setOnClickListener {
+            val hadith = currentDailyHadith ?: return@setOnClickListener
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(
+                    Intent.EXTRA_TEXT,
+                    com.hafij.islamicalarm.hadith.DailyHadithRepository.formatShareText(hadith)
+                )
+            }
+            startActivity(Intent.createChooser(sendIntent, "সহিহ হাদিস শেয়ার করুন"))
+        }
+
+        binding.btnDailyHadithNext.setOnClickListener {
+            dailyHadithOffset += 1
+            dailyHadithExpanded = false
+            loadDailyHadith(forceNetwork = true)
+        }
+
+        loadDailyHadith(forceNetwork = false)
+    }
+
+    private fun loadDailyHadith(forceNetwork: Boolean) {
+        val dateKey = com.hafij.islamicalarm.hadith.DailyHadithRepository.todayDateKey()
+        val requestOffset = dailyHadithOffset
+        lastLoadedHadithDateKey = dateKey
+
+        val instant = com.hafij.islamicalarm.hadith.DailyHadithRepository.getInstantHadithForDate(
+            this,
+            dateKey = dateKey,
+            offset = requestOffset
+        )
+        renderDailyHadith(instant)
+
+        val needsRemoteFetch = forceNetwork || !instant.isFromOnlineApi
+        if (!needsRemoteFetch) {
+            binding.pbDailyHadithLoading.visibility = View.GONE
+            return
+        }
+
+        binding.pbDailyHadithLoading.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            val fetched = com.hafij.islamicalarm.hadith.DailyHadithRepository.fetchOrGetDailyHadith(
+                context = this@MainActivity,
+                dateKey = dateKey,
+                offset = requestOffset,
+                forceNetwork = forceNetwork
+            )
+            if (isFinishing || isDestroyed) return@launch
+            if (requestOffset == dailyHadithOffset && lastLoadedHadithDateKey == dateKey) {
+                binding.pbDailyHadithLoading.visibility = View.GONE
+                renderDailyHadith(fetched)
+            }
+        }
+    }
+
+    private fun renderDailyHadith(hadith: com.hafij.islamicalarm.hadith.DailyHadith) {
+        currentDailyHadith = hadith
+        binding.tvDailyHadithTopic.text = hadith.topicBn
+        binding.tvDailyHadithReference.text = hadith.referenceBn
+        binding.tvDailyHadithGrade.text = hadith.gradeBn.ifBlank { "সহিহ" }
+        binding.tvDailyHadithSourceBadge.text = if (hadith.isFromOnlineApi) "অনলাইন সহিহ" else "দৈনিক বাণী"
+
+        if (hadith.arabicText.isNotBlank()) {
+            binding.tvDailyHadithArabic.text = hadith.arabicText
+            binding.tvDailyHadithArabic.visibility = View.VISIBLE
+        } else {
+            binding.tvDailyHadithArabic.visibility = View.GONE
+        }
+
+        binding.tvDailyHadithTranslation.text = hadith.bengaliText
+        applyHadithExpansionUi()
+    }
+
+    private fun applyHadithExpansionUi() {
+        val tv = binding.tvDailyHadithTranslation
+        if (dailyHadithExpanded) {
+            tv.maxLines = Int.MAX_VALUE
+            tv.ellipsize = null
+            binding.tvDailyHadithExpandHint.text = "সংক্ষিপ্ত করুন ▴"
+            binding.tvDailyHadithExpandHint.visibility = View.VISIBLE
+        } else {
+            tv.maxLines = 6
+            tv.ellipsize = android.text.TextUtils.TruncateAt.END
+            val isLong = (currentDailyHadith?.bengaliText?.length ?: 0) > 220
+            binding.tvDailyHadithExpandHint.text = "সম্পূর্ণ পড়ুন ▾"
+            binding.tvDailyHadithExpandHint.visibility = if (isLong) View.VISIBLE else View.GONE
         }
     }
 

@@ -264,7 +264,12 @@ class SettingsFragment : Fragment() {
         val b = _binding ?: return
         val ctx = context ?: return
 
-        val steps = PermissionHelper.applicableSteps(ctx) + PermissionHelper.microphoneStep
+        val baseSteps = PermissionHelper.applicableSteps(ctx) + PermissionHelper.microphoneStep
+        val steps = if (baseSteps.any { it.id == PermissionHelper.ID_AUTOSTART }) {
+            baseSteps
+        } else {
+            baseSteps + PermissionHelper.autostartStep
+        }
         val statuses = steps.map { step ->
             if (PermissionHelper.isDetectable(step.id)) {
                 PermissionHelper.isGranted(ctx, step.id)
@@ -302,6 +307,9 @@ class SettingsFragment : Fragment() {
         val tvTitle = row.findViewById<TextView>(R.id.tvPermTitle)
         val tvDesc = row.findViewById<TextView>(R.id.tvPermDesc)
         val btn = row.findViewById<MaterialButton>(R.id.btnPermAction)
+        val guideCard = row.findViewById<View>(R.id.cardPermGuidePreview)
+        val ivGuide = row.findViewById<android.widget.ImageView>(R.id.ivPermGuidePreview)
+        val tvGuideHint = row.findViewById<TextView>(R.id.tvPermGuideHint)
 
         tvStatus.text = when (granted) {
             true -> "✅"
@@ -318,6 +326,28 @@ class SettingsFragment : Fragment() {
             btn.text = if (granted == null) "সেটিংস খুলুন" else "চালু করুন"
             btn.setOnClickListener { requestPermission(step.id) }
         }
+
+        val guideRes = PermissionHelper.guideImageResFor(step.id)
+        if (guideRes != null) {
+            guideCard.visibility = View.VISIBLE
+            ivGuide.setImageResource(guideRes)
+            val hint = PermissionHelper.guideHintFor(step.id)
+            tvGuideHint.text = if (!hint.isNullOrBlank()) {
+                "$hint\n🔍 বড় করে দেখতে ছবিতে ট্যাপ করুন"
+            } else {
+                "🖼️ সেটিংস গাইড ছবি — বড় করে দেখতে ট্যাপ করুন 🔍"
+            }
+            guideCard.setOnClickListener {
+                com.hafij.islamicalarm.permissions.PermissionImageZoomDialog.show(
+                    requireContext(),
+                    step,
+                    guideRes
+                )
+            }
+        } else {
+            guideCard.visibility = View.GONE
+        }
+
         b.layoutPermRows.addView(row)
     }
 

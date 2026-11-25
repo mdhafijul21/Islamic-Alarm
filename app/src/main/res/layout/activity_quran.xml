@@ -401,44 +401,44 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Category grid -->
-            <!-- Category grid: Row 1 (Surah & Para) -->
+            <!-- Compact Category Grid: Row 1 (Surah, Para, Page) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="11dp"
-                android:layout_marginTop="22dp"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="14dp"
                 android:orientation="horizontal">
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardCatSurah"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="5dp"
+                    android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
-                    app:cardBackgroundColor="@color/dua_surface"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="0dp">
+                    app:cardBackgroundColor="@color/dua_soft_green"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="@color/dua_border"
+                    app:strokeWidth="1dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp">
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="10dp">
 
                         <FrameLayout
-                            android:layout_width="52dp"
-                            android:layout_height="52dp"
-                            android:background="@drawable/bg_quran_icon_circle">
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_quran_cat_badge">
 
                             <ImageView
-                                android:layout_width="26dp"
-                                android:layout_height="26dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:layout_gravity="center"
                                 android:contentDescription="সুরা সমূহ"
                                 android:src="@drawable/ic_nav_quran"
@@ -448,21 +448,25 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
+                            android:layout_marginTop="6dp"
+                            android:ellipsize="end"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="সুরা সমূহ"
                             android:textColor="@color/dua_primary"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
+                            android:ellipsize="end"
                             android:gravity="center"
-                            android:text="১৫ লাইন হাফেজী (আরবি)"
+                            android:maxLines="1"
+                            android:text="১৫ লাইন হাফেজী"
                             android:textColor="@color/dua_muted"
-                            android:textSize="11sp" />
+                            android:textSize="9.5sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -470,31 +474,32 @@
                     android:id="@+id/cardCatPara"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="5dp"
+                    android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
-                    app:cardBackgroundColor="@color/dua_surface"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="0dp">
+                    app:cardBackgroundColor="@color/dua_soft_green"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="@color/dua_border"
+                    app:strokeWidth="1dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp">
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="10dp">
 
                         <FrameLayout
-                            android:layout_width="52dp"
-                            android:layout_height="52dp"
-                            android:background="@drawable/bg_quran_icon_circle">
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_quran_cat_badge">
 
                             <ImageView
-                                android:layout_width="26dp"
-                                android:layout_height="26dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:layout_gravity="center"
                                 android:contentDescription="পারা সমূহ"
                                 android:src="@drawable/ic_nav_quran"
@@ -504,62 +509,58 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
+                            android:layout_marginTop="6dp"
+                            android:ellipsize="end"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="পারা সমূহ"
                             android:textColor="@color/dua_primary"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
+                            android:ellipsize="end"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="৩০ পারা (অফলাইন)"
                             android:textColor="@color/dua_muted"
-                            android:textSize="11sp" />
+                            android:textSize="9.5sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
-            <!-- Category grid: Row 2 (পৃষ্ঠা & সার্চ) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="11dp"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal">
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardCatSearch"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="5dp"
+                    android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
-                    app:cardBackgroundColor="@color/dua_surface"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="0dp">
+                    app:cardBackgroundColor="@color/dua_soft_green"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="@color/dua_border"
+                    app:strokeWidth="1dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp">
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="10dp">
 
                         <FrameLayout
-                            android:layout_width="52dp"
-                            android:layout_height="52dp"
-                            android:background="@drawable/bg_quran_icon_circle">
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_quran_cat_badge">
 
                             <ImageView
-                                android:layout_width="26dp"
-                                android:layout_height="26dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:layout_gravity="center"
                                 android:contentDescription="পৃষ্ঠা"
                                 android:src="@drawable/ic_nav_quran"
@@ -569,53 +570,67 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
+                            android:layout_marginTop="6dp"
+                            android:ellipsize="end"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="পৃষ্ঠা"
                             android:textColor="@color/dua_primary"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
+                            android:ellipsize="end"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="১–৬১০ পৃষ্ঠা পড়ুন"
                             android:textColor="@color/dua_muted"
-                            android:textSize="11sp" />
+                            android:textSize="9.5sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Compact Category Grid: Row 2 (সার্চ, অডিও, অর্থ সহ) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardCatParaSearch"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="5dp"
+                    android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
-                    app:cardBackgroundColor="@color/dua_surface"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="0dp">
+                    app:cardBackgroundColor="@color/dua_soft_green"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="@color/dua_border"
+                    app:strokeWidth="1dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp">
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="10dp">
 
                         <FrameLayout
-                            android:layout_width="52dp"
-                            android:layout_height="52dp"
-                            android:background="@drawable/bg_quran_icon_circle">
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_quran_cat_badge">
 
                             <ImageView
-                                android:layout_width="26dp"
-                                android:layout_height="26dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:layout_gravity="center"
                                 android:contentDescription="সার্চ"
                                 android:src="@android:drawable/ic_menu_search"
@@ -625,62 +640,58 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
+                            android:layout_marginTop="6dp"
+                            android:ellipsize="end"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="সার্চ"
                             android:textColor="@color/dua_primary"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
+                            android:ellipsize="end"
                             android:gravity="center"
-                            android:text="পারা ও পৃষ্ঠা খুঁজুন"
+                            android:maxLines="1"
+                            android:text="পারা ও পৃষ্ঠা"
                             android:textColor="@color/dua_muted"
-                            android:textSize="11sp" />
+                            android:textSize="9.5sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
-            <!-- Category grid: Row 3 (অডিও & অর্থ সহ) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="11dp"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal">
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardCatAudioQuran"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="5dp"
+                    android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
-                    app:cardBackgroundColor="@color/dua_surface"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="0dp">
+                    app:cardBackgroundColor="@color/dua_soft_green"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="@color/dua_border"
+                    app:strokeWidth="1dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp">
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="10dp">
 
                         <FrameLayout
-                            android:layout_width="52dp"
-                            android:layout_height="52dp"
-                            android:background="@drawable/bg_quran_icon_circle">
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_quran_cat_badge">
 
                             <ImageView
-                                android:layout_width="26dp"
-                                android:layout_height="26dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:layout_gravity="center"
                                 android:contentDescription="অডিও"
                                 android:src="@drawable/ic_volume_up"
@@ -690,21 +701,25 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
+                            android:layout_marginTop="6dp"
+                            android:ellipsize="end"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="অডিও"
                             android:textColor="@color/dua_primary"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
+                            android:ellipsize="end"
                             android:gravity="center"
-                            android:text="১১৪ সুরা • ডাউনলোড"
+                            android:maxLines="1"
+                            android:text="১১৪ সুরা তেলাওয়াত"
                             android:textColor="@color/dua_muted"
-                            android:textSize="11sp" />
+                            android:textSize="9.5sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -712,31 +727,32 @@
                     android:id="@+id/cardCatMeaning"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="5dp"
+                    android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
-                    app:cardBackgroundColor="@color/dua_surface"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="0dp">
+                    app:cardBackgroundColor="@color/dua_soft_green"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="@color/dua_border"
+                    app:strokeWidth="1dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_horizontal"
                         android:orientation="vertical"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="14dp">
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="10dp">
 
                         <FrameLayout
-                            android:layout_width="52dp"
-                            android:layout_height="52dp"
-                            android:background="@drawable/bg_quran_icon_circle">
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_quran_cat_badge">
 
                             <ImageView
-                                android:layout_width="26dp"
-                                android:layout_height="26dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:layout_gravity="center"
                                 android:contentDescription="অর্থ সহ"
                                 android:src="@drawable/ic_nav_quran"
@@ -746,21 +762,25 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
+                            android:layout_marginTop="6dp"
+                            android:ellipsize="end"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="অর্থ সহ"
                             android:textColor="@color/dua_primary"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
+                            android:ellipsize="end"
                             android:gravity="center"
-                            android:text="আরবি + বাংলা অর্থ সহ"
+                            android:maxLines="1"
+                            android:text="আরবি + বাংলা অর্থ"
                             android:textColor="@color/dua_muted"
-                            android:textSize="11sp" />
+                            android:textSize="9.5sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>

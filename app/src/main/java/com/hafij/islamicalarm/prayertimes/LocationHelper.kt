@@ -8,7 +8,6 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -22,26 +21,41 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.abs
 
 object LocationHelper {
+
+    internal const val GRANULARITY_MICRO = 1
+    internal const val GRANULARITY_LOCALITY = 2
+    internal const val GRANULARITY_BROAD = 3
+
+    private const val APP_USER_AGENT = "IslamicAlarm/1.0 (com.hafij.islamicalarm; android-app)"
 
     internal data class ResolvedSpot(
         val spotBn: String,
         val parentBn: String,
         val spotEn: String = "",
-        val countryName: String = ""
+        val countryName: String = "",
+        val granularityTier: Int = GRANULARITY_BROAD
     )
 
     private val PLUS_CODE_REGEX = Regex("^[A-Z0-9]{4,8}\\+[A-Z0-9]{2,4}.*$")
     private val GENERIC_PLACE_NAMES = setOf(
         "unnamed road", "unnamed", "bangladesh", "বাংলাদেশ", "road", "street"
+    )
+    private val BROAD_ADMIN_SUFFIXES = listOf(
+        "থানা", "উপজেলা", "জেলা", "বিভাগ", "মহানগর",
+        "thana", "upazila", "zila", "zilla", "district", "division", "city corporation", "sadar", "সদর"
     )
 
     fun hasLocationPermission(context: Context): Boolean {
@@ -129,7 +143,7 @@ object LocationHelper {
             val cts = CancellationTokenSource()
             fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
                 .addOnSuccessListener { currentLoc: Location? ->
-                    if (currentLoc != null && (!currentLoc.hasAccuracy() || currentLoc.accuracy <= 150f)) {
+                    if (currentLoc != null && (!currentLoc.hasAccuracy() || currentLoc.accuracy <= 120f)) {
                         resolveLocationToDistrict(context, currentLoc, onSuccess)
                     } else {
                         tryCachedOrActiveUpdate(context, fusedClient, onSuccess, onError)
@@ -196,7 +210,6 @@ object LocationHelper {
                     if (bestSeen == null || (loc.hasAccuracy() && (!bestSeen!!.hasAccuracy() || loc.accuracy < bestSeen!!.accuracy))) {
                         bestSeen = loc
                     }
-                    // Wait for reasonably tight accuracy if first update was coarse; otherwise finish immediately
                     if (!alreadyHandled && (!loc.hasAccuracy() || loc.accuracy <= 80f)) {
                         alreadyHandled = true
                         timeoutHandler.removeCallbacksAndMessages(null)
@@ -266,7 +279,6 @@ object LocationHelper {
                 return
             }
 
-            // Try an active single LocationManager update when cached fix is stale/missing
             val activeProvider = when {
                 locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
@@ -328,7 +340,7 @@ object LocationHelper {
 
     /**
      * Resolves a chosen map point (lat/lng) to a place name and a District, using the same
-     * village-first lookup as the GPS button. [onSuccess] is called on the main thread.
+     * micro-spot-first lookup as the GPS button. [onSuccess] is called on the main thread.
      */
     fun resolveCoordinates(
         context: Context,
@@ -352,21 +364,28 @@ object LocationHelper {
             val lat = location.latitude
             val lng = location.longitude
 
-            // The smallest place name wins (village / para / neighbourhood), because the user
-            // wants the exact place where they are, not the upazila or district.
-            //
-            // 1. OpenStreetMap (Nominatim, zoom=18): the only source here that usually knows
-            //    village / hamlet / neighbourhood names in Bangladesh.
-            var resolved = fetchNominatimSpot(lat, lng)
+            // Query all independent reverse-geocoding sources in parallel so micro-level
+            // village/para/road names from Android Geocoder or Photon ALWAYS beat broad
+            // town/thana/district labels from Nominatim/BigDataCloud.
+            val resolved = coroutineScope {
+                val geoDeferred = async { fetchAndroidGeocoderSpot(context, lat, lng) }
+                val nomDeferred = async { fetchNominatimSpot(lat, lng) }
+                val photonDeferred = async { fetchPhotonReverseSpot(lat, lng) }
+                val bdcDeferred = async { fetchBigDataCloudSpot(lat, lng) }
 
-            // 2. Android Geocoder (bn_BD): sub-locality / street level when available.
-            val geocoderSpot = fetchAndroidGeocoderSpot(context, lat, lng)
-            resolved = mergeResolvedSpots(primary = resolved, secondary = geocoderSpot)
+                val candidates = listOfNotNull(
+                    geoDeferred.await(),
+                    nomDeferred.await(),
+                    photonDeferred.await(),
+                    bdcDeferred.await()
+                )
 
-            // 3. Last fallback: BigDataCloud. It only knows administrative areas
-            //    (upazila / district), so it is used only if nothing finer was found.
-            val bigDataSpot = fetchBigDataCloudSpot(lat, lng)
-            resolved = mergeResolvedSpots(primary = resolved, secondary = bigDataSpot)
+                var best: ResolvedSpot? = null
+                for (candidate in candidates) {
+                    best = mergeResolvedSpots(best, candidate)
+                }
+                best
+            }
 
             val tz = TimeZone.getDefault()
             val timeZoneOffsetHours = tz.getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
@@ -376,28 +395,15 @@ object LocationHelper {
                 countryName.contains("Bangladesh", ignoreCase = true) ||
                 countryName.contains("বাংলাদেশ", ignoreCase = true)
 
-            val method = when {
-                isBangladesh -> CalculationMethod.KARACHI_BD
-                countryName.contains("Saudi", ignoreCase = true) || countryName.contains("সৌদি", ignoreCase = true) ->
-                    CalculationMethod.UMM_AL_QURA
-                countryName.contains("Egypt", ignoreCase = true) || countryName.contains("মিশর", ignoreCase = true) ->
-                    CalculationMethod.EGYPTIAN
-                countryName.contains("United States", ignoreCase = true) || countryName.contains("Canada", ignoreCase = true) ->
-                    CalculationMethod.ISNA
-                else -> CalculationMethod.MUSLIM_WORLD_LEAGUE
-            }
+            val method = inferCalculationMethod(lat, lng, countryName)
 
-            // Use closest local entry ONLY for division/timezone fallback metadata, NEVER to override spot name or exact coords
             val closest = LocationData.findClosestLocation(lat, lng)
             val finalSpotBn = resolved?.spotBn?.takeIf { it.isNotBlank() } ?: closest.nameBn
             val finalParentBn = resolved?.parentBn?.takeIf { it.isNotBlank() } ?: closest.parentBn
-            // Show ONLY the exact detected spot (no ", district/division" suffix).
-            // The parent area is still kept separately in parentBn for other screens.
-            val formattedExactName = finalSpotBn
 
             val resultDistrict = District(
-                nameEn = resolved?.spotEn?.takeIf { it.isNotBlank() } ?: formattedExactName,
-                nameBn = formattedExactName,
+                nameEn = resolved?.spotEn?.takeIf { it.isNotBlank() } ?: finalSpotBn,
+                nameBn = finalSpotBn,
                 divisionBn = closest.divisionBn,
                 lat = lat,
                 lng = lng,
@@ -414,13 +420,22 @@ object LocationHelper {
         }
     }
 
-    /**
-     * https://api.bigdatacloud.net/data/reverse-geocode-client — free, no API key, and its
-     * own Fair Use Policy explicitly allows exactly this: a mobile app calling it directly
-     * from the client using the device's current GPS fix. It resolves to administrative/
-     * village boundaries rather than street addresses, so it stays accurate in rural areas
-     * where other providers only have thana/district-level data.
-     */
+    private fun inferCalculationMethod(lat: Double, lng: Double, countryName: String): CalculationMethod {
+        val isBd = (lat in 20.5..26.8 && lng in 88.0..92.8) ||
+            countryName.contains("Bangladesh", ignoreCase = true) ||
+            countryName.contains("বাংলাদেশ", ignoreCase = true)
+        return when {
+            isBd -> CalculationMethod.KARACHI_BD
+            countryName.contains("Saudi", ignoreCase = true) || countryName.contains("সৌদি", ignoreCase = true) ->
+                CalculationMethod.UMM_AL_QURA
+            countryName.contains("Egypt", ignoreCase = true) || countryName.contains("মিশর", ignoreCase = true) ->
+                CalculationMethod.EGYPTIAN
+            countryName.contains("United States", ignoreCase = true) || countryName.contains("Canada", ignoreCase = true) ->
+                CalculationMethod.ISNA
+            else -> CalculationMethod.MUSLIM_WORLD_LEAGUE
+        }
+    }
+
     private fun fetchBigDataCloudSpot(lat: Double, lng: Double): ResolvedSpot? {
         var conn: HttpURLConnection? = null
         return try {
@@ -434,6 +449,7 @@ object LocationHelper {
                 connectTimeout = 4500
                 readTimeout = 4500
                 requestMethod = "GET"
+                setRequestProperty("User-Agent", APP_USER_AGENT)
             }
             if (conn.responseCode !in 200..299) return null
             val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -454,9 +470,6 @@ object LocationHelper {
             val city = cleanToken(root.optString("city"))
             val principalSubdivision = cleanToken(root.optString("principalSubdivision"))
 
-            // "administrative" is ordered most-significant-first (country -> division ->
-            // district -> upazila -> union/ward), so the last usable entry is the finest
-            // named boundary and the one before it is the next broader level.
             val adminNames = mutableListOf<String>()
             val adminArr = root.optJSONObject("localityInfo")?.optJSONArray("administrative")
             if (adminArr != null) {
@@ -479,11 +492,18 @@ object LocationHelper {
                 country
             ).firstOrNull { isUsablePlaceToken(it) && !it.equals(spot, ignoreCase = true) } ?: country.orEmpty()
 
+            val tier = if (locality != null && spot == locality && !isBroadAdminName(spot)) {
+                GRANULARITY_LOCALITY
+            } else {
+                GRANULARITY_BROAD
+            }
+
             ResolvedSpot(
                 spotBn = spot,
                 parentBn = parent,
                 spotEn = spot,
-                countryName = country.orEmpty()
+                countryName = country.orEmpty(),
+                granularityTier = tier
             )
         } catch (_: Exception) {
             null
@@ -503,7 +523,7 @@ object LocationHelper {
                 connectTimeout = 4500
                 readTimeout = 4500
                 requestMethod = "GET"
-                setRequestProperty("User-Agent", "IslamicAlarmAndroid/1.0")
+                setRequestProperty("User-Agent", APP_USER_AGENT)
             }
             if (conn.responseCode !in 200..299) return null
             val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -515,16 +535,96 @@ object LocationHelper {
         }
     }
 
-    private fun fetchAndroidGeocoderSpot(context: Context, lat: Double, lng: Double): ResolvedSpot? {
-        if (!Geocoder.isPresent()) return null
+    private fun fetchPhotonReverseSpot(lat: Double, lng: Double): ResolvedSpot? {
+        var conn: HttpURLConnection? = null
         return try {
-            val bnGeocoder = Geocoder(context, Locale("bn", "BD"))
-            @Suppress("DEPRECATION")
-            val bnAddresses = bnGeocoder.getFromLocation(lat, lng, 3).orEmpty()
-            extractExactPlaceFromAddresses(bnAddresses)
+            val urlStr = String.format(
+                Locale.US,
+                "https://photon.komoot.io/reverse?lat=%.6f&lon=%.6f",
+                lat,
+                lng
+            )
+            conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 4500
+                readTimeout = 4500
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", APP_USER_AGENT)
+            }
+            if (conn.responseCode !in 200..299) return null
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            extractExactPlaceFromPhotonJson(body)
+        } catch (_: Exception) {
+            null
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    internal fun extractExactPlaceFromPhotonJson(jsonStr: String): ResolvedSpot? {
+        if (jsonStr.isBlank()) return null
+        return try {
+            val root = JSONObject(jsonStr)
+            val features = root.optJSONArray("features") ?: return null
+            if (features.length() == 0) return null
+            val props = features.optJSONObject(0)?.optJSONObject("properties") ?: return null
+
+            val country = cleanToken(props.optString("country"))
+            val name = cleanToken(props.optString("name"))
+            val street = cleanToken(props.optString("street"))
+            val locality = cleanToken(props.optString("locality"))
+            val district = cleanToken(props.optString("district"))
+            val city = cleanToken(props.optString("city"))
+            val county = cleanToken(props.optString("county"))
+            val state = cleanToken(props.optString("state"))
+
+            val microCandidate = listOfNotNull(name, street)
+                .firstOrNull { isUsablePlaceToken(it) && !isBroadAdminName(it) }
+            val localityCandidate = listOfNotNull(locality, district)
+                .firstOrNull { isUsablePlaceToken(it) && !isBroadAdminName(it) }
+            val broadCandidate = listOfNotNull(locality, district, city, county, state)
+                .firstOrNull { isUsablePlaceToken(it) }
+
+            val spot = microCandidate ?: localityCandidate ?: broadCandidate ?: return null
+            val tier = when {
+                microCandidate != null -> GRANULARITY_MICRO
+                localityCandidate != null -> GRANULARITY_LOCALITY
+                else -> GRANULARITY_BROAD
+            }
+            val parent = listOfNotNull(district, city, county, state, country)
+                .firstOrNull { isUsablePlaceToken(it) && !it.equals(spot, ignoreCase = true) }
+                ?: country.orEmpty()
+
+            ResolvedSpot(
+                spotBn = spot,
+                parentBn = parent,
+                spotEn = spot,
+                countryName = country.orEmpty(),
+                granularityTier = tier
+            )
         } catch (_: Exception) {
             null
         }
+    }
+
+    private fun fetchAndroidGeocoderSpot(context: Context, lat: Double, lng: Double): ResolvedSpot? {
+        if (!Geocoder.isPresent()) return null
+        var best: ResolvedSpot? = null
+        val locales = listOf(Locale("bn", "BD"), Locale.ENGLISH)
+        for (loc in locales) {
+            try {
+                val geocoder = Geocoder(context, loc)
+                @Suppress("DEPRECATION")
+                val addresses = geocoder.getFromLocation(lat, lng, 5).orEmpty()
+                val candidate = extractExactPlaceFromAddresses(addresses)
+                best = mergeResolvedSpots(best, candidate)
+                if (best != null && best.granularityTier == GRANULARITY_MICRO && loc.language == "bn") {
+                    break
+                }
+            } catch (_: Exception) {
+                // continue to next locale
+            }
+        }
+        return best
     }
 
     internal fun extractExactPlaceFromNominatimJson(jsonStr: String): ResolvedSpot? {
@@ -534,21 +634,31 @@ object LocationHelper {
             val addr = root.optJSONObject("address") ?: return null
 
             val country = cleanToken(addr.optString("country"))
-            // Smallest area first: village / hamlet / neighbourhood, then broader ones.
-            // Road and POI names come last so a highway name does not replace the village.
-            val microCandidates = listOf(
+
+            val microFields = listOf(
                 addr.optString("village"),
                 addr.optString("hamlet"),
                 addr.optString("neighbourhood"),
-                addr.optString("suburb"),
                 addr.optString("quarter"),
                 addr.optString("residential"),
-                addr.optString("municipality"),
-                addr.optString("city_district"),
-                addr.optString("town"),
-                addr.optString("city"),
                 addr.optString("road"),
                 root.optString("name")
+            ).mapNotNull { cleanToken(it) }.filter { isUsablePlaceToken(it) && !isBroadAdminName(it) }
+
+            val localityFields = listOf(
+                addr.optString("suburb"),
+                addr.optString("municipality"),
+                addr.optString("city_district"),
+                addr.optString("town")
+            ).mapNotNull { cleanToken(it) }.filter { isUsablePlaceToken(it) && !isBroadAdminName(it) }
+
+            val broadFields = listOf(
+                addr.optString("suburb"),
+                addr.optString("town"),
+                addr.optString("city"),
+                addr.optString("county"),
+                addr.optString("state_district"),
+                addr.optString("state")
             ).mapNotNull { cleanToken(it) }.filter { isUsablePlaceToken(it) }
 
             val parentCandidates = listOf(
@@ -560,7 +670,13 @@ object LocationHelper {
                 country
             ).mapNotNull { cleanToken(it) }.filter { isUsablePlaceToken(it) }
 
-            val spot = microCandidates.firstOrNull() ?: return null
+            val (spot, tier) = when {
+                microFields.isNotEmpty() -> microFields.first() to GRANULARITY_MICRO
+                localityFields.isNotEmpty() -> localityFields.first() to GRANULARITY_LOCALITY
+                broadFields.isNotEmpty() -> broadFields.first() to GRANULARITY_BROAD
+                else -> return null
+            }
+
             val parent = parentCandidates.firstOrNull { !it.equals(spot, ignoreCase = true) }
                 ?: parentCandidates.firstOrNull().orEmpty()
 
@@ -568,7 +684,8 @@ object LocationHelper {
                 spotBn = spot,
                 parentBn = parent,
                 spotEn = spot,
-                countryName = country.orEmpty()
+                countryName = country.orEmpty(),
+                granularityTier = tier
             )
         } catch (_: Exception) {
             null
@@ -578,65 +695,76 @@ object LocationHelper {
     internal fun extractExactPlaceFromAddresses(addresses: List<Address>): ResolvedSpot? {
         if (addresses.isEmpty()) return null
 
-        val specificTokens = mutableListOf<String>()
+        val microTokens = mutableListOf<String>()
+        val localityTokens = mutableListOf<String>()
+        val broadTokens = mutableListOf<String>()
         val parentTokens = mutableListOf<String>()
         var country = ""
 
         for (addr in addresses) {
             if (country.isBlank()) country = cleanToken(addr.countryName).orEmpty()
 
-            // Micro-level candidates first: road/para/village/neighborhood/landmark BEFORE broad subLocality/District
-            val candidates = listOf(
-                addr.subLocality,
-                addr.thoroughfare,
-                addr.featureName,
-                addr.locality,
-                addr.subAdminArea,
-                addr.adminArea
-            )
-            // Prioritize subLocality or thoroughfare when distinct from locality/subAdminArea (district)
             val districtOrCity = setOfNotNull(
                 cleanToken(addr.subAdminArea)?.lowercase(Locale.ROOT),
                 cleanToken(addr.adminArea)?.lowercase(Locale.ROOT)
             )
-            val orderedSpecific = listOf(
-                addr.thoroughfare,
-                addr.subLocality,
-                addr.featureName,
-                addr.locality,
-                addr.subAdminArea,
-                addr.adminArea
-            ).mapNotNull { cleanToken(it) }
-                .filter { isUsablePlaceToken(it) && !isPureNumber(it) }
 
-            // Put tokens that are NOT identical to the broad district/division at the front
-            val strictlyLocal = orderedSpecific.filter { it.lowercase(Locale.ROOT) !in districtOrCity }
-            for (tok in strictlyLocal) {
-                if (tok !in specificTokens) specificTokens.add(tok)
-            }
-            for (tok in orderedSpecific) {
-                if (tok !in specificTokens) specificTokens.add(tok)
-            }
-
-            listOf(addr.locality, addr.subAdminArea, addr.adminArea, addr.countryName)
-                .mapNotNull { cleanToken(it) }
-                .filter { isUsablePlaceToken(it) && !isPureNumber(it) }
-                .forEach { tok -> if (tok !in parentTokens) parentTokens.add(tok) }
-
-            // Also parse address lines if thoroughfare/subLocality were blank (common in Bangladesh Google Geocoder)
+            // Parse address line 0 for ultra-specific house/road/para/village segments first
             val line0 = cleanToken(addr.getAddressLine(0))
             if (!line0.isNullOrBlank()) {
-                line0.split(",")
+                val parts = line0.split(",")
                     .mapNotNull { cleanToken(it) }
                     .filter { isUsablePlaceToken(it) && !isPureNumber(it) }
-                    .firstOrNull { it.lowercase(Locale.ROOT) !in districtOrCity }
-                    ?.let { tok ->
-                        if (tok !in specificTokens) specificTokens.add(0, tok)
-                    }
+                val firstPart = parts.firstOrNull {
+                    it.lowercase(Locale.ROOT) !in districtOrCity &&
+                        !it.equals(country, ignoreCase = true) &&
+                        !isBroadAdminName(it)
+                }
+                if (firstPart != null && firstPart !in microTokens) {
+                    microTokens.add(firstPart)
+                }
+            }
+
+            listOf(addr.thoroughfare, addr.subLocality, addr.featureName)
+                .mapNotNull { cleanToken(it) }
+                .filter {
+                    isUsablePlaceToken(it) &&
+                        !isPureNumber(it) &&
+                        it.lowercase(Locale.ROOT) !in districtOrCity &&
+                        !isBroadAdminName(it)
+                }
+                .forEach { tok -> if (tok !in microTokens) microTokens.add(tok) }
+
+            listOf(addr.subLocality, addr.locality)
+                .mapNotNull { cleanToken(it) }
+                .filter {
+                    isUsablePlaceToken(it) &&
+                        !isPureNumber(it) &&
+                        it.lowercase(Locale.ROOT) !in districtOrCity &&
+                        !isBroadAdminName(it)
+                }
+                .forEach { tok -> if (tok !in localityTokens) localityTokens.add(tok) }
+
+            listOf(addr.locality, addr.subAdminArea, addr.adminArea)
+                .mapNotNull { cleanToken(it) }
+                .filter { isUsablePlaceToken(it) && !isPureNumber(it) }
+                .forEach { tok ->
+                    if (tok !in broadTokens) broadTokens.add(tok)
+                    if (tok !in parentTokens) parentTokens.add(tok)
+                }
+
+            cleanToken(addr.countryName)?.let {
+                if (isUsablePlaceToken(it) && it !in parentTokens) parentTokens.add(it)
             }
         }
 
-        val spot = specificTokens.firstOrNull() ?: return null
+        val (spot, tier) = when {
+            microTokens.isNotEmpty() -> microTokens.first() to GRANULARITY_MICRO
+            localityTokens.isNotEmpty() -> localityTokens.first() to GRANULARITY_LOCALITY
+            broadTokens.isNotEmpty() -> broadTokens.first() to GRANULARITY_BROAD
+            else -> return null
+        }
+
         val parent = parentTokens.firstOrNull { !it.equals(spot, ignoreCase = true) }
             ?: parentTokens.firstOrNull().orEmpty()
 
@@ -644,19 +772,50 @@ object LocationHelper {
             spotBn = spot,
             parentBn = parent,
             spotEn = spot,
-            countryName = country
+            countryName = country,
+            granularityTier = tier
         )
     }
 
+    /**
+     * Merges two resolved candidates, ALWAYS letting a finer-grained (lower tier)
+     * spot win over a broader district/thana/city fallback. Enriches missing parent/country metadata.
+     */
     internal fun mergeResolvedSpots(primary: ResolvedSpot?, secondary: ResolvedSpot?): ResolvedSpot? {
         if (primary == null) return secondary
         if (secondary == null) return primary
+
+        val primaryWins = when {
+            primary.spotBn.isBlank() -> false
+            secondary.spotBn.isBlank() -> true
+            primary.granularityTier < secondary.granularityTier -> true
+            secondary.granularityTier < primary.granularityTier -> false
+            containsBengaliScript(primary.spotBn) && !containsBengaliScript(secondary.spotBn) -> true
+            containsBengaliScript(secondary.spotBn) && !containsBengaliScript(primary.spotBn) -> false
+            else -> true
+        }
+
+        val winner = if (primaryWins) primary else secondary
+        val other = if (primaryWins) secondary else primary
+
         return ResolvedSpot(
-            spotBn = primary.spotBn.ifBlank { secondary.spotBn },
-            parentBn = primary.parentBn.ifBlank { secondary.parentBn },
-            spotEn = primary.spotEn.ifBlank { secondary.spotEn },
-            countryName = primary.countryName.ifBlank { secondary.countryName }
+            spotBn = winner.spotBn.ifBlank { other.spotBn },
+            parentBn = winner.parentBn.ifBlank { other.parentBn },
+            spotEn = winner.spotEn.ifBlank { other.spotEn },
+            countryName = winner.countryName.ifBlank { other.countryName },
+            granularityTier = winner.granularityTier
         )
+    }
+
+    private fun containsBengaliScript(text: String): Boolean =
+        text.any { it in '\u0980'..'\u09FF' }
+
+    internal fun isBroadAdminName(raw: String): Boolean {
+        val lower = raw.trim().lowercase(Locale.ROOT)
+        if (lower.isBlank()) return true
+        return BROAD_ADMIN_SUFFIXES.any { suffix ->
+            lower == suffix || lower.endsWith(" $suffix") || lower.endsWith("-$suffix")
+        }
     }
 
     private fun cleanToken(raw: String?): String? {
@@ -678,61 +837,250 @@ object LocationHelper {
     }
 
     /**
-     * Search any location globally using Android Geocoder API online
+     * Unlimited global + Bangladesh place search used by both the Map Picker search bar
+     * and the District Dialog online search. Combines:
+     * 1. Instant offline catalog matches (Divisions, 64 Districts, ~500 Thanas, Global cities)
+     * 2. Per-device Android Geocoder (zero shared rate limits across thousands of users)
+     * 3. OSM Photon Search API (geo-biased, free, no API key)
+     * 4. Open-Meteo Geocoding API (worldwide cities/villages, free, high throughput)
      */
-    suspend fun searchOnline(context: Context, query: String): List<District> = withContext(Dispatchers.IO) {
-        val results = mutableListOf<District>()
-        if (query.isBlank()) return@withContext results
+    suspend fun searchPlacesUnlimited(
+        context: Context,
+        query: String,
+        biasLat: Double? = null,
+        biasLng: Double? = null
+    ): List<District> = withContext(Dispatchers.IO) {
+        val cleanQuery = query.trim()
+        if (cleanQuery.isBlank()) return@withContext emptyList()
 
-        try {
-            if (Geocoder.isPresent()) {
-                val geocoder = Geocoder(context, Locale.getDefault())
-                @Suppress("DEPRECATION")
-                val addresses = geocoder.getFromLocationName(query, 5)
+        val qLower = cleanQuery.lowercase(Locale.ROOT)
+        val offlineMatches = LocationData.allLocations.filter {
+            it.nameBn.lowercase(Locale.ROOT).contains(qLower) ||
+                it.nameEn.lowercase(Locale.ROOT).contains(qLower) ||
+                it.parentBn.lowercase(Locale.ROOT).contains(qLower)
+        }.take(10)
 
-                if (!addresses.isNullOrEmpty()) {
-                    for (addr in addresses) {
-                        val name = addr.subLocality ?: addr.thoroughfare ?: addr.locality ?: addr.subAdminArea ?: addr.featureName ?: query
-                        val parent = addr.locality ?: addr.subAdminArea ?: addr.adminArea ?: addr.countryName ?: ""
-                        val country = addr.countryName ?: ""
-                        val lat = addr.latitude
-                        val lng = addr.longitude
+        val remoteResults = coroutineScope {
+            val geocoderDeferred = async { searchWithAndroidGeocoder(context, cleanQuery) }
+            val photonDeferred = async { searchWithPhotonApi(cleanQuery, biasLat, biasLng) }
+            val openMeteoDeferred = async { searchWithOpenMeteoApi(cleanQuery) }
 
-                        val isBd = (lat in 20.5..26.8 && lng in 88.0..92.8) || country.contains("Bangladesh", ignoreCase = true)
-                        val tz = if (isBd) 6.0 else {
-                            val detectedTz = TimeZone.getDefault()
-                            detectedTz.getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
-                        }
-
-                        val method = when {
-                            isBd -> CalculationMethod.KARACHI_BD
-                            country.contains("Saudi", ignoreCase = true) -> CalculationMethod.UMM_AL_QURA
-                            country.contains("Egypt", ignoreCase = true) -> CalculationMethod.EGYPTIAN
-                            country.contains("United States", ignoreCase = true) || country.contains("Canada", ignoreCase = true) -> CalculationMethod.ISNA
-                            else -> CalculationMethod.MUSLIM_WORLD_LEAGUE
-                        }
-
-                        results.add(
-                            District(
-                                nameEn = name,
-                                nameBn = name,
-                                divisionBn = parent,
-                                lat = lat,
-                                lng = lng,
-                                offsetMinutes = 0,
-                                timeZone = tz,
-                                type = LocationType.GLOBAL_CITY,
-                                parentBn = parent,
-                                method = method
-                            )
-                        )
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+            geocoderDeferred.await() + photonDeferred.await() + openMeteoDeferred.await()
         }
 
-        return@withContext results
+        val combined = offlineMatches + remoteResults
+        deduplicateDistricts(combined).take(25)
+    }
+
+    suspend fun searchOnline(context: Context, query: String): List<District> =
+        searchPlacesUnlimited(context, query)
+
+    private fun searchWithAndroidGeocoder(context: Context, query: String): List<District> {
+        if (!Geocoder.isPresent()) return emptyList()
+        val results = mutableListOf<District>()
+        try {
+            val geocoder = Geocoder(context, Locale.getDefault())
+            @Suppress("DEPRECATION")
+            val addresses = geocoder.getFromLocationName(query, 12).orEmpty()
+            val tzDefault = TimeZone.getDefault().getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
+            for (addr in addresses) {
+                val name = cleanToken(addr.subLocality)
+                    ?: cleanToken(addr.thoroughfare)
+                    ?: cleanToken(addr.locality)
+                    ?: cleanToken(addr.featureName)
+                    ?: cleanToken(addr.subAdminArea)
+                    ?: query
+                val parent = listOfNotNull(
+                    cleanToken(addr.locality),
+                    cleanToken(addr.subAdminArea),
+                    cleanToken(addr.adminArea),
+                    cleanToken(addr.countryName)
+                ).firstOrNull { !it.equals(name, ignoreCase = true) }.orEmpty()
+                val country = cleanToken(addr.countryName).orEmpty()
+                val lat = addr.latitude
+                val lng = addr.longitude
+                val isBd = (lat in 20.5..26.8 && lng in 88.0..92.8) ||
+                    country.contains("Bangladesh", ignoreCase = true)
+                results.add(
+                    District(
+                        nameEn = name,
+                        nameBn = name,
+                        divisionBn = parent,
+                        lat = lat,
+                        lng = lng,
+                        offsetMinutes = 0,
+                        timeZone = if (isBd) 6.0 else tzDefault,
+                        type = if (isBd) LocationType.CUSTOM_GPS else LocationType.GLOBAL_CITY,
+                        parentBn = parent.ifBlank { country },
+                        method = inferCalculationMethod(lat, lng, country)
+                    )
+                )
+            }
+        } catch (_: Exception) {
+        }
+        return results
+    }
+
+    private fun searchWithPhotonApi(query: String, biasLat: Double?, biasLng: Double?): List<District> {
+        var conn: HttpURLConnection? = null
+        return try {
+            val encoded = URLEncoder.encode(query, "UTF-8")
+            val biasPart = if (biasLat != null && biasLng != null) {
+                String.format(Locale.US, "&lat=%.4f&lon=%.4f", biasLat, biasLng)
+            } else {
+                ""
+            }
+            val urlStr = "https://photon.komoot.io/api/?q=$encoded&limit=15$biasPart"
+            conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 5000
+                readTimeout = 5000
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", APP_USER_AGENT)
+            }
+            if (conn.responseCode !in 200..299) return emptyList()
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            parsePhotonSearchJson(body)
+        } catch (_: Exception) {
+            emptyList()
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    internal fun parsePhotonSearchJson(jsonStr: String): List<District> {
+        if (jsonStr.isBlank()) return emptyList()
+        val results = mutableListOf<District>()
+        try {
+            val root = JSONObject(jsonStr)
+            val features = root.optJSONArray("features") ?: return emptyList()
+            val tzDefault = TimeZone.getDefault().getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
+            for (i in 0 until features.length()) {
+                val feat = features.optJSONObject(i) ?: continue
+                val coords = feat.optJSONObject("geometry")?.optJSONArray("coordinates") ?: continue
+                if (coords.length() < 2) continue
+                val lng = coords.optDouble(0)
+                val lat = coords.optDouble(1)
+                if (lat.isNaN() || lng.isNaN()) continue
+
+                val props = feat.optJSONObject("properties") ?: continue
+                val name = cleanToken(props.optString("name"))
+                    ?: cleanToken(props.optString("city"))
+                    ?: cleanToken(props.optString("street"))
+                    ?: continue
+                val country = cleanToken(props.optString("country")).orEmpty()
+                val parent = listOfNotNull(
+                    cleanToken(props.optString("district")),
+                    cleanToken(props.optString("city")),
+                    cleanToken(props.optString("county")),
+                    cleanToken(props.optString("state")),
+                    country.takeIf { it.isNotBlank() }
+                ).filter { !it.equals(name, ignoreCase = true) }
+                    .distinct()
+                    .take(2)
+                    .joinToString(", ")
+
+                val isBd = (lat in 20.5..26.8 && lng in 88.0..92.8) ||
+                    country.contains("Bangladesh", ignoreCase = true)
+                results.add(
+                    District(
+                        nameEn = name,
+                        nameBn = name,
+                        divisionBn = parent,
+                        lat = lat,
+                        lng = lng,
+                        offsetMinutes = 0,
+                        timeZone = if (isBd) 6.0 else tzDefault,
+                        type = if (isBd) LocationType.CUSTOM_GPS else LocationType.GLOBAL_CITY,
+                        parentBn = parent.ifBlank { country },
+                        method = inferCalculationMethod(lat, lng, country)
+                    )
+                )
+            }
+        } catch (_: Exception) {
+        }
+        return results
+    }
+
+    private fun searchWithOpenMeteoApi(query: String): List<District> {
+        var conn: HttpURLConnection? = null
+        return try {
+            val encoded = URLEncoder.encode(query, "UTF-8")
+            val urlStr = "https://geocoding-api.open-meteo.com/v1/search?name=$encoded&count=12&language=en&format=json"
+            conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 5000
+                readTimeout = 5000
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", APP_USER_AGENT)
+            }
+            if (conn.responseCode !in 200..299) return emptyList()
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            parseOpenMeteoSearchJson(body)
+        } catch (_: Exception) {
+            emptyList()
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    internal fun parseOpenMeteoSearchJson(jsonStr: String): List<District> {
+        if (jsonStr.isBlank()) return emptyList()
+        val results = mutableListOf<District>()
+        try {
+            val root = JSONObject(jsonStr)
+            val arr = root.optJSONArray("results") ?: return emptyList()
+            for (i in 0 until arr.length()) {
+                val item = arr.optJSONObject(i) ?: continue
+                val name = cleanToken(item.optString("name")) ?: continue
+                val lat = item.optDouble("latitude", Double.NaN)
+                val lng = item.optDouble("longitude", Double.NaN)
+                if (lat.isNaN() || lng.isNaN()) continue
+                val admin2 = cleanToken(item.optString("admin2"))
+                val admin1 = cleanToken(item.optString("admin1"))
+                val country = cleanToken(item.optString("country")).orEmpty()
+                val tzId = cleanToken(item.optString("timezone"))
+                val tzHours = if (!tzId.isNullOrBlank()) {
+                    TimeZone.getTimeZone(tzId).getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
+                } else {
+                    TimeZone.getDefault().getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
+                }
+                val parent = listOfNotNull(admin2, admin1, country.takeIf { it.isNotBlank() })
+                    .filter { !it.equals(name, ignoreCase = true) }
+                    .distinct()
+                    .take(2)
+                    .joinToString(", ")
+                val isBd = (lat in 20.5..26.8 && lng in 88.0..92.8) ||
+                    country.contains("Bangladesh", ignoreCase = true)
+                results.add(
+                    District(
+                        nameEn = name,
+                        nameBn = name,
+                        divisionBn = parent,
+                        lat = lat,
+                        lng = lng,
+                        offsetMinutes = 0,
+                        timeZone = if (isBd) 6.0 else tzHours,
+                        type = if (isBd) LocationType.CUSTOM_GPS else LocationType.GLOBAL_CITY,
+                        parentBn = parent.ifBlank { country },
+                        method = inferCalculationMethod(lat, lng, country)
+                    )
+                )
+            }
+        } catch (_: Exception) {
+        }
+        return results
+    }
+
+    private fun deduplicateDistricts(list: List<District>): List<District> {
+        val unique = mutableListOf<District>()
+        for (item in list) {
+            val isDup = unique.any { existing ->
+                val sameCoords = abs(existing.lat - item.lat) < 0.01 && abs(existing.lng - item.lng) < 0.01
+                val sameName = existing.nameBn.equals(item.nameBn, ignoreCase = true) ||
+                    existing.nameEn.equals(item.nameEn, ignoreCase = true)
+                sameCoords && sameName
+            }
+            if (!isDup) unique.add(item)
+        }
+        return unique
     }
 }

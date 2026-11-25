@@ -3,10 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
+    android:layout_marginHorizontal="14dp"
     android:layout_marginVertical="6dp"
     app:cardBackgroundColor="@color/surface"
-    app:cardCornerRadius="14dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="2dp"
     app:strokeColor="@color/border"
     app:strokeWidth="1dp">
@@ -14,120 +14,178 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        android:orientation="vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="10dp">
 
-        <!-- Surah Number Badge -->
-        <FrameLayout
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:background="@drawable/bg_islamic_star_badge">
-
-            <TextView
-                android:id="@+id/tvAudioSurahNo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="১"
-                android:textColor="@color/secondary"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-        </FrameLayout>
-
-        <!-- Surah Info -->
+        <!-- Upper Section: Full width for Surah Number, Bangla Name, Arabic Name & Ayah Count -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
+            <!-- Surah Number Badge -->
+            <FrameLayout
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:background="@drawable/bg_islamic_star_badge">
+
+                <TextView
+                    android:id="@+id/tvAudioSurahNo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="১"
+                    android:textColor="@color/secondary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <!-- Bangla Name, Ayah Count, Para & Meaning -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvAudioSurahNameBn"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:lineSpacingExtra="2dp"
                     android:text="আল-ফাতিহা"
                     android:textColor="@color/text_primary"
-                    android:textSize="15sp"
+                    android:textSize="16.5sp"
                     android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAudioSurahMeta"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="মোট ৭ আয়াত • মক্কী • পারা ১"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAudioSurahMeaning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="অর্থ: সূচনা"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11.5sp" />
+
+            </LinearLayout>
+
+            <!-- Right Column: Clear Arabic Surah Title & Offline Status Badge -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvAudioSurahNameAr"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/amiri"
                     android:text="الفاتحة"
                     android:textColor="@color/secondary"
-                    android:textSize="16sp"
+                    android:textSize="20sp"
                     android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/tvAudioSurahMeta"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="৭ আয়াত • মক্কী • পারা ১"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
 
                 <TextView
                     android:id="@+id/tvDownloadStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_duration_chip"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
                     android:text="অনলাইন"
                     android:textColor="@color/text_secondary"
-                    android:textSize="10sp" />
+                    android:textSize="10.5sp"
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Offline Download Button -->
-        <ImageButton
-            android:id="@+id/btnDownloadSurah"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:layout_marginStart="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Download Surah Offline"
-            android:src="@android:drawable/stat_sys_download"
-            app:tint="@color/text_secondary" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="8dp"
+            android:background="@color/divider" />
 
-        <!-- Read in Mushaf Button -->
-        <ImageButton
-            android:id="@+id/btnReadSurahMushaf"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Read Surah in Quran"
-            android:src="@android:drawable/ic_menu_agenda"
-            app:tint="@color/text_secondary" />
+        <!-- Lower Section: Clear, Spacious Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <!-- Play/Pause Button -->
-        <ImageButton
-            android:id="@+id/btnPlayAudioSurah"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Play Surah Audio"
-            android:src="@android:drawable/ic_media_play"
-            app:tint="@color/secondary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPlayAudioSurah"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:contentDescription="সুরা শুনুন বা বিরতি দিন"
+                android:insetTop="2dp"
+                android:insetBottom="2dp"
+                android:paddingHorizontal="8dp"
+                android:text="▶ শুনুন"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/secondary"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnReadSurahMushaf"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1.15"
+                android:contentDescription="কুরআন পড়ুন"
+                android:insetTop="2dp"
+                android:insetBottom="2dp"
+                android:paddingHorizontal="8dp"
+                android:text="📖 পড়ুন"
+                android:textColor="@color/secondary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:cornerRadius="12dp"
+                app:strokeColor="@color/secondary"
+                app:strokeWidth="1dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDownloadSurah"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:contentDescription="অফলাইন সেভ করুন"
+                android:insetTop="2dp"
+                android:insetBottom="2dp"
+                android:paddingHorizontal="8dp"
+                android:text="⬇️ সেভ"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/surface_container"
+                app:cornerRadius="12dp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

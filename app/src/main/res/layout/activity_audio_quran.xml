@@ -16,8 +16,9 @@
             android:id="@+id/toolbarAudioQuran"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:subtitle="বিশ্বখ্যাত ক্বারীগণের কণ্ঠে ১১৪টি সুরা • ডাউনলোড ও অফলাইন"
+            app:navigationIcon="@drawable/ic_arrow_back_24"
+            app:navigationIconTint="@color/secondary"
+            app:subtitle="১১৪টি সুরা • বাংলা নাম, আয়াত ও অফলাইন তিলাওয়াত"
             app:subtitleTextColor="@color/text_secondary"
             app:title="অডিও"
             app:titleTextColor="@color/secondary" />
