@@ -326,6 +326,23 @@ object LocationHelper {
         }
     }
 
+    /**
+     * Resolves a chosen map point (lat/lng) to a place name and a District, using the same
+     * village-first lookup as the GPS button. [onSuccess] is called on the main thread.
+     */
+    fun resolveCoordinates(
+        context: Context,
+        lat: Double,
+        lng: Double,
+        onSuccess: (District) -> Unit
+    ) {
+        val point = Location("map_picker").apply {
+            latitude = lat
+            longitude = lng
+        }
+        resolveLocationToDistrict(context, point, onSuccess)
+    }
+
     private fun resolveLocationToDistrict(
         context: Context,
         location: Location,
@@ -335,25 +352,21 @@ object LocationHelper {
             val lat = location.latitude
             val lng = location.longitude
 
-            // 1. Primary: BigDataCloud's boundary-based reverse geocoder. Unlike Nominatim
-            // (whose usage policy explicitly forbids bulk calls from a mobile app installed
-            // on many devices, so it silently rate-limits/fails for real users) or Android's
-            // built-in Geocoder (backed by Google's database, which often has no street/POI
-            // data for rural upazila/union areas and falls back to thana/district), this
-            // endpoint is designed specifically for client apps using the device's live GPS,
-            // resolves to administrative/village-level boundaries, and works reliably even
-            // in less-populated areas — this is what other apps (e.g. Muslim Day) rely on
-            // to show the exact spot instead of just the thana/district.
-            var resolved = fetchBigDataCloudSpot(lat, lng)
+            // The smallest place name wins (village / para / neighbourhood), because the user
+            // wants the exact place where they are, not the upazila or district.
+            //
+            // 1. OpenStreetMap (Nominatim, zoom=18): the only source here that usually knows
+            //    village / hamlet / neighbourhood names in Bangladesh.
+            var resolved = fetchNominatimSpot(lat, lng)
 
-            // 2. Supplement any still-blank fields with high-precision Nominatim reverse
-            // geocode (zoom=18, street/neighbourhood level).
-            val nominatimSpot = fetchNominatimSpot(lat, lng)
-            resolved = mergeResolvedSpots(primary = resolved, secondary = nominatimSpot)
-
-            // 3. Final fallback with Android Geocoder (bn_BD, then device default)
+            // 2. Android Geocoder (bn_BD): sub-locality / street level when available.
             val geocoderSpot = fetchAndroidGeocoderSpot(context, lat, lng)
             resolved = mergeResolvedSpots(primary = resolved, secondary = geocoderSpot)
+
+            // 3. Last fallback: BigDataCloud. It only knows administrative areas
+            //    (upazila / district), so it is used only if nothing finer was found.
+            val bigDataSpot = fetchBigDataCloudSpot(lat, lng)
+            resolved = mergeResolvedSpots(primary = resolved, secondary = bigDataSpot)
 
             val tz = TimeZone.getDefault()
             val timeZoneOffsetHours = tz.getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
@@ -378,15 +391,9 @@ object LocationHelper {
             val closest = LocationData.findClosestLocation(lat, lng)
             val finalSpotBn = resolved?.spotBn?.takeIf { it.isNotBlank() } ?: closest.nameBn
             val finalParentBn = resolved?.parentBn?.takeIf { it.isNotBlank() } ?: closest.parentBn
-            val formattedExactName = if (
-                finalParentBn.isNotBlank() &&
-                finalParentBn != "বাংলাদেশ" &&
-                !finalSpotBn.contains(finalParentBn, ignoreCase = true)
-            ) {
-                "$finalSpotBn, $finalParentBn"
-            } else {
-                finalSpotBn
-            }
+            // Show ONLY the exact detected spot (no ", district/division" suffix).
+            // The parent area is still kept separately in parentBn for other screens.
+            val formattedExactName = finalSpotBn
 
             val resultDistrict = District(
                 nameEn = resolved?.spotEn?.takeIf { it.isNotBlank() } ?: formattedExactName,
@@ -527,18 +534,21 @@ object LocationHelper {
             val addr = root.optJSONObject("address") ?: return null
 
             val country = cleanToken(addr.optString("country"))
+            // Smallest area first: village / hamlet / neighbourhood, then broader ones.
+            // Road and POI names come last so a highway name does not replace the village.
             val microCandidates = listOf(
-                addr.optString("neighbourhood"),
-                addr.optString("quarter"),
-                addr.optString("residential"),
                 addr.optString("village"),
                 addr.optString("hamlet"),
+                addr.optString("neighbourhood"),
                 addr.optString("suburb"),
-                addr.optString("road"),
-                root.optString("name"),
+                addr.optString("quarter"),
+                addr.optString("residential"),
+                addr.optString("municipality"),
                 addr.optString("city_district"),
                 addr.optString("town"),
-                addr.optString("city")
+                addr.optString("city"),
+                addr.optString("road"),
+                root.optString("name")
             ).mapNotNull { cleanToken(it) }.filter { isUsablePlaceToken(it) }
 
             val parentCandidates = listOf(

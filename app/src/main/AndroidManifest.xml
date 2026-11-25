@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
@@ -76,6 +77,13 @@
             android:theme="@style/Theme.IslamicAlarm.LockScreen" />
 
         <!-- Quran Activity -->
+
+        <!-- Map location picker (OpenStreetMap) -->
+        <activity
+            android:name="com.hafij.islamicalarm.prayertimes.MapPickerActivity"
+            android:exported="false"
+            android:label="মানচিত্র থেকে লোকেশন"
+            android:theme="@style/Theme.IslamicAlarm" />
 
         <!-- Surah Detail Activity -->
         <activity

@@ -128,6 +128,40 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val mapPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val data = result.data
+        if (result.resultCode == RESULT_OK && data != null) {
+            val method = try {
+                CalculationMethod.valueOf(
+                    data.getStringExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.RESULT_METHOD) ?: CalculationMethod.KARACHI_BD.name
+                )
+            } catch (e: Exception) {
+                CalculationMethod.KARACHI_BD
+            }
+            val nameBn = data.getStringExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.RESULT_NAME_BN).orEmpty()
+            val parentBn = data.getStringExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.RESULT_PARENT_BN).orEmpty()
+            val picked = District(
+                nameEn = data.getStringExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.RESULT_NAME_EN) ?: nameBn,
+                nameBn = nameBn,
+                divisionBn = parentBn,
+                lat = data.getDoubleExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.RESULT_LAT, 0.0),
+                lng = data.getDoubleExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.RESULT_LNG, 0.0),
+                offsetMinutes = 0,
+                timeZone = data.getDoubleExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.RESULT_TZ, 6.0),
+                type = LocationType.CUSTOM_GPS,
+                parentBn = parentBn,
+                method = method
+            )
+            if (picked.lat != 0.0 && picked.lng != 0.0 && nameBn.isNotBlank()) {
+                saveSelectedDistrict(picked)
+                updatePrayerTimes()
+                Toast.makeText(this, "✅ লোকেশন সেট হয়েছে: ${picked.displayName}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -819,6 +853,17 @@ class MainActivity : AppCompatActivity() {
         dialogBinding.btnDetectGpsLocation.setOnClickListener {
             dialog.dismiss()
             promptTurnOnGpsAndDetect(showToast = true)
+        }
+
+        // Pick exact place on the map
+        dialogBinding.btnPickOnMap.setOnClickListener {
+            dialog.dismiss()
+            val mapIntent = Intent(this, com.hafij.islamicalarm.prayertimes.MapPickerActivity::class.java)
+            if (prefs.getBoolean("has_user_set_location", false)) {
+                mapIntent.putExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.EXTRA_LAT, selectedDistrict.lat)
+                mapIntent.putExtra(com.hafij.islamicalarm.prayertimes.MapPickerActivity.EXTRA_LNG, selectedDistrict.lng)
+            }
+            mapPickerLauncher.launch(mapIntent)
         }
 
         dialogBinding.tvLocationBreadcrumb.setOnClickListener {

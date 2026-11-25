@@ -37,12 +37,9 @@ data class District(
             LocationType.GLOBAL_CITY -> "$nameBn, $parentBn"
             LocationType.DISTRICT -> "$nameBn জেলা"
             LocationType.DIVISION -> "$nameBn বিভাগ"
-            LocationType.CUSTOM_GPS -> {
-                val hasParent = parentBn.isNotBlank() &&
-                    parentBn != "বাংলাদেশ" &&
-                    !nameBn.contains(parentBn, ignoreCase = true)
-                if (hasParent) "📍 $nameBn, $parentBn" else "📍 $nameBn"
-            }
+            // GPS: show only the exact spot. substringBefore also cleans names saved by
+            // older versions that were stored as "spot, district".
+            LocationType.CUSTOM_GPS -> "📍 ${nameBn.substringBefore(",").trim()}"
         }
 }
 

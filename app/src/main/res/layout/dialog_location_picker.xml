@@ -62,6 +62,21 @@
         app:strokeColor="@color/secondary"
         app:strokeWidth="1.5dp" />
 
+    <!-- Pick the exact place on a map -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnPickOnMap"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:text="🗺️ মানচিত্র থেকে নিজের জায়গা বেছে নিন"
+        android:textColor="@color/secondary"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:cornerRadius="12dp"
+        app:strokeColor="@color/secondary"
+        app:strokeWidth="1.5dp" />
+
     <!-- Search Input -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilSearchLocation"
