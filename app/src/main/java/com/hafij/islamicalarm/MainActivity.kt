@@ -31,6 +31,7 @@ import com.hafij.islamicalarm.databinding.ActivityMainBinding
 import com.hafij.islamicalarm.databinding.DialogAddAlarmBinding
 import com.hafij.islamicalarm.databinding.DialogLocationPickerBinding
 import com.hafij.islamicalarm.names.AllahNamesActivity
+import com.hafij.islamicalarm.prayertimes.BanglaCalendarHelper
 import com.hafij.islamicalarm.prayertimes.CalculationMethod
 import com.hafij.islamicalarm.prayertimes.District
 import com.hafij.islamicalarm.prayertimes.HijriCalendarActivity
@@ -882,9 +883,12 @@ class MainActivity : AppCompatActivity() {
                 currentSchedule = sch
                 updateLocationHeaderUi()
 
-                // Hijri Date
+                // Hijri + Gregorian + Bangla date, all three together in the compact badge
                 val hijriDate = HijriCalendarHelper.getHijriDate(now)
-                binding.tvMainHijriDate.text = hijriDate.formattedBn
+                val gregorianBn = BanglaCalendarHelper.formatGregorianBn(now)
+                val banglaDate = BanglaCalendarHelper.getBanglaDate(now)
+                binding.tvMainHijriDate.text =
+                    "${hijriDate.formattedBn}\n$gregorianBn, ${banglaDate.formattedBn}"
 
                 // Times
                 binding.tvFajrTime.text = "শুরু: ভোর ${sch.fajr} — সূর্যোদয়: ভোর ${sch.sunrise}"
@@ -1009,6 +1013,8 @@ class MainActivity : AppCompatActivity() {
         val nextPrayer = PrayerTimeCalculator.getNextPrayer(now, schedule)
 
         binding.tvNextPrayerTitle.text = "পরবর্তী নামাজ: ${nextPrayer.prayerNameBn} (${nextPrayer.prayerTimeStr})"
+        binding.tvNextPrayerSunTimes.text =
+            "🌅 সূর্যোদয়: ${schedule.sunrise}   🌇 সূর্যাস্ত: ${schedule.sunset}"
 
         countdownTimer = object : CountDownTimer(nextPrayer.remainingMillis, 1000) {
             override fun onTick(millisUntilFinished: Long) {

@@ -335,10 +335,23 @@ object LocationHelper {
             val lat = location.latitude
             val lng = location.longitude
 
-            // 1. Try high-precision street/neighborhood-level Nominatim reverse geocode (zoom=18)
-            var resolved = fetchNominatimSpot(lat, lng)
+            // 1. Primary: BigDataCloud's boundary-based reverse geocoder. Unlike Nominatim
+            // (whose usage policy explicitly forbids bulk calls from a mobile app installed
+            // on many devices, so it silently rate-limits/fails for real users) or Android's
+            // built-in Geocoder (backed by Google's database, which often has no street/POI
+            // data for rural upazila/union areas and falls back to thana/district), this
+            // endpoint is designed specifically for client apps using the device's live GPS,
+            // resolves to administrative/village-level boundaries, and works reliably even
+            // in less-populated areas — this is what other apps (e.g. Muslim Day) rely on
+            // to show the exact spot instead of just the thana/district.
+            var resolved = fetchBigDataCloudSpot(lat, lng)
 
-            // 2. Supplement / fallback with Android Geocoder (bn_BD, then device default)
+            // 2. Supplement any still-blank fields with high-precision Nominatim reverse
+            // geocode (zoom=18, street/neighbourhood level).
+            val nominatimSpot = fetchNominatimSpot(lat, lng)
+            resolved = mergeResolvedSpots(primary = resolved, secondary = nominatimSpot)
+
+            // 3. Final fallback with Android Geocoder (bn_BD, then device default)
             val geocoderSpot = fetchAndroidGeocoderSpot(context, lat, lng)
             resolved = mergeResolvedSpots(primary = resolved, secondary = geocoderSpot)
 
@@ -391,6 +404,82 @@ object LocationHelper {
             withContext(Dispatchers.Main) {
                 onSuccess(resultDistrict)
             }
+        }
+    }
+
+    /**
+     * https://api.bigdatacloud.net/data/reverse-geocode-client — free, no API key, and its
+     * own Fair Use Policy explicitly allows exactly this: a mobile app calling it directly
+     * from the client using the device's current GPS fix. It resolves to administrative/
+     * village boundaries rather than street addresses, so it stays accurate in rural areas
+     * where other providers only have thana/district-level data.
+     */
+    private fun fetchBigDataCloudSpot(lat: Double, lng: Double): ResolvedSpot? {
+        var conn: HttpURLConnection? = null
+        return try {
+            val urlStr = String.format(
+                Locale.US,
+                "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.6f&longitude=%.6f&localityLanguage=bn",
+                lat,
+                lng
+            )
+            conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 4500
+                readTimeout = 4500
+                requestMethod = "GET"
+            }
+            if (conn.responseCode !in 200..299) return null
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            extractExactPlaceFromBigDataCloudJson(body)
+        } catch (_: Exception) {
+            null
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    internal fun extractExactPlaceFromBigDataCloudJson(jsonStr: String): ResolvedSpot? {
+        if (jsonStr.isBlank()) return null
+        return try {
+            val root = JSONObject(jsonStr)
+            val country = cleanToken(root.optString("countryName"))
+            val locality = cleanToken(root.optString("locality"))
+            val city = cleanToken(root.optString("city"))
+            val principalSubdivision = cleanToken(root.optString("principalSubdivision"))
+
+            // "administrative" is ordered most-significant-first (country -> division ->
+            // district -> upazila -> union/ward), so the last usable entry is the finest
+            // named boundary and the one before it is the next broader level.
+            val adminNames = mutableListOf<String>()
+            val adminArr = root.optJSONObject("localityInfo")?.optJSONArray("administrative")
+            if (adminArr != null) {
+                for (i in 0 until adminArr.length()) {
+                    val name = cleanToken(adminArr.optJSONObject(i)?.optString("name"))
+                    if (name != null && isUsablePlaceToken(name)) adminNames.add(name)
+                }
+            }
+            val adminMostGranular = adminNames.lastOrNull()
+            val adminBroader = if (adminNames.size >= 2) adminNames[adminNames.size - 2] else null
+
+            val spot = listOfNotNull(locality, city, adminMostGranular)
+                .firstOrNull { isUsablePlaceToken(it) && !it.equals(country, ignoreCase = true) }
+                ?: return null
+
+            val parent = listOfNotNull(
+                principalSubdivision,
+                adminBroader,
+                city?.takeIf { !it.equals(spot, ignoreCase = true) },
+                country
+            ).firstOrNull { isUsablePlaceToken(it) && !it.equals(spot, ignoreCase = true) } ?: country.orEmpty()
+
+            ResolvedSpot(
+                spotBn = spot,
+                parentBn = parent,
+                spotEn = spot,
+                countryName = country.orEmpty()
+            )
+        } catch (_: Exception) {
+            null
         }
     }
 
