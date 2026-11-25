@@ -1820,6 +1820,85 @@
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11.5sp" />
 
+                            <TextView
+                                android:id="@+id/tvSafeDnsPrivacyNote"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:lineSpacingExtra="2dp"
+                                android:text="এই অ্যাপের সেফ DNS কোনো বিদেশি সার্ভারে আপনার ইন্টারনেট ডেটা পাঠায় না; এটি ফোনের ভেতরেই একটি লোকাল (On-Device) DNS-only টানেল (10.120.0.2) তৈরি করে। তাই আপনার মূল ইন্টারনেটের স্পিড কমে না এবং আপনার প্রকৃত IP Address বা লোকেশন বদলায় না।"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/cardPrivateDnsHelper"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                app:cardBackgroundColor="@color/surface_container"
+                                app:cardCornerRadius="10dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@color/border"
+                                app:strokeWidth="1dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="10dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="🔒 VPN চিহ্ন ছাড়া ও অন্য VPN সহ সুরক্ষা (Private DNS)"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="12.5sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvPrivateDnsStatus"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="3dp"
+                                        android:lineSpacingExtra="2dp"
+                                        android:text="অ্যান্ড্রয়েড Private DNS সেট করলে স্ট্যাটাস বারে কোনো VPN চিহ্ন থাকবে না এবং অন্য যেকোনো VPN-ও একসাথে চলবে।"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="11sp" />
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="8dp"
+                                        android:orientation="horizontal">
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnSetupPrivateDns"
+                                            style="@style/Widget.Material3.Button.OutlinedButton"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="48dp"
+                                            android:text="Private DNS সেট করুন"
+                                            android:textColor="@color/secondary"
+                                            android:textSize="12sp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnCopyPrivateDns"
+                                            style="@style/Widget.Material3.Button.OutlinedButton"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginStart="8dp"
+                                            android:minHeight="48dp"
+                                            android:text="📋 কপি"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="12sp" />
+
+                                    </LinearLayout>
+
+                                </LinearLayout>
+
+                            </com.google.android.material.card.MaterialCardView>
+
                             <View
                                 android:layout_width="match_parent"
                                 android:layout_height="1dp"
@@ -1934,7 +2013,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:lineSpacingExtra="3dp"
-                                android:text="• সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN চালু থাকলে ব্রাউজার ও সব অ্যাপে অ্যাডাল্ট/NSFW ডোমেইন নেটওয়ার্ক পর্যায়ে আটকে যায় এবং Family DNS-এ সেফ সার্চ কার্যকর হয় (অ্যাপের নিজের VPN নোটিফিকেশন হাইড থাকবে; তবে Android System-এর VPN সক্রিয় সূচক সিস্টেমের নিয়ম অনুযায়ী দেখাতে পারে)।\n• ইনকগনিটো বা প্রাইভেট ট্যাব খুললেই শনাক্ত করে অটো ব্যাক করায় (ব্রাউজারের ৩-ডট মেনুতে ক্লিক করলে বন্ধ হবে না)।\n• সার্চ করার সময় বা সাধারণ ওয়েবসাইটে অযথা বন্ধ হবে না; অ্যাডাল্ট সাইটে ক্লিক করলে বা VidMate, SnapTube, Telegram ও ভিডিও প্লেয়ারে নিষিদ্ধ ভিডিও চালু হলে শনাক্ত করে স্ক্রিন ব্লার করে অটো ব্যাক এ আসবে।\n• বন্ধ করতে চাইলে একটি সতর্কবার্তা নোটিশ আসবে এবং 'ওকে' চাপলে বন্ধ হবে।"
+                                android:text="• এই অ্যাপের সেফ DNS কোনো বিদেশি সার্ভারে আপনার ইন্টারনেট ডেটা পাঠায় না; এটি ফোনের ভেতরেই একটি লোকাল (On-Device) DNS-only টানেল (10.120.0.2) তৈরি করে। তাই আপনার মূল ইন্টারনেটের স্পিড কমে না এবং আপনার প্রকৃত IP Address বা লোকেশন বদলায় না।\n• সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN চালু থাকলে ব্রাউজার ও সব অ্যাপে অ্যাডাল্ট/NSFW ডোমেইন নেটওয়ার্ক পর্যায়ে আটকে যায় এবং Family DNS-এ সেফ সার্চ কার্যকর হয়।\n• ইনকগনিটো বা প্রাইভেট ট্যাব খুললেই শনাক্ত করে অটো ব্যাক করায় (ব্রাউজারের ৩-ডট মেনুতে ক্লিক করলে বন্ধ হবে না)।\n• সার্চ করার সময় বা সাধারণ ওয়েবসাইটে অযথা বন্ধ হবে না; অ্যাডাল্ট সাইটে ক্লিক করলে বা VidMate, SnapTube, Telegram ও ভিডিও প্লেয়ারে নিষিদ্ধ ভিডিও চালু হলে শনাক্ত করে স্ক্রিন ব্লার করে অটো ব্যাক এ আসবে।\n• VPN চিহ্ন ছাড়াই DNS ব্লকিং ও অন্য VPN-ও একসাথে চালাতে চাইলে উপরের 'Private DNS সেট করুন' বাটন দিয়ে family.adguard-dns.com সেট করুন—সেক্ষেত্রে লোকাল VPN ছাড়াই DNS সুরক্ষা ও অন্য VPN একসাথে চলবে।\n• বন্ধ করতে চাইলে একটি সতর্কবার্তা নোটিশ আসবে এবং 'ওকে' চাপলে বন্ধ হবে।"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11.5sp" />
 

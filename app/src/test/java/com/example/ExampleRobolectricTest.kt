@@ -1628,6 +1628,45 @@ class ExampleRobolectricTest {
             assertTrue("Category '$cat' should have multiple items, found $count", count >= 2)
         }
 
+        val safeDnsNote = mainAct.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvSafeDnsPrivacyNote
+        )
+        assertTrue(safeDnsNote.text.toString().contains("DNS-only টানেল (10.120.0.2)"))
+        assertTrue(safeDnsNote.text.toString().contains("IP Address বা লোকেশন বদলায় না"))
+
+        // 6. Private DNS helper & external VPN co-existence checks
+        assertTrue(com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("family.adguard-dns.com"))
+        assertTrue(com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("family.cloudflare-dns.com"))
+        assertTrue(!com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("dns.google"))
+
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_alarm
+        mainAct.supportFragmentManager.executePendingTransactions()
+        mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tabSafeMode).performClick()
+        val tvPrivateDns = mainAct.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvPrivateDnsStatus
+        )
+        assertTrue(tvPrivateDns.text.toString().isNotBlank())
+
+        mainAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.btnCopyPrivateDns
+        ).performClick()
+        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        assertEquals(
+            com.hafij.islamicalarm.restrict.SafeDnsHelper.HOST_ADGUARD_FAMILY,
+            clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+        )
+
+        mainAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.btnSetupPrivateDns
+        ).performClick()
+        val privateDnsDialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        assertTrue(privateDnsDialog.isShowing)
+        assertTrue(
+            privateDnsDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).text.toString()
+                .contains("সেটিংসে যান")
+        )
+        privateDnsDialog.dismiss()
+
         mainCtrl.pause().stop().destroy()
     }
 }

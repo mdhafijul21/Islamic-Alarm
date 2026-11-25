@@ -16,6 +16,7 @@ import com.hafij.islamicalarm.permissions.PermissionHelper
  * Drives the "সেফ মোড" tab:
  *  - Master Safe Mode switch (shows a notice dialog with "ওকে" to confirm turning off)
  *  - System-wide Local DNS VPN switch (Cloudflare/AdGuard Family DNS + local blocklist)
+ *  - Android Native Private DNS helper (zero VPN icon + compatible with external VPNs)
  *  - Incognito / Private Tab block toggle
  *  - Custom blocked words/domains editor
  */
@@ -32,6 +33,16 @@ class SafeModeController(
             PermissionHelper.openSettings(activity, PermissionHelper.ID_ACCESSIBILITY)
         }
         binding.btnSafeWords.setOnClickListener { showWordsDialog() }
+        binding.btnSetupPrivateDns.setOnClickListener { showPrivateDnsSetupDialog() }
+        binding.btnCopyPrivateDns.setOnClickListener {
+            if (SafeDnsHelper.copyHostname(activity, SafeDnsHelper.HOST_ADGUARD_FAMILY)) {
+                Toast.makeText(
+                    activity,
+                    "কপি হয়েছে: ${SafeDnsHelper.HOST_ADGUARD_FAMILY}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 
     fun onVpnConsentResult() {
@@ -54,6 +65,8 @@ class SafeModeController(
 
     fun refresh() {
         val serviceOn = PermissionHelper.isAccessibilityEnabled(activity)
+        val privateDns = SafeDnsHelper.getPrivateDnsStatus(activity)
+        val externalVpnActive = SafeDnsHelper.isExternalVpnActive(activity)
 
         // Master Safe Mode switch
         binding.switchSafeMode.setOnCheckedChangeListener(null)
@@ -85,12 +98,33 @@ class SafeModeController(
                 val last = store.lastBlockedDomain
                 if (last.isNullOrBlank()) base else "$base • সর্বশেষ: $last"
             }
+            privateDns.isFamilySafe ->
+                "✅ ফোনের Private DNS (${privateDns.serverName}) সক্রিয় থাকায় লোকাল VPN ছাড়াই DNS সুরক্ষা কাজ করছে (অন্য VPN-ও চলবে)।"
+            externalVpnActive ->
+                "🌐 আপনার অন্য একটি VPN চালু আছে — সেফ মোডের ইনকগনিটো ও সাইট-ব্লার সুরক্ষা সক্রিয় রয়েছে।"
             store.isEnabled && store.isDnsVpnEnabled && needsVpnPrep ->
                 "⚠️ সেফ DNS VPN চালু করতে অনুমতির পপ-আপে 'OK' চাপুন।"
             store.isEnabled && store.isDnsVpnEnabled ->
                 "✅ সেফ DNS VPN সক্রিয় • ব্লক হয়েছে: ${store.dnsBlockedCount}টি"
             else ->
                 "বন্ধ আছে • চালু করলে ফোনের সব অ্যাপ ও ব্রাউজারে নেটওয়ার্ক পর্যায়ে অ্যাডাল্ট ডোমেইন ব্লক ও সেফ সার্চ সুরক্ষা কাজ করবে।"
+        }
+
+        // Native Private DNS status helper
+        binding.tvPrivateDnsStatus.text = when {
+            !privateDns.isSupported ->
+                "এই ফিচারটি Android 9 বা তার উপরের ভার্সনে পাওয়া যায়। এই ডিভাইসে উপরের লোকাল সেফ DNS VPN ব্যবহার করুন।"
+            privateDns.isFamilySafe ->
+                "✅ সক্রিয়: ${privateDns.serverName} — স্ট্যাটাস বারে কোনো VPN চিহ্ন নেই এবং অন্য যেকোনো VPN একসাথে চলবে।"
+            privateDns.isActive && !privateDns.serverName.isNullOrBlank() ->
+                "বর্তমানে '${privateDns.serverName}' চালু আছে। অ্যাডাল্ট সাইট ব্লকের জন্য '${SafeDnsHelper.HOST_ADGUARD_FAMILY}' সেট করুন।"
+            else ->
+                "সেট করা নেই • এটি সেট করলে কোনো VPN চিহ্ন থাকবে না এবং অন্য VPN চালু থাকলেও DNS সুরক্ষা বজায় থাকবে।"
+        }
+        binding.btnSetupPrivateDns.text = if (privateDns.isFamilySafe) {
+            "Private DNS সেটিংস দেখুন"
+        } else {
+            "Private DNS সেট করুন"
         }
 
         // Incognito block switch
@@ -107,8 +141,31 @@ class SafeModeController(
     private fun onToggle(checked: Boolean) {
         if (checked) {
             store.isEnabled = true
-            store.isDnsVpnEnabled = true
-            startOrRequestDnsVpn()
+            val privateDns = SafeDnsHelper.getPrivateDnsStatus(activity)
+            val externalVpnActive = SafeDnsHelper.isExternalVpnActive(activity)
+            when {
+                privateDns.isFamilySafe -> {
+                    store.isDnsVpnEnabled = false
+                    SafeDnsVpnService.stop(activity)
+                    Toast.makeText(
+                        activity,
+                        "✅ সেফ মোড চালু • Private DNS (${privateDns.serverName}) সক্রিয় আছে",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                externalVpnActive -> {
+                    store.isDnsVpnEnabled = false
+                    Toast.makeText(
+                        activity,
+                        "✅ সেফ মোড চালু • আপনার অন্য VPN চলতে থাকবে",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                else -> {
+                    store.isDnsVpnEnabled = true
+                    startOrRequestDnsVpn()
+                }
+            }
             if (!PermissionHelper.isAccessibilityEnabled(activity)) {
                 Toast.makeText(
                     activity,
@@ -142,6 +199,28 @@ class SafeModeController(
 
     private fun onToggleDnsVpn(checked: Boolean) {
         if (checked) {
+            if (SafeDnsHelper.isExternalVpnActive(activity)) {
+                refresh()
+                MaterialAlertDialogBuilder(activity)
+                    .setTitle("🌐 অন্য একটি VPN চালু আছে")
+                    .setMessage(
+                        "অ্যান্ড্রয়েডে একসাথে দুটি VPN চালানো যায় না। লোকাল সেফ DNS VPN চালু করলে আপনার বর্তমান VPN-টি বন্ধ হয়ে যাবে।\n\n" +
+                            "আপনি চাইলে 'Private DNS' সেট করতে পারেন—তাহলে কোনো VPN চিহ্ন ছাড়াই অন্য VPN-ও একসাথে চলবে।"
+                    )
+                    .setPositiveButton("লোকাল DNS চালু করুন") { _, _ ->
+                        store.isEnabled = true
+                        store.isDnsVpnEnabled = true
+                        startOrRequestDnsVpn()
+                        refresh()
+                    }
+                    .setNeutralButton("Private DNS সেট করুন") { _, _ ->
+                        showPrivateDnsSetupDialog()
+                    }
+                    .setNegativeButton("বাতিল") { _, _ -> refresh() }
+                    .setOnCancelListener { refresh() }
+                    .show()
+                return
+            }
             store.isEnabled = true
             store.isDnsVpnEnabled = true
             startOrRequestDnsVpn()
@@ -151,7 +230,7 @@ class SafeModeController(
             MaterialAlertDialogBuilder(activity)
                 .setTitle("⚠️ সেফ DNS / লোকাল VPN বন্ধ করবেন?")
                 .setMessage(
-                    "সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN বন্ধ করলে ব্রাউজার ও অন্যান্য অ্যাপে ডোমেইন পর্যায়ের অ্যাডাল্ট ব্লকিং ও Family SafeSearch সুরক্ষা কাজ করবে না।\n\n" +
+                    "সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN বন্ধ করলেও ইনকগনিটো ও সাইট-ব্লার সুরক্ষা চালু থাকবে এবং আপনি অন্য VPN বা Private DNS ব্যবহার করতে পারবেন।\n\n" +
                         "বন্ধ করতে চাইলে 'ওকে' চাপুন।"
                 )
                 .setPositiveButton("ওকে") { _, _ ->
@@ -163,6 +242,48 @@ class SafeModeController(
                 .setOnCancelListener { refresh() }
                 .show()
         }
+    }
+
+    private fun showPrivateDnsSetupDialog() {
+        val hosts = arrayOf(
+            "${SafeDnsHelper.HOST_ADGUARD_FAMILY} (AdGuard Family - প্রস্তাবিত)",
+            "${SafeDnsHelper.HOST_CLOUDFLARE_FAMILY} (Cloudflare Family)"
+        )
+        val rawHosts = arrayOf(
+            SafeDnsHelper.HOST_ADGUARD_FAMILY,
+            SafeDnsHelper.HOST_CLOUDFLARE_FAMILY
+        )
+        var selectedIndex = 0
+        SafeDnsHelper.copyHostname(activity, rawHosts[selectedIndex])
+
+        MaterialAlertDialogBuilder(activity)
+            .setTitle("🔒 VPN চিহ্ন ছাড়া Private DNS সেটআপ")
+            .setSingleChoiceItems(hosts, selectedIndex) { _, which ->
+                selectedIndex = which
+                SafeDnsHelper.copyHostname(activity, rawHosts[selectedIndex])
+                Toast.makeText(
+                    activity,
+                    "কপি হয়েছে: ${rawHosts[selectedIndex]}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setPositiveButton("কপি করে সেটিংসে যান") { _, _ ->
+                val chosen = rawHosts[selectedIndex]
+                SafeDnsHelper.copyHostname(activity, chosen)
+                Toast.makeText(
+                    activity,
+                    "কপি হয়েছে '$chosen' — Network/Connection → Private DNS → Hostname-এ পেস্ট করুন",
+                    Toast.LENGTH_LONG
+                ).show()
+                SafeDnsHelper.openPrivateDnsSettings(activity)
+            }
+            .setNeutralButton("শুধু কপি করুন") { _, _ ->
+                val chosen = rawHosts[selectedIndex]
+                SafeDnsHelper.copyHostname(activity, chosen)
+                Toast.makeText(activity, "কপি হয়েছে: $chosen", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("বন্ধ করুন", null)
+            .show()
     }
 
     private fun startOrRequestDnsVpn() {

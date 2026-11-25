@@ -274,7 +274,6 @@ class MainActivity : AppCompatActivity() {
         } else if (binding.layoutPrayerTimesContainer.visibility == View.VISIBLE) {
             runHomePermissionWizard()
         }
-        if (::restrictController.isInitialized) restrictController.onScreenShown()
         updatePrayerTimes(force = true)
         loadAlarms()
         refreshOccasionNotificationsAndBadge()
@@ -282,8 +281,12 @@ class MainActivity : AppCompatActivity() {
             com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this, fromForeground = true)
         }
         val safeStore = com.hafij.islamicalarm.restrict.SafeModeStore(this)
+        val privateDns = com.hafij.islamicalarm.restrict.SafeDnsHelper.getPrivateDnsStatus(this)
+        val externalVpnActive = com.hafij.islamicalarm.restrict.SafeDnsHelper.isExternalVpnActive(this)
         if (safeStore.isEnabled && safeStore.isDnsVpnEnabled &&
-            !com.hafij.islamicalarm.restrict.SafeDnsVpnService.isVpnRunning
+            !com.hafij.islamicalarm.restrict.SafeDnsVpnService.isVpnRunning &&
+            !privateDns.isFamilySafe &&
+            !externalVpnActive
         ) {
             val prep = try {
                 android.net.VpnService.prepare(this)
@@ -294,6 +297,7 @@ class MainActivity : AppCompatActivity() {
                 com.hafij.islamicalarm.restrict.SafeDnsVpnService.start(this)
             }
         }
+        if (::restrictController.isInitialized) restrictController.onScreenShown()
     }
 
     override fun onDestroy() {
