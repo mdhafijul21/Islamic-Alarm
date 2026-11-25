@@ -37,7 +37,12 @@ data class District(
             LocationType.GLOBAL_CITY -> "$nameBn, $parentBn"
             LocationType.DISTRICT -> "$nameBn জেলা"
             LocationType.DIVISION -> "$nameBn বিভাগ"
-            LocationType.CUSTOM_GPS -> "📍 $nameBn"
+            LocationType.CUSTOM_GPS -> {
+                val hasParent = parentBn.isNotBlank() &&
+                    parentBn != "বাংলাদেশ" &&
+                    !nameBn.contains(parentBn, ignoreCase = true)
+                if (hasParent) "📍 $nameBn, $parentBn" else "📍 $nameBn"
+            }
         }
 }
 
@@ -138,103 +143,8 @@ object LocationData {
         District("Sherpur", "শেরপুর", "ময়মনসিংহ", 25.0205, 90.0153, 2)
     )
 
-    // Thanas & Upazilas across Bangladesh
-    val thanas = listOf(
-        // Dhaka City & District Thanas
-        District("Mirpur", "মিরপুর", "ঢাকা", 23.8223, 90.3654, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Uttara", "উত্তরা", "ঢাকা", 23.8759, 90.3795, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Dhanmondi", "ধানমন্ডি", "ঢাকা", 23.7465, 90.3760, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Gulshan", "গুলশান", "ঢাকা", 23.7925, 90.4078, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Banani", "বনানী", "ঢাকা", 23.7937, 90.4043, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Mohammadpur", "মোহাম্মদপুর", "ঢাকা", 23.7658, 90.3584, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Motijheel", "মতিঝিল", "ঢাকা", 23.7330, 90.4172, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Badda", "বাড্ডা", "ঢাকা", 23.7806, 90.4267, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Jatrabari", "যাত্রাবাড়ী", "ঢাকা", 23.7099, 90.4358, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Savar", "সাভার", "ঢাকা", 23.8477, 90.2577, 1, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Dhamrai", "ধামরাই", "ঢাকা", 23.9186, 90.2114, 1, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Keraniganj", "কেরানীগঞ্জ", "ঢাকা", 23.6875, 90.3125, 0, 6.0, LocationType.THANA, "ঢাকা"),
-        District("Nawabganj", "নবাবগঞ্জ", "ঢাকা", 23.6667, 90.1667, 1, 6.0, LocationType.THANA, "ঢাকা"),
-
-        // Gazipur Thanas
-        District("Tongi", "টঙ্গী", "গাজীপুর", 23.8967, 90.4022, 0, 6.0, LocationType.THANA, "গাজীপুর"),
-        District("Kaliakair", "কালিয়াকৈর", "গাজীপুর", 24.0667, 90.2167, 1, 6.0, LocationType.THANA, "গাজীপুর"),
-        District("Sreepur", "শ্রীপুর", "গাজীপুর", 24.2000, 90.4667, 0, 6.0, LocationType.THANA, "গাজীপুর"),
-        District("Kapasia", "কাপাসিয়া", "গাজীপুর", 24.1167, 90.5667, -1, 6.0, LocationType.THANA, "গাজীপুর"),
-        District("Kaliganj", "কালীগঞ্জ", "গাজীপুর", 23.9167, 90.5667, -1, 6.0, LocationType.THANA, "গাজীপুর"),
-
-        // Narayanganj Thanas
-        District("Siddhirganj", "সিদ্ধিরগঞ্জ", "নারায়ণগঞ্জ", 23.6833, 90.5167, 0, 6.0, LocationType.THANA, "নারায়ণগঞ্জ"),
-        District("Fatullah", "ফতুল্লা", "নারায়ণগঞ্জ", 23.6500, 90.4833, 0, 6.0, LocationType.THANA, "নারায়ণগঞ্জ"),
-        District("Rupganj", "রূপগঞ্জ", "নারায়ণগঞ্জ", 23.8000, 90.5167, 0, 6.0, LocationType.THANA, "নারায়ণগঞ্জ"),
-        District("Sonargaon", "সোনারগাঁও", "নারায়ণগঞ্জ", 23.6500, 90.6000, 0, 6.0, LocationType.THANA, "নারায়ণগঞ্জ"),
-        District("Araihazar", "আড়াইহাজার", "নারায়ণগঞ্জ", 23.7833, 90.6500, -1, 6.0, LocationType.THANA, "নারায়ণগঞ্জ"),
-
-        // Chattogram Thanas
-        District("Panchlaish", "পাঁচলাইশ", "চট্টগ্রাম", 22.3667, 91.8333, -5, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Kotwali Ctg", "কোতোয়ালী", "চট্টগ্রাম", 22.3384, 91.8317, -5, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Halishahar", "হালিশহর", "চট্টগ্রাম", 22.3167, 91.7833, -5, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Sitakunda", "সীতাকুণ্ড", "চট্টগ্রাম", 22.6167, 91.6667, -5, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Hathazari", "হাটহাজারী", "চট্টগ্রাম", 22.5083, 91.8083, -5, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Patiya", "পটিয়া", "চট্টগ্রাম", 22.2947, 91.9772, -6, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Raozan", "রাউজান", "চট্টগ্রাম", 22.5333, 91.9167, -6, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Boalkhali", "বোয়ালখালী", "চট্টগ্রাম", 22.3833, 91.9167, -6, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Anwara", "আনোয়ারা", "চট্টগ্রাম", 22.2167, 91.9167, -6, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-        District("Mirsharai", "মীরসরাই", "চট্টগ্রাম", 22.7722, 91.5750, -4, 6.0, LocationType.THANA, "চট্টগ্রাম"),
-
-        // Cox's Bazar Thanas
-        District("Teknaf", "টেকনাফ", "কক্সবাজার", 20.8667, 92.3000, -7, 6.0, LocationType.THANA, "কক্সবাজার"),
-        District("Chakaria", "চকোরিয়া", "কক্সবাজার", 21.7861, 92.0778, -6, 6.0, LocationType.THANA, "কক্সবাজার"),
-        District("Ramu", "রামু", "কক্সবাজার", 21.4583, 92.1000, -6, 6.0, LocationType.THANA, "কক্সবাজার"),
-        District("Ukhia", "উখিয়া", "কক্সবাজার", 21.2833, 92.1667, -6, 6.0, LocationType.THANA, "কক্সবাজার"),
-        District("Maheshkhali", "মহেশখালী", "কক্সবাজার", 21.5500, 91.9500, -6, 6.0, LocationType.THANA, "কক্সবাজার"),
-
-        // Cumilla Thanas
-        District("Chandina", "চান্দিনা", "কুমিল্লা", 23.4833, 90.9833, -2, 6.0, LocationType.THANA, "কুমিল্লা"),
-        District("Daudkandi", "দাউদকান্দি", "কুমিল্লা", 23.5333, 90.7167, -1, 6.0, LocationType.THANA, "কুমিল্লা"),
-        District("Debidwar", "দেবিদ্বার", "কুমিল্লা", 23.6000, 90.9833, -2, 6.0, LocationType.THANA, "কুমিল্লা"),
-        District("Laksam", "লাকসাম", "কুমিল্লা", 23.2500, 91.1333, -3, 6.0, LocationType.THANA, "কুমিল্লা"),
-        District("Muradnagar", "মুরাদনগর", "কুমিল্লা", 23.6333, 90.9333, -2, 6.0, LocationType.THANA, "কুমিল্লা"),
-        District("Barura", "বরুড়া", "কুমিল্লা", 23.3667, 91.0500, -2, 6.0, LocationType.THANA, "কুমিল্লা"),
-        District("Burichang", "বুড়িচং", "কুমিল্লা", 23.5500, 91.1333, -3, 6.0, LocationType.THANA, "কুমিল্লা"),
-
-        // Sylhet Thanas
-        District("Golapganj", "গোলাপগঞ্জ", "সিলেট", 24.8667, 92.0167, -7, 6.0, LocationType.THANA, "সিলেট"),
-        District("Beanibazar", "বিয়ানীবাজার", "সিলেট", 24.8333, 92.1667, -7, 6.0, LocationType.THANA, "সিলেট"),
-        District("Biswanath", "বিশ্বনাথ", "সিলেট", 24.7833, 91.7333, -5, 6.0, LocationType.THANA, "সিলেট"),
-        District("Balaganj", "বালাগঞ্জ", "সিলেট", 24.6667, 91.8333, -6, 6.0, LocationType.THANA, "সিলেট"),
-        District("Osmani Nagar", "ওসমানীনগর", "সিলেট", 24.7167, 91.7500, -5, 6.0, LocationType.THANA, "সিলেট"),
-        District("Kanaighat", "কানাইঘাট", "সিলেট", 25.0167, 92.2667, -8, 6.0, LocationType.THANA, "সিলেট"),
-
-        // Bogura & Rajshahi Thanas
-        District("Sherpur Bogura", "শেরপুর", "বগুড়া", 24.6667, 89.4167, 4, 6.0, LocationType.THANA, "বগুড়া"),
-        District("Shibganj Bogura", "শিবগঞ্জ", "বগুড়া", 24.9833, 89.3333, 4, 6.0, LocationType.THANA, "বগুড়া"),
-        District("Ishwardi", "ঈশ্বরদী", "পাবনা", 24.1500, 89.0667, 5, 6.0, LocationType.THANA, "পাবনা"),
-        District("Shahjadpur", "শাহজাদপুর", "সিরাজগঞ্জ", 24.1667, 89.6000, 3, 6.0, LocationType.THANA, "সিরাজগঞ্জ"),
-        District("Ullapara", "উল্লাপাড়া", "সিরাজগঞ্জ", 24.3167, 89.5667, 3, 6.0, LocationType.THANA, "সিরাজগঞ্জ"),
-        District("Puthia", "পুঠিয়া", "রাজশাহী", 24.3667, 88.8333, 6, 6.0, LocationType.THANA, "রাজশাহী"),
-        District("Bagha", "বাঘা", "রাজশাহী", 24.2000, 88.7667, 7, 6.0, LocationType.THANA, "রাজশাহী"),
-        District("Godagari", "গোদাগাড়ী", "রাজশাহী", 24.4667, 88.3333, 8, 6.0, LocationType.THANA, "রাজশাহী"),
-
-        // Khulna & Jashore Thanas
-        District("Dumuria", "ডুমুরিয়া", "খুলনা", 22.8083, 89.4250, 3, 6.0, LocationType.THANA, "খুলনা"),
-        District("Rupsha", "রূপসা", "খুলনা", 22.8333, 89.5833, 3, 6.0, LocationType.THANA, "খুলনা"),
-        District("Jhikargachha", "ঝিকরগাছা", "যশোর", 23.1000, 89.1333, 5, 6.0, LocationType.THANA, "যশোর"),
-        District("Keshabpur", "কেশবপুর", "যশোর", 22.9000, 89.2167, 5, 6.0, LocationType.THANA, "যশোর"),
-        District("Benapole", "বেনাপোল", "যশোর", 23.0333, 88.8833, 6, 6.0, LocationType.THANA, "যশোর"),
-        District("Bheramara", "ভেড়ামারা", "কুষ্টিয়া", 24.0167, 88.9833, 6, 6.0, LocationType.THANA, "কুষ্টিয়া"),
-
-        // Barishal & Rangpur & Mymensingh Thanas
-        District("Bakerganj", "বাকেরগঞ্জ", "বরিশাল", 22.5500, 90.3333, 0, 6.0, LocationType.THANA, "বরিশাল"),
-        District("Babuganj", "বাবুগঞ্জ", "বরিশাল", 22.8167, 90.3167, 0, 6.0, LocationType.THANA, "বরিশাল"),
-        District("Pirganj", "পীরগঞ্জ", "রংপুর", 25.4167, 89.3167, 4, 6.0, LocationType.THANA, "রংপুর"),
-        District("Mithapukur", "মিঠাপুকুর", "রংপুর", 25.5667, 89.2833, 4, 6.0, LocationType.THANA, "রংপুর"),
-        District("Birganj", "বীরগঞ্জ", "দিনাজপুর", 25.8667, 88.6667, 7, 6.0, LocationType.THANA, "দিনাজপুর"),
-        District("Saidpur", "সৈয়দপুর", "নীলফামারী", 25.7833, 88.9000, 6, 6.0, LocationType.THANA, "নীলফামারী"),
-        District("Muktagachha", "মুক্তাগাছা", "ময়মনসিংহ", 24.7667, 90.2667, 1, 6.0, LocationType.THANA, "ময়মনসিংহ"),
-        District("Fulbaria", "ফুলবাড়িয়া", "ময়মনসিংহ", 24.6333, 90.2667, 1, 6.0, LocationType.THANA, "ময়মনসিংহ"),
-        District("Trishal", "ত্রিশাল", "ময়মনসিংহ", 24.5833, 90.4000, 0, 6.0, LocationType.THANA, "ময়মনসিংহ"),
-        District("Bhaluka", "ভালুকা", "ময়মনসিংহ", 24.2333, 90.3833, 0, 6.0, LocationType.THANA, "ময়মনসিংহ")
-    )
+    // বাংলাদেশের ৮ বিভাগের ৬৪ জেলার সকল উপজেলা ও মেট্রোপলিটন থানা
+    val thanas: List<District> = BangladeshThanasData.allThanas
 
     // Major Islamic & Worldwide Cities
     val globalCities = listOf(

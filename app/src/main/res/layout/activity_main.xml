@@ -77,9 +77,9 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:paddingHorizontal="13dp"
-                            android:paddingTop="14dp"
-                            android:paddingBottom="10dp">
+                            android:paddingHorizontal="11dp"
+                            android:paddingTop="8dp"
+                            android:paddingBottom="6dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -94,13 +94,13 @@
                                 android:layout_weight="1"
                                 android:text="নামাজের সময়সূচী"
                                 android:textColor="@color/art_text"
-                                android:textSize="21sp"
+                                android:textSize="17sp"
                                 android:textStyle="bold" />
 
                             <FrameLayout
                                 android:id="@+id/btnHomeNotifications"
                                 android:layout_width="48dp"
-                                android:layout_height="48dp"
+                                android:layout_height="40dp"
                                 android:background="?attr/selectableItemBackgroundBorderless"
                                 android:clickable="true"
                                 android:contentDescription="ইসলামিক নোটিফিকেশন"
@@ -152,12 +152,12 @@
                             android:textStyle="bold"
                             android:visibility="gone" />
 
-                        <!-- District & Hijri Date Bar (raised directly below header title) -->
+                        <!-- District & Hijri Date Bar (compact) -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:layout_marginBottom="10dp"
+                            android:layout_marginTop="2dp"
+                            android:layout_marginBottom="5dp"
                             android:gravity="center_vertical"
                             android:orientation="horizontal">
 
@@ -166,24 +166,24 @@
                                 android:id="@+id/btnSelectDistrict"
                                 style="@style/Widget.Material3.Button.TonalButton"
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
+                                android:layout_height="34dp"
                                 android:maxWidth="172dp"
-                                android:minHeight="40dp"
+                                android:minHeight="34dp"
                                 android:backgroundTint="@color/art_surface"
                                 android:ellipsize="end"
                                 android:insetTop="0dp"
                                 android:insetBottom="0dp"
                                 android:maxLines="1"
-                                android:paddingHorizontal="10dp"
+                                android:paddingHorizontal="9dp"
                                 android:text="ঢাকা জেলা ▾"
                                 android:textColor="@color/art_gold"
-                                android:textSize="11sp"
+                                android:textSize="10.5sp"
                                 android:textStyle="bold"
-                                app:cornerRadius="12dp"
+                                app:cornerRadius="10dp"
                                 app:icon="@drawable/ic_location_pin"
                                 app:iconGravity="textStart"
                                 app:iconPadding="4dp"
-                                app:iconSize="15dp"
+                                app:iconSize="14dp"
                                 app:iconTint="@color/art_gold"
                                 app:strokeColor="@color/art_gold"
                                 app:strokeWidth="1.2dp" />
@@ -193,10 +193,10 @@
                                 android:id="@+id/btnQuickGpsLocation"
                                 style="@style/Widget.Material3.Button.TonalButton"
                                 android:layout_width="wrap_content"
-                                android:layout_height="40dp"
+                                android:layout_height="34dp"
                                 android:layout_marginStart="5dp"
                                 android:minWidth="0dp"
-                                android:minHeight="40dp"
+                                android:minHeight="34dp"
                                 android:backgroundTint="@color/art_surface"
                                 android:contentDescription="স্বয়ংক্রিয় GPS লোকেশন"
                                 android:insetTop="0dp"
@@ -206,7 +206,7 @@
                                 android:textColor="@color/art_gold"
                                 android:textSize="10sp"
                                 android:textStyle="bold"
-                                app:cornerRadius="12dp"
+                                app:cornerRadius="10dp"
                                 app:strokeColor="@color/art_border"
                                 app:strokeWidth="1dp" />
 
@@ -221,23 +221,23 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:background="@drawable/bg_challenge_badge_night"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="6dp"
+                                android:paddingHorizontal="7dp"
+                                android:paddingVertical="4dp"
                                 android:textColor="@color/art_gold"
-                                android:textSize="10sp"
+                                android:textSize="9.5sp"
                                 android:textStyle="bold"
                                 tools:text="২৯ সফর, ১৪৪৮ হিজরি" />
 
                         </LinearLayout>
 
-                        <!-- Next Prayer Live Countdown Banner (borderless, no rectangular outline) -->
+                        <!-- Next Prayer Live Countdown Banner (compact) -->
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:layout_marginBottom="10dp"
+                            android:layout_marginTop="0dp"
+                            android:layout_marginBottom="4dp"
                             app:cardBackgroundColor="#40102018"
-                            app:cardCornerRadius="18dp"
+                            app:cardCornerRadius="14dp"
                             app:cardElevation="0dp"
                             app:strokeWidth="0dp">
 
@@ -246,23 +246,24 @@
                                 android:layout_height="wrap_content"
                                 android:gravity="center"
                                 android:orientation="vertical"
-                                android:padding="9dp">
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="5dp">
 
                                 <TextView
                                     android:id="@+id/tvCurrentWaqtStatus"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:textColor="@color/art_text_secondary"
-                                    android:textSize="10sp"
+                                    android:textSize="9.5sp"
                                     tools:text="যোহরের ওয়াক্ত চলছে" />
 
                                 <TextView
                                     android:id="@+id/tvNextPrayerTitle"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
+                                    android:layout_marginTop="1dp"
                                     android:textColor="@color/art_gold"
-                                    android:textSize="15sp"
+                                    android:textSize="13.5sp"
                                     android:textStyle="bold"
                                     tools:text="পরবর্তী নামাজ: আসর (০৪:৩৫)" />
 
@@ -270,12 +271,12 @@
                                     android:id="@+id/tvNextPrayerCountdown"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="4dp"
+                                    android:layout_marginTop="2dp"
                                     android:background="@drawable/bg_countdown_pill_clean"
-                                    android:paddingHorizontal="10dp"
-                                    android:paddingVertical="3dp"
+                                    android:paddingHorizontal="9dp"
+                                    android:paddingVertical="2dp"
                                     android:textColor="@color/art_text"
-                                    android:textSize="10sp"
+                                    android:textSize="9.5sp"
                                     android:textStyle="bold"
                                     tools:text="বাকি ১ ঘণ্টা ২৫ মিনিট ৩০ সেকেন্ড" />
 
@@ -1921,7 +1922,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:lineSpacingExtra="3dp"
-                                android:text="• সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN চালু থাকলে ব্রাউজার ও সব অ্যাপে অ্যাডাল্ট/NSFW ডোমেইন নেটওয়ার্ক পর্যায়ে আটকে যায় এবং Family DNS-এ সেফ সার্চ কার্যকর হয়।\n• ইনকগনিটো বা প্রাইভেট ট্যাব খুললেই শনাক্ত করে অটো ব্যাক করায়।\n• সার্চ করার সময়ই (Google/Bing/SafeSearch) অযথা বন্ধ হবে না; রেজাল্ট আসার পর কোনো অ্যাডাল্ট সাইটে ক্লিক করলে বা VidMate, SnapTube, Telegram ও প্লেয়ারে অ্যাডাল্ট ভিডিও চালু হলে শনাক্ত করে স্ক্রিন ব্লার করে অটো ব্যাক এ আসবে।\n• বন্ধ করতে চাইলে একটি সতর্কবার্তা নোটিশ আসবে এবং 'ওকে' চাপলে বন্ধ হবে।"
+                                android:text="• সিস্টেম-ওয়াইড সেফ DNS / লোকাল VPN চালু থাকলে ব্রাউজার ও সব অ্যাপে অ্যাডাল্ট/NSFW ডোমেইন নেটওয়ার্ক পর্যায়ে আটকে যায় এবং Family DNS-এ সেফ সার্চ কার্যকর হয় (অ্যাপের নিজের VPN নোটিফিকেশন হাইড থাকবে; তবে Android System-এর VPN সক্রিয় সূচক সিস্টেমের নিয়ম অনুযায়ী দেখাতে পারে)।\n• ইনকগনিটো বা প্রাইভেট ট্যাব খুললেই শনাক্ত করে অটো ব্যাক করায় (ব্রাউজারের ৩-ডট মেনুতে ক্লিক করলে বন্ধ হবে না)।\n• সার্চ করার সময় বা সাধারণ ওয়েবসাইটে অযথা বন্ধ হবে না; অ্যাডাল্ট সাইটে ক্লিক করলে বা VidMate, SnapTube, Telegram ও ভিডিও প্লেয়ারে নিষিদ্ধ ভিডিও চালু হলে শনাক্ত করে স্ক্রিন ব্লার করে অটো ব্যাক এ আসবে।\n• বন্ধ করতে চাইলে একটি সতর্কবার্তা নোটিশ আসবে এবং 'ওকে' চাপলে বন্ধ হবে।"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11.5sp" />
 

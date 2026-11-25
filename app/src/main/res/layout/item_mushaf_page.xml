@@ -10,7 +10,7 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingBottom="4dp">
 
@@ -39,16 +39,33 @@
                 android:textStyle="bold"
                 tools:text="البقرة ٢" />
 
-            <TextView
-                android:id="@+id/tvMushafTopMeta"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp"
+                android:layout_marginHorizontal="6dp"
                 android:gravity="center"
-                android:textColor="@color/text_primary"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                tools:text="( ০১ : ০৩ )" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvMushafTopMeta"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14.5sp"
+                    android:textStyle="bold"
+                    tools:text="( ০১ : ০৩ )" />
+
+                <TextView
+                    android:id="@+id/tvMushafTopTotalPage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textColor="@color/dua_primary"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    tools:text="মোট পৃষ্ঠা ১/৬১০" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvMushafTopJuz"
@@ -132,15 +149,10 @@
                         android:textStyle="bold"
                         tools:text="﴿ ٣ / ٢١ ﴾" />
 
-                    <TextView
-                        android:id="@+id/tvMushafBottomLineHint"
+                    <View
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:gravity="end"
-                        android:text="মোট পৃষ্ঠা ১/৬১০"
-                        android:textColor="@color/dua_muted"
-                        android:textSize="10sp" />
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
                 </LinearLayout>
 
             </LinearLayout>

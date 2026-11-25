@@ -720,25 +720,42 @@ class ExampleRobolectricTest {
         org.robolectric.shadows.ShadowLooper.idleMainLooper()
 
         assertTrue(toolbar.subtitle?.toString().orEmpty().contains("পারা ৪ • পৃষ্ঠা ১৬ / ১৯"))
+        assertTrue(toolbar.subtitle?.toString().orEmpty().contains("মোট পৃষ্ঠা ৭৮/৬১০"))
         val footerText = offlineAct.findViewById<android.widget.TextView>(
             com.hafij.islamicalarm.R.id.tvMushafPageFooter
         ).text.toString()
-        assertTrue(footerText.contains("পারা ৪ : পৃষ্ঠা ১৬/১৯"))
+        assertEquals("পারা ৪ : পৃষ্ঠা ১৬/১৯", footerText)
+        assertTrue(!footerText.contains("মোট"))
 
-        // Verify ViewPager2 Mushaf page renders top-center ( ০৪ : ১৬ ), ﴿ ١٦ / ١٩ ﴾, and visible Ayah numbers inside medallions
+        // Font zoom controls & bottom hint must be removed
+        assertEquals(0, ctx.resources.getIdentifier("btnMushafFontSmaller", "id", ctx.packageName))
+        assertEquals(0, ctx.resources.getIdentifier("btnMushafFontLarger", "id", ctx.packageName))
+        assertEquals(0, ctx.resources.getIdentifier("tvMushafBottomLineHint", "id", ctx.packageName))
+
+        // Verify ViewPager2 Mushaf is RTL (left-to-right page advance) and renders top-center ( ০৪ : ১৬ ), মোট পৃষ্ঠা, ﴿ ١٦ / ١٩ ﴾
         val vpMushaf = offlineAct.findViewById<androidx.viewpager2.widget.ViewPager2>(
             com.hafij.islamicalarm.R.id.vpMushafPages
         )
+        vpMushaf.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY)
+        )
+        vpMushaf.layout(0, 0, 1080, 1920)
+        assertEquals(android.view.View.LAYOUT_DIRECTION_RTL, vpMushaf.layoutDirection)
         val vpInnerRv = vpMushaf.getChildAt(0) as androidx.recyclerview.widget.RecyclerView
         vpInnerRv.measure(
             android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
             android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY)
         )
         vpInnerRv.layout(0, 0, 1080, 1920)
+        assertEquals(android.view.View.LAYOUT_DIRECTION_RTL, vpInnerRv.layoutDirection)
         val mushafHolder = vpInnerRv.findViewHolderForAdapterPosition(77) // global page 78
         assertNotNull(mushafHolder)
         val topMeta = mushafHolder!!.itemView.findViewById<android.widget.TextView>(
             com.hafij.islamicalarm.R.id.tvMushafTopMeta
+        )
+        val topTotalPage = mushafHolder.itemView.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvMushafTopTotalPage
         )
         val bottomPage = mushafHolder.itemView.findViewById<android.widget.TextView>(
             com.hafij.islamicalarm.R.id.tvMushafBottomPage
@@ -747,6 +764,7 @@ class ExampleRobolectricTest {
             com.hafij.islamicalarm.R.id.llMushafPageContent
         )
         assertEquals("( ০৪ : ১৬ )", topMeta.text.toString())
+        assertEquals("মোট পৃষ্ঠা ৭৮/৬১০", topTotalPage.text.toString())
         assertEquals("﴿ ١٦ / ١٩ ﴾", bottomPage.text.toString())
         assertTrue("Expected 15 Mushaf rows plus rule lines", linesContainer.childCount >= 15)
 
@@ -806,7 +824,7 @@ class ExampleRobolectricTest {
         rvDuaCats.layout(0, 0, 1080, 1920)
         val visibleDuaTexts = collectTexts(rvDuaCats)
         assertTrue(visibleDuaTexts.none { it == "সবগুলো" || it == "(সবগুলো)" })
-        assertTrue(visibleDuaTexts.contains("পছন্দের দোয়া"))
+        assertTrue(visibleDuaTexts.contains("পছন্দের আমল"))
 
         // 4. AudioQuranActivity renamed to "অডিও", multi-mirror CDN fast URLs, and foreground media notification (Prev | Play/Pause | Next)
         val reciterUrls = com.hafij.islamicalarm.audio.ReciterData.getDefaultReciter().getAllPlaybackUrls(1)
@@ -1210,5 +1228,406 @@ class ExampleRobolectricTest {
         val silenceWave = ShortArray(4000) { 0 }
         assertTrue(com.hafij.islamicalarm.auto.AzanListenerService.isAzanFrameLikelyVocal(vocalWave, vocalWave.size))
         assertTrue(!com.hafij.islamicalarm.auto.AzanListenerService.isAzanFrameLikelyVocal(silenceWave, silenceWave.size))
+    }
+
+    @Test
+    fun testCompactBannerLibraryApisSafeModeFixesSilentVpnAndCleanQuran(): Unit = runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+
+        // 1. Compact Home banner (~30% reduced)
+        val mainActivity = Robolectric.buildActivity(MainActivity::class.java).create().start().resume().get()
+        val headerTitle = mainActivity.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvHeaderTitle
+        )
+        val headerContainer = mainActivity.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.headerArtContainer
+        )
+        assertTrue(headerTitle.textSize <= 18f * ctx.resources.displayMetrics.scaledDensity + 1f)
+        assertTrue(headerContainer.paddingTop <= (10 * ctx.resources.displayMetrics.density).toInt() + 1)
+
+        // 2. Clean Quran "অর্থ সহ" (quran-simple without Uthmani ٱ/۟/ۭ marks + clean Unicode Bengali + @font/amiri)
+        val surah1 = QuranRepository.fetchSurahAyahs(ctx, 1)
+        assertEquals(7, surah1.size)
+        for (ayah in surah1) {
+            assertTrue("Must not contain Uthmani Alef Wasla", !ayah.textArabic.contains('\u0671'))
+            assertTrue("Must not contain Uthmani small high rounded zero", !ayah.textArabic.contains('\u06DF'))
+            assertTrue("Must not contain Uthmani small low meem", !ayah.textArabic.contains('\u06ED'))
+            assertTrue("Must not contain broken Bijoy glyph", !ayah.textBangla.contains("ো"))
+        }
+
+        // 3. Safe Mode: Chrome normal page (aistudio.google.com) with SurfaceView & stray text MUST NOT trigger,
+        //    and Chrome 3-dot overflow menu MUST NOT trigger Incognito Block, while real Incognito tab DOES.
+        val serviceCtrl = Robolectric.buildService(
+            com.hafij.islamicalarm.restrict.RestrictAccessibilityService::class.java
+        )
+        val service = serviceCtrl.create().get()
+
+        val chromeRoot = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.FrameLayout"
+        }
+        val aiStudioUrlBar = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.EditText"
+            viewIdResourceName = "com.android.chrome:id/url_bar"
+            isFocused = false
+            text = "aistudio.google.com/apps/drive/123"
+        }
+        val chromeSurface = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.view.SurfaceView"
+        }
+        val pageBodyMention = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.TextView"
+            text = "Safe Mode fixes adult blocking and fullscreen video player false positives"
+        }
+        org.robolectric.Shadows.shadowOf(chromeRoot).addChild(aiStudioUrlBar)
+        org.robolectric.Shadows.shadowOf(chromeRoot).addChild(chromeSurface)
+        org.robolectric.Shadows.shadowOf(chromeRoot).addChild(pageBodyMention)
+        assertTrue(!service.shouldTriggerSafeVideoBlock(chromeRoot))
+
+        // Chrome 3-dot overflow menu popup MUST NOT trigger Incognito Block
+        val menuRoot = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.ListView"
+        }
+        val menuNewTab = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.TextView"
+            viewIdResourceName = "com.android.chrome:id/menu_item_text"
+            text = "New tab"
+        }
+        val menuNewIncognito = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.TextView"
+            viewIdResourceName = "com.android.chrome:id/menu_item_text"
+            text = "New Incognito tab"
+        }
+        val menuBookmarks = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.TextView"
+            viewIdResourceName = "com.android.chrome:id/menu_item_text"
+            text = "Bookmarks"
+        }
+        org.robolectric.Shadows.shadowOf(menuRoot).addChild(menuNewTab)
+        org.robolectric.Shadows.shadowOf(menuRoot).addChild(menuNewIncognito)
+        org.robolectric.Shadows.shadowOf(menuRoot).addChild(menuBookmarks)
+        assertTrue(!service.shouldTriggerSafeVideoBlock(menuRoot))
+
+        // Real Incognito tab view MUST still trigger Incognito Block
+        val realIncognito = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
+            packageName = "com.android.chrome"
+            className = "android.widget.TextView"
+            text = "You've gone incognito"
+        }
+        assertTrue(service.shouldTriggerSafeVideoBlock(realIncognito))
+
+        aiStudioUrlBar.recycle()
+        chromeSurface.recycle()
+        pageBodyMention.recycle()
+        chromeRoot.recycle()
+        menuNewTab.recycle()
+        menuNewIncognito.recycle()
+        menuBookmarks.recycle()
+        menuRoot.recycle()
+        realIncognito.recycle()
+        serviceCtrl.destroy()
+
+        // 4. SafeDnsVpnService silent start posts NO app foreground notification
+        val safeStore = com.hafij.islamicalarm.restrict.SafeModeStore(ctx)
+        safeStore.isEnabled = true
+        safeStore.isDnsVpnEnabled = true
+        val silentVpnIntent = Intent(ctx, com.hafij.islamicalarm.restrict.SafeDnsVpnService::class.java).apply {
+            action = com.hafij.islamicalarm.restrict.SafeDnsVpnService.ACTION_START
+            putExtra(com.hafij.islamicalarm.restrict.SafeDnsVpnService.EXTRA_FOREGROUND_REQUIRED, false)
+        }
+        val vpnSvcCtrl = Robolectric.buildService(
+            com.hafij.islamicalarm.restrict.SafeDnsVpnService::class.java,
+            silentVpnIntent
+        ).create().startCommand(0, 1)
+        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val postedNotifs = org.robolectric.Shadows.shadowOf(nm).allNotifications
+        assertTrue(postedNotifs.none { it.extras.getString(android.app.Notification.EXTRA_TITLE)?.contains("সেফ DNS") == true })
+        vpnSvcCtrl.destroy()
+
+        // 5. Kitab & Library multi-source APIs (Stories, Sahaba/History, Seerah/Tafsir, Qawmi, OpenLibrary, Islamic.app) & UI
+        val azharmeaSample = """
+            {"result":[
+              {"name":"Sat Juboker Golpo.pdf"},
+              {"name":"Hayatus Sahabah Vol 1.pdf"},
+              {"name":"Arrahikulmakhtum Bangla.pdf"},
+              {"name":"1.pdf"}
+            ]}
+        """.trimIndent()
+        val parsedBanglaArchive = com.hafij.islamicalarm.books.LibraryApiClient.parseArchiveCollectionFilesJson(
+            identifier = "azharmea-www.eelm.weebly.com-skype-id-azharmea",
+            jsonStr = azharmeaSample,
+            defaultJamatCode = com.hafij.islamicalarm.books.RemoteLibraryBook.JAMAT_GENERAL_BANGLA,
+            sourceLabel = "Bangla Islamic Archive",
+            smartClassify = true
+        )
+        assertEquals(3, parsedBanglaArchive.size)
+        assertEquals(com.hafij.islamicalarm.books.RemoteLibraryBook.CAT_STORIES, parsedBanglaArchive[0].jamatCode)
+        assertTrue(parsedBanglaArchive[0].titleBn.contains("সাত যুবকের গল্প"))
+        assertEquals(com.hafij.islamicalarm.books.RemoteLibraryBook.CAT_SAHABA_HISTORY, parsedBanglaArchive[1].jamatCode)
+        assertEquals(com.hafij.islamicalarm.books.RemoteLibraryBook.CAT_SEERAH_TAFSIR, parsedBanglaArchive[2].jamatCode)
+
+        val openLibSample = """
+            {"docs":[
+              {"title":"Stories of the Prophets","ia":["storiesofprophet00ibnk"],"author_name":["Ibn Kathir"]},
+              {"title":"Book without IA","author_name":["Unknown"]}
+            ]}
+        """.trimIndent()
+        val parsedOpenLib = com.hafij.islamicalarm.books.LibraryApiClient.parseOpenLibraryDocs(openLibSample)
+        assertEquals(1, parsedOpenLib.size)
+        assertEquals("storiesofprophet00ibnk", parsedOpenLib[0].iaIdentifier)
+
+        val kawmiSample = """
+            {"result":[
+              {"name":"D-Sahih-Al-Bukhari-1.pdf"},
+              {"name":"T-Beheshte-Jewor.pdf"},
+              {"name":"K-Kuduri.pdf"},
+              {"name":"D-Sahih-Al-Bukhari-1_text.pdf"}
+            ]}
+        """.trimIndent()
+        val parsedKawmi = com.hafij.islamicalarm.books.LibraryApiClient.parseArchiveKawmiFilesJson(kawmiSample)
+        assertEquals(3, parsedKawmi.size)
+        assertEquals(com.hafij.islamicalarm.books.RemoteLibraryBook.JAMAT_DAWRA, parsedKawmi[0].jamatCode)
+        assertEquals(com.hafij.islamicalarm.books.RemoteLibraryBook.JAMAT_TAISIR, parsedKawmi[1].jamatCode)
+        assertEquals(com.hafij.islamicalarm.books.RemoteLibraryBook.JAMAT_KAFIYA, parsedKawmi[2].jamatCode)
+        assertTrue(parsedKawmi[1].titleBn.contains("বেহেশতী জেওর"))
+
+        val searchSample = """
+            {"response":{"docs":[
+              {"identifier":"tafsir-jalalain-bn","title":"Tafsir Jalalain Bangla","creator":"Maulana"}
+            ]}}
+        """.trimIndent()
+        val parsedSearchDocs = com.hafij.islamicalarm.books.LibraryApiClient.parseArchiveSearchDocs(searchSample)
+        assertEquals(1, parsedSearchDocs.size)
+        assertEquals("tafsir-jalalain-bn", parsedSearchDocs[0].identifier)
+
+        val islamicAppSample = """
+            {"data":{"books":[
+              {"slug":"riyad-salihin","has_pdf":true,"title_ar":"رياض الصالحين","title_en":"Riyad as-Salihin","title_i18n":{"bn":"রিয়াদুস সালেহীন"},"pages":520}
+            ]}}
+        """.trimIndent()
+        val parsedClassical = com.hafij.islamicalarm.books.LibraryApiClient.parseIslamicAppBooksJson(islamicAppSample)
+        assertEquals(1, parsedClassical.size)
+        assertEquals("রিয়াদুস সালেহীন", parsedClassical[0].titleBn)
+        assertEquals(com.hafij.islamicalarm.books.RemoteLibraryBook.JAMAT_CLASSICAL_AR, parsedClassical[0].jamatCode)
+
+        // Ensure zero "বেফাক" references in JamatCatalog or Activity header
+        assertTrue(
+            com.hafij.islamicalarm.books.JamatCatalog.allCategories.none {
+                it.titleBn.contains("বেফাক") || it.subtitleBn.contains("বেফাক")
+            }
+        )
+
+        // Populate catalog cache & verify IslamicLibraryActivity 2-col category grid -> 3-col book shelf & 5-tab bar
+        com.hafij.islamicalarm.books.LibraryPrefsStore(ctx).saveCatalogCache(
+            parsedBanglaArchive + parsedKawmi + parsedClassical
+        )
+        val libCtrl = Robolectric.buildActivity(
+            com.hafij.islamicalarm.books.IslamicLibraryActivity::class.java
+        ).create().start().resume()
+        val libAct = libCtrl.get()
+        val headerLibraryTitle = libAct.findViewById<android.widget.TextView>(
+            com.hafij.islamicalarm.R.id.tvLibraryHeaderTitle
+        )
+        assertEquals("ইসলামিক ও কিতাব লাইব্রেরী", headerLibraryTitle.text.toString())
+        assertEquals(0, ctx.resources.getIdentifier("cardLibNavHome", "id", ctx.packageName))
+
+        val rvJamat = libAct.findViewById<androidx.recyclerview.widget.RecyclerView>(
+            com.hafij.islamicalarm.R.id.rvJamatCategories
+        )
+        val rvBooks = libAct.findViewById<androidx.recyclerview.widget.RecyclerView>(
+            com.hafij.islamicalarm.R.id.rvRemoteBooks
+        )
+        val layoutInfo = libAct.findViewById<android.view.View>(
+            com.hafij.islamicalarm.R.id.layoutLibraryInfo
+        )
+        assertEquals(android.view.View.VISIBLE, rvJamat.visibility)
+        assertEquals(2, (rvJamat.layoutManager as androidx.recyclerview.widget.GridLayoutManager).spanCount)
+        assertEquals(3, (rvBooks.layoutManager as androidx.recyclerview.widget.GridLayoutManager).spanCount)
+        assertEquals(com.hafij.islamicalarm.books.JamatCatalog.allCategories.size, rvJamat.adapter?.itemCount)
+
+        // Measure/layout Category RecyclerView & click first category ("ইসলামিক গল্প ও কাহিনি")
+        rvJamat.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY)
+        )
+        rvJamat.layout(0, 0, 1080, 1920)
+        rvJamat.findViewHolderForAdapterPosition(0)!!.itemView.performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+
+        assertEquals(android.view.View.GONE, rvJamat.visibility)
+        assertEquals(android.view.View.VISIBLE, rvBooks.visibility)
+        assertEquals(1, rvBooks.adapter?.itemCount)
+
+        // Switch to Info tab, then Back to Home tab & verify "জামাত: দাওরা" at position 4
+        libAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnLibNavInfo).performClick()
+        assertEquals(android.view.View.VISIBLE, layoutInfo.visibility)
+        libAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnLibNavHome).performClick()
+        assertEquals(android.view.View.VISIBLE, rvJamat.visibility)
+        rvJamat.findViewHolderForAdapterPosition(4)!!.itemView.performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertEquals(1, rvBooks.adapter?.itemCount)
+
+        libCtrl.pause().stop().destroy()
+    }
+
+    @Test
+    fun testExactGpsBangladeshLocationsMushafFullPageSettingsShareAndAmalExpansion() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+
+        // 1. All 8 Divisions, all 64 Districts, and every District has Upazilas/Thanas
+        val divisions = com.hafij.islamicalarm.prayertimes.LocationData.divisions
+        val districts = com.hafij.islamicalarm.prayertimes.LocationData.districts
+        val thanas = com.hafij.islamicalarm.prayertimes.LocationData.thanas
+        assertEquals(8, divisions.size)
+        assertEquals(64, districts.size)
+        assertTrue("Expected full Bangladesh thanas/upazilas >= 490, found ${thanas.size}", thanas.size >= 490)
+        val districtNames = districts.map { it.nameBn }.toSet()
+        for (d in districts) {
+            assertTrue(
+                "District ${d.nameBn} missing thanas/upazilas",
+                thanas.any { it.parentBn == d.nameBn }
+            )
+        }
+        assertTrue(thanas.all { it.parentBn in districtNames })
+
+        // 2. LocationHelper exact-spot extraction (Nominatim zoom=18 + Geocoder + freshness check)
+        val nominatimSample = """
+            {
+              "name": "বাড্ডা জামে মসজিদ",
+              "address": {
+                "road": "স্বাধীনতা সরণি",
+                "neighbourhood": "উত্তর বাড্ডা",
+                "suburb": "বাড্ডা থানা",
+                "city": "ঢাকা",
+                "state": "ঢাকা বিভাগ",
+                "country": "বাংলাদেশ"
+              }
+            }
+        """.trimIndent()
+        val parsedSpot = com.hafij.islamicalarm.prayertimes.LocationHelper.extractExactPlaceFromNominatimJson(nominatimSample)
+        assertNotNull(parsedSpot)
+        assertEquals("উত্তর বাড্ডা", parsedSpot!!.spotBn)
+        assertEquals("ঢাকা", parsedSpot.parentBn)
+
+        val customGps = com.hafij.islamicalarm.prayertimes.District(
+            nameEn = "Uttar Badda",
+            nameBn = "উত্তর বাড্ডা",
+            divisionBn = "ঢাকা",
+            lat = 23.7806,
+            lng = 90.4267,
+            type = com.hafij.islamicalarm.prayertimes.LocationType.CUSTOM_GPS,
+            parentBn = "ঢাকা"
+        )
+        assertEquals("📍 উত্তর বাড্ডা, ঢাকা", customGps.displayName)
+
+        val addr = android.location.Address(java.util.Locale("bn", "BD")).apply {
+            thoroughfare = "কলেজ রোড"
+            subLocality = "ধানমন্ডি"
+            locality = "ঢাকা"
+            subAdminArea = "ঢাকা"
+            countryName = "বাংলাদেশ"
+        }
+        val parsedGeo = com.hafij.islamicalarm.prayertimes.LocationHelper.extractExactPlaceFromAddresses(listOf(addr))
+        assertNotNull(parsedGeo)
+        assertEquals("কলেজ রোড", parsedGeo!!.spotBn)
+
+        val staleLoc = android.location.Location("gps").apply {
+            time = System.currentTimeMillis() - 10 * 60 * 1000L
+            accuracy = 15f
+        }
+        val coarseLoc = android.location.Location("network").apply {
+            time = System.currentTimeMillis()
+            accuracy = 180f
+        }
+        val freshExactLoc = android.location.Location("gps").apply {
+            time = System.currentTimeMillis()
+            accuracy = 12f
+        }
+        assertTrue(!com.hafij.islamicalarm.prayertimes.LocationHelper.isRecentAndPrecise(staleLoc))
+        assertTrue(!com.hafij.islamicalarm.prayertimes.LocationHelper.isRecentAndPrecise(coarseLoc))
+        assertTrue(com.hafij.islamicalarm.prayertimes.LocationHelper.isRecentAndPrecise(freshExactLoc))
+
+        // 3. Mushaf Page 1, Page 2, Page 610 full-page rendering (no mid-page blank cut)
+        val offlineActCtrl = Robolectric.buildActivity(
+            com.hafij.islamicalarm.quran.OfflineArabicQuranActivity::class.java
+        ).create().start().resume()
+        val offlineAct = offlineActCtrl.get()
+        val pager = offlineAct.findViewById<androidx.viewpager2.widget.ViewPager2>(
+            com.hafij.islamicalarm.R.id.vpMushafPages
+        )
+        val pagerRecycler = pager.getChildAt(0) as androidx.recyclerview.widget.RecyclerView
+        fun bindAndMeasurePage(pageOneBased: Int): android.widget.LinearLayout {
+            val vh = pager.adapter!!.createViewHolder(pagerRecycler, 0)
+            @Suppress("UNCHECKED_CAST")
+            (pager.adapter as androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>)
+                .onBindViewHolder(vh, pageOneBased - 1)
+            vh.itemView.measure(
+                android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY)
+            )
+            vh.itemView.layout(0, 0, 1080, 1920)
+            return vh.itemView.findViewById(com.hafij.islamicalarm.R.id.llMushafPageContent)
+        }
+        fun collectTexts(v: android.view.View): List<String> = when (v) {
+            is android.widget.TextView -> listOf(v.text.toString())
+            is android.view.ViewGroup -> (0 until v.childCount).flatMap { collectTexts(v.getChildAt(it)) }
+            else -> emptyList()
+        }
+
+        val page1Container = bindAndMeasurePage(1)
+        val page2Container = bindAndMeasurePage(2)
+        val page610Container = bindAndMeasurePage(610)
+        // Page 1 & 2 fill the frame with positive row heights and no empty spacer dead weight
+        assertTrue(page1Container.height > 1000)
+        assertTrue(page2Container.height > 1000)
+        // Page 610 collapses 6 trailing BlankLines into a single Khatam-ul-Quran closing panel
+        val page610Texts = collectTexts(page610Container).joinToString("\n")
+        assertTrue(page610Texts.contains("خَتْمُ الْقُرْآنِ الْكَرِيمِ"))
+        assertTrue(page610Texts.contains("আল-কুরআনুল কারীম সমাপ্ত"))
+        offlineActCtrl.pause().stop().destroy()
+
+        // 4. Settings Share button + Dynamic Admin JSON link update
+        val mainCtrl = Robolectric.buildActivity(MainActivity::class.java).create().start().resume()
+        val mainAct = mainCtrl.get()
+        val navBar = mainAct.findViewById<com.hafij.islamicalarm.MainBottomBar>(
+            com.hafij.islamicalarm.R.id.bottomNavigation
+        )
+        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_settings
+        mainAct.supportFragmentManager.executePendingTransactions()
+
+        val shareBtn = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnSettingsShareApp)
+        assertEquals(android.view.View.VISIBLE, shareBtn.visibility)
+        val adminJson = """
+            {
+              "share_url": "https://islamic-alarm.example.com/download-v2",
+              "share_title": "ইসলামিক এলার্ম আপডেট",
+              "share_message": "অ্যাডমিন প্যানেল থেকে যুক্ত নতুন লিংক:"
+            }
+        """.trimIndent()
+        assertTrue(com.hafij.islamicalarm.settings.AppShareConfigStore.applyRemoteConfigJson(ctx, adminJson))
+        val shareText = com.hafij.islamicalarm.settings.AppShareConfigStore.buildShareText(ctx)
+        assertTrue(shareText.contains("https://islamic-alarm.example.com/download-v2"))
+        assertTrue(shareText.contains("অ্যাডমিন প্যানেল থেকে যুক্ত নতুন লিংক:"))
+
+        // 5. Bottom Bar "আমল" label + Every Dua/Amal category populated & expanded
+        val navTexts = collectTexts(navBar)
+        assertTrue(navTexts.contains("আমল"))
+        assertTrue(navTexts.none { it == "দোয়া" || it == "দোয়া" })
+
+        val allAmalItems = com.hafij.islamicalarm.duas.DuaData.getDuasAndHadiths
+        val categories = com.hafij.islamicalarm.duas.DuaData.getCategories
+        for (cat in categories) {
+            val count = allAmalItems.count { it.category == cat }
+            assertTrue("Category '$cat' should have multiple items, found $count", count >= 2)
+        }
+
+        mainCtrl.pause().stop().destroy()
     }
 }

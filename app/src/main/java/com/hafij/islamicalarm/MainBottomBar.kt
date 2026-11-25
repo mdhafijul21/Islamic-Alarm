@@ -61,7 +61,7 @@ class MainBottomBar @JvmOverloads constructor(
             Triple(R.id.nav_alarm, R.drawable.ic_nav_alarm, "সেফ মোড"),
             Triple(R.id.nav_quran, R.drawable.ic_nav_quran, "কুরআন"),
             Triple(R.id.nav_tasbih, R.drawable.ic_nav_tasbih, "তাসবিহ"),
-            Triple(R.id.nav_duas, R.drawable.ic_nav_dua, "দোয়া"),
+            Triple(R.id.nav_duas, R.drawable.ic_nav_dua, "আমল"),
             Triple(R.id.nav_settings, R.drawable.ic_nav_settings, "সেটিংস")
         )
         for ((id, icon, text) in defs) {

@@ -69,20 +69,22 @@
 
         </LinearLayout>
 
-        <!-- Arabic Uthmani Ayah Text -->
+        <!-- Clean Arabic Ayah Text (Amiri font for crisp harakat & sukunat) -->
         <TextView
             android:id="@+id/tvAyahArabic"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:background="@drawable/bg_arabic_verse"
+            android:fontFamily="@font/amiri"
             android:gravity="end"
-            android:lineSpacingExtra="5dp"
-            android:padding="10dp"
+            android:lineSpacingExtra="8dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="10dp"
             android:textColor="@color/text_primary"
-            android:textSize="19sp"
-            android:textStyle="bold"
-            tools:text="بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ﴿١﴾" />
+            android:textDirection="rtl"
+            android:textSize="21sp"
+            tools:text="بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴿١﴾" />
 
         <!-- Bengali Translation -->
         <TextView

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardBookGridItem"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="5dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:strokeColor="#D8E2E6"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="5dp">
+
+        <!-- Tall Book Cover Container -->
+        <FrameLayout
+            android:id="@+id/frameBookCover"
+            android:layout_width="match_parent"
+            android:layout_height="142dp"
+            android:background="#0F4C5C">
+
+            <!-- Ornate Printed Book Cover Design (fallback when cover image isn't downloaded) -->
+            <LinearLayout
+                android:id="@+id/layoutGeneratedCover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/tvCoverBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#33000000"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:textColor="#FCE8B2"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold"
+                    tools:text="গল্প ও কাহিনি" />
+
+                <TextView
+                    android:id="@+id/tvCoverCenterTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="4"
+                    android:paddingHorizontal="4dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    tools:text="আসহাবে রাসূলের জীবনকথা" />
+
+                <TextView
+                    android:id="@+id/tvCoverSource"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:textColor="#D9EEF3"
+                    android:textSize="8sp"
+                    tools:text="Islamic PDF" />
+
+            </LinearLayout>
+
+            <!-- Real Cover Image (loaded asynchronously for Archive.org / OpenLibrary items) -->
+            <ImageView
+                android:id="@+id/ivBookCover"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <!-- Top-left Royal Teal Downloaded Checkmark Badge -->
+            <FrameLayout
+                android:id="@+id/badgeBookDownloaded"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="top|start"
+                android:layout_margin="4dp"
+                android:background="@drawable/bg_badge_circle_gold"
+                android:backgroundTint="#0F4C5C"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="ডাউনলোড সম্পন্ন"
+                    android:src="@drawable/ic_lib_check" />
+            </FrameLayout>
+
+            <!-- Top-right Circular Delete Icon (shown in Download / Offline shelf) -->
+            <FrameLayout
+                android:id="@+id/btnDeleteDownloadedBook"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="top|end"
+                android:layout_margin="3dp"
+                android:background="@drawable/bg_badge_circle_gold"
+                android:backgroundTint="#C93B3B"
+                android:clickable="true"
+                android:contentDescription="অফলাইন কিতাব মুছুন"
+                android:focusable="true"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <ImageView
+                    android:layout_width="15dp"
+                    android:layout_height="15dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_lib_delete" />
+            </FrameLayout>
+
+        </FrameLayout>
+
+        <!-- Short Title Underneath Cover Card -->
+        <TextView
+            android:id="@+id/tvGridBookTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="2"
+            android:minLines="1"
+            android:textColor="#18262B"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            tools:text="আসহাবে রাসূলের জীবনকথা" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

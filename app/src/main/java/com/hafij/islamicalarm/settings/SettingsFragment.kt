@@ -16,6 +16,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.hafij.islamicalarm.MainActivity
@@ -26,6 +27,7 @@ import com.hafij.islamicalarm.permissions.PermissionHelper
 import com.hafij.islamicalarm.report.ReportItem
 import com.hafij.islamicalarm.report.ReportStore
 import com.hafij.islamicalarm.widget.IslamicAlarmWidget
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -119,7 +121,42 @@ class SettingsFragment : Fragment() {
         b.cardAddToHomeWidget.setOnClickListener {
             pinPrayerCounterWidget()
         }
+        b.btnSettingsShareApp.setOnClickListener {
+            shareAppLink()
+        }
+        b.cardSettingsShareApp.setOnClickListener {
+            shareAppLink()
+        }
+        refreshShareUi()
+        syncAdminShareLinkInBackground()
         renderCategoryScreen()
+    }
+
+    private fun shareAppLink() {
+        val ctx = context ?: return
+        val shareIntent = AppShareConfigStore.buildShareIntent(ctx)
+        startActivity(Intent.createChooser(shareIntent, "অ্যাপ শেয়ার করুন"))
+    }
+
+    private fun refreshShareUi() {
+        val b = _binding ?: return
+        val ctx = context ?: return
+        val cfg = AppShareConfigStore.getConfig(ctx)
+        b.tvShareLinkSummary.text = if (cfg.hasCustomAdminLink) {
+            "আপডেটকৃত লিংক: ${cfg.shareUrl}"
+        } else {
+            "বন্ধু ও পরিবারের সাথে অ্যাপের লিংক শেয়ার করুন"
+        }
+    }
+
+    private fun syncAdminShareLinkInBackground() {
+        val ctx = context ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val updated = AppShareConfigStore.syncFromAdminEndpointIfConfigured(ctx)
+            if (updated && _binding != null) {
+                refreshShareUi()
+            }
+        }
     }
 
     private fun pinPrayerCounterWidget() {
@@ -201,6 +238,7 @@ class SettingsFragment : Fragment() {
         super.onResume()
         // The user may have just switched something on in the system settings.
         refreshPermissions()
+        refreshShareUi()
     }
 
     override fun onHiddenChanged(hidden: Boolean) {

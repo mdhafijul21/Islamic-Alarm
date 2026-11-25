@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
     android:orientation="vertical"
-    tools:context="com.hafij.islamicalarm.books.PdfReaderActivity"
-    xmlns:tools="http://schemas.android.com/tools">
+    tools:context="com.hafij.islamicalarm.books.PdfReaderActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -25,30 +25,63 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <HorizontalScrollView
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#1A1A1A"
-        android:fillViewport="true">
+        android:background="#1A1A1A">
 
-        <ScrollView
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true">
 
-            <ImageView
-                android:id="@+id/ivPdfPage"
+            <ScrollView
                 android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <ImageView
+                    android:id="@+id/ivPdfPage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:adjustViewBounds="true"
+                    android:contentDescription="PDF Page"
+                    android:scaleType="fitCenter" />
+
+            </ScrollView>
+
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:id="@+id/layoutPdfLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="#DD121814"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:visibility="gone">
+
+            <ProgressBar
+                android:id="@+id/pbPdfLoading"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:indeterminateTint="#D4AF37" />
+
+            <TextView
+                android:id="@+id/tvPdfLoadingStatus"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:adjustViewBounds="true"
-                android:contentDescription="PDF Page"
-                android:scaleType="fitCenter" />
+                android:layout_marginTop="10dp"
+                android:text="অনলাইন থেকে কিতাব লোড হচ্ছে..."
+                android:textColor="#FFFFFF"
+                android:textSize="13sp" />
+        </LinearLayout>
 
-        </ScrollView>
-
-    </HorizontalScrollView>
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="match_parent"

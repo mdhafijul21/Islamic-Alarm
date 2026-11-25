@@ -44,7 +44,7 @@ object DuaCategoryArtwork {
         DuaData.CATEGORY_DECEASED -> "🤍"
         DuaData.CATEGORY_HADITH -> "📜"
         DuaData.CATEGORY_CHARITY -> "💝"
-        "পছন্দের দোয়া" -> "⭐"
+        "পছন্দের আমল", "পছন্দের দোয়া" -> "⭐"
         else -> "📖"
     }
 }

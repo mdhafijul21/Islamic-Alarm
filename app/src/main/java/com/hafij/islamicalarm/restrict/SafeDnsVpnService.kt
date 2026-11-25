@@ -52,21 +52,37 @@ class SafeDnsVpnService : VpnService() {
             return START_NOT_STICKY
         }
 
-        try {
-            val notification = buildNotification()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(
-                    NOTIFICATION_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-                )
-            } else {
-                startForeground(NOTIFICATION_ID, notification)
+        val useForeground = intent?.getBooleanExtra(EXTRA_FOREGROUND_REQUIRED, false) == true
+        if (useForeground) {
+            try {
+                val notification = buildNotification()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                    )
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                stopSelf()
+                return START_NOT_STICKY
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            stopSelf()
-            return START_NOT_STICKY
+        } else {
+            // Started silently from foreground — remove any legacy foreground notification.
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+                (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                    .cancel(NOTIFICATION_ID)
+            } catch (_: Exception) {
+            }
         }
 
         if (vpnInterface == null) {
@@ -90,31 +106,39 @@ class SafeDnsVpnService : VpnService() {
 
     private fun establishTunnel(): Boolean {
         return try {
+            val v4Local = InetAddress.getByAddress(byteArrayOf(10, 120, 0, 1))
+            val v4Dns = InetAddress.getByAddress(byteArrayOf(10, 120, 0, 2))
             val builder = Builder()
                 .setSession("Islamic Alarm সেফ DNS")
                 .setMtu(1500)
-                .addAddress("10.120.0.1", 32)
-                .addDnsServer("10.120.0.2")
-                .addRoute("10.120.0.2", 32)
+                .addAddress(v4Local, 32)
+                .addDnsServer(v4Dns)
+                .addRoute(v4Dns, 32)
                 .setBlocking(true)
 
             try {
-                builder.addAddress("fd00:120::1", 128)
-                    .addDnsServer("fd00:120::2")
-                    .addRoute("fd00:120::2", 128)
-            } catch (_: Exception) {
+                val v6Local = InetAddress.getByAddress(
+                    byteArrayOf(0xfd.toByte(), 0x00, 0x01, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+                )
+                val v6Dns = InetAddress.getByAddress(
+                    byteArrayOf(0xfd.toByte(), 0x00, 0x01, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2)
+                )
+                builder.addAddress(v6Local, 128)
+                    .addDnsServer(v6Dns)
+                    .addRoute(v6Dns, 128)
+            } catch (_: Throwable) {
                 // Carrier or device may not support IPv6 TUN; IPv4 DNS filtering still works cleanly.
             }
 
             try {
                 builder.addDisallowedApplication(packageName)
-            } catch (_: Exception) {
+            } catch (_: Throwable) {
             }
 
             vpnInterface = builder.establish()
             vpnInterface != null
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (t: Throwable) {
+            t.printStackTrace()
             false
         }
     }
@@ -286,6 +310,7 @@ class SafeDnsVpnService : VpnService() {
     companion object {
         const val ACTION_START = "com.hafij.islamicalarm.ACTION_START_SAFE_DNS_VPN"
         const val ACTION_STOP = "com.hafij.islamicalarm.ACTION_STOP_SAFE_DNS_VPN"
+        const val EXTRA_FOREGROUND_REQUIRED = "extra_foreground_required"
         private const val CHANNEL_ID = "safe_dns_vpn_channel"
         private const val NOTIFICATION_ID = 44210
 
@@ -296,11 +321,22 @@ class SafeDnsVpnService : VpnService() {
         fun start(context: Context): Boolean {
             return try {
                 if (prepare(context) != null) return false
-                val intent = Intent(context, SafeDnsVpnService::class.java).apply {
+                val silentIntent = Intent(context, SafeDnsVpnService::class.java).apply {
                     action = ACTION_START
+                    putExtra(EXTRA_FOREGROUND_REQUIRED, false)
                 }
-                ContextCompat.startForegroundService(context, intent)
-                true
+                try {
+                    context.startService(silentIntent)
+                    true
+                } catch (_: IllegalStateException) {
+                    // Background start restriction on Android 8+: fall back to foreground start.
+                    val fgIntent = Intent(context, SafeDnsVpnService::class.java).apply {
+                        action = ACTION_START
+                        putExtra(EXTRA_FOREGROUND_REQUIRED, true)
+                    }
+                    ContextCompat.startForegroundService(context, fgIntent)
+                    true
+                }
             } catch (_: Exception) {
                 false
             }

@@ -98,7 +98,7 @@
         <activity
             android:name="com.hafij.islamicalarm.duas.DuaDetailActivity"
             android:exported="false"
-            android:label="দোয়ার বিস্তারিত"
+            android:label="আমলের বিস্তারিত"
             android:theme="@style/Theme.IslamicAlarm.Duas" />
 
         <!-- Ramadan & Fasting Activity -->

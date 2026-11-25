@@ -280,11 +280,13 @@ class RestrictAccessibilityService : AccessibilityService() {
         var visited = 0
         var hasVideoPlayer = false
         var hasSeekBar = false
-        var hasTimestampText = false
+        var hasDurationPairText = false
         var hasAdultUrl = false
         var hasSearchResultsUrl = false
+        var hasSafeNonAdultUrlBar = false
         var hasBlockedText = false
         var hasIncognitoUi = false
+        var menuClusterHits = 0
         val rect = Rect()
 
         while (queue.isNotEmpty() && visited < MAX_SCAN_NODES) {
@@ -304,8 +306,17 @@ class RestrictAccessibilityService : AccessibilityService() {
                 ?.lowercase()
                 .orEmpty()
 
-            // 0. Incognito / Private browsing check (inside browser packages)
-            if (checkIncognito && isBrowser && !hasIncognitoUi) {
+            val isMenuNode = isBrowser && (
+                viewId.contains("menu_item") ||
+                    viewId.contains("app_menu") ||
+                    viewId.contains("overflow_menu")
+                )
+            if (isBrowser && !node.isEditable && textLower in BROWSER_MENU_CLUSTER_ITEMS) {
+                menuClusterHits++
+            }
+
+            // 0. Incognito / Private browsing check (inside browser packages, never on 3-dot menu popups)
+            if (checkIncognito && isBrowser && !hasIncognitoUi && !isMenuNode) {
                 if (INCOGNITO_ID_HINTS.any { viewId.contains(it) } ||
                     (!node.isEditable && INCOGNITO_TEXT_HINTS.any {
                         textLower.contains(it) || descLower.contains(it)
@@ -315,11 +326,14 @@ class RestrictAccessibilityService : AccessibilityService() {
                 }
             }
 
-            // 1. Detect video player / video surface / HTML5 video / Telegram PhotoViewer / VidMate / SnapTube player
+            // 1. Detect genuine video player / media viewer
+            // NOTE: Browsers (especially Chrome on ColorOS/Realme/OPPO) use SurfaceView/TextureView
+            // for normal webpage compositing, so NEVER treat SurfaceView/TextureView as a video
+            // player inside browsers.
             if (!hasVideoPlayer) {
                 if (VIDEO_CLASS_HINTS.any { clsLower.contains(it) } || roleDesc == "video") {
                     hasVideoPlayer = true
-                } else if (clsLower.endsWith(".surfaceview") || clsLower.endsWith(".textureview")) {
+                } else if (!isBrowser && (clsLower.endsWith(".surfaceview") || clsLower.endsWith(".textureview"))) {
                     node.getBoundsInScreen(rect)
                     if (rect.width() >= 100 && rect.height() >= 70) {
                         hasVideoPlayer = true
@@ -335,11 +349,12 @@ class RestrictAccessibilityService : AccessibilityService() {
                 }
             }
 
-            if (!hasTimestampText && TIMESTAMP_REGEX.containsMatchIn(text)) {
-                hasTimestampText = true
+            if (!hasDurationPairText && DURATION_PAIR_REGEX.containsMatchIn(text)) {
+                hasDurationPairText = true
             }
 
-            // 2. Address bar & WebView URL check (browsers + VidMate / SnapTube / Telegram in-app browser)
+            // 2. Address bar & WebView URL check
+            // Inside standard browsers, ONLY trust actual URL bar nodes (never webpage body snippets).
             val isUrlBar = URL_BAR_ID_HINTS.any { viewId.contains(it) }
             if (isUrlBar && !node.isFocused) {
                 val urlCandidate = if (text.isNotBlank()) text else desc
@@ -348,9 +363,11 @@ class RestrictAccessibilityService : AccessibilityService() {
                         hasSearchResultsUrl = true
                     } else if (!hasAdultUrl && SafeWords.matchesSiteUrl(urlCandidate, custom)) {
                         hasAdultUrl = true
+                    } else if (looksLikeUrlText(urlCandidate)) {
+                        hasSafeNonAdultUrlBar = true
                     }
                 }
-            } else if (!hasAdultUrl && !hasSearchResultsUrl && !node.isEditable && text.length in 5..350 && looksLikeUrlText(text)) {
+            } else if (!isBrowser && !hasAdultUrl && !hasSearchResultsUrl && !node.isEditable && text.length in 5..350 && looksLikeUrlText(text)) {
                 node.getBoundsInScreen(rect)
                 val topLimit = if (isMediaApp) 720 else 440
                 if ((isMediaApp || rect.top in 0..topLimit) &&
@@ -361,8 +378,8 @@ class RestrictAccessibilityService : AccessibilityService() {
                 }
             }
 
-            // 3. Non-password, non-editable rendered text / description / WebView / caption / title check
-            if (!hasBlockedText && !node.isPassword && !node.isEditable) {
+            // 3. Non-password, non-editable rendered text / description check
+            if (!hasBlockedText && !node.isPassword && !node.isEditable && !isMenuNode) {
                 if ((text.isNotBlank() && SafeWords.matches(text, custom)) ||
                     (desc.isNotBlank() && SafeWords.matches(desc, custom))
                 ) {
@@ -376,17 +393,28 @@ class RestrictAccessibilityService : AccessibilityService() {
             }
         }
 
+        // Browser 3-dot overflow menu popup must never trigger Incognito or Safe Mode false positives
+        if (isBrowser && menuClusterHits >= 2) {
+            hasIncognitoUi = false
+        }
+
         // If the browser's own URL bar says we're on a search results page (Google / Bing / SafeSearch),
         // snippet URLs shown inside search results must NOT mark the page as an adult site until clicked.
         if (hasSearchResultsUrl) {
             hasAdultUrl = false
         }
 
-        if (!hasVideoPlayer && ((hasSeekBar && hasTimestampText) || (isMediaApp && DURATION_PAIR_REGEX.containsMatchIn(root.text?.toString().orEmpty())))) {
+        // Safe non-adult websites (e.g. aistudio.google.com, docs, news) with text discussing keywords
+        // must not falsely close the browser unless a genuine adult URL is loaded.
+        if (isBrowser && hasSafeNonAdultUrlBar && !hasAdultUrl) {
+            hasBlockedText = false
+        }
+
+        if (!hasVideoPlayer && ((hasSeekBar && hasDurationPairText) || (isMediaApp && DURATION_PAIR_REGEX.containsMatchIn(root.text?.toString().orEmpty())))) {
             hasVideoPlayer = true
         }
-        // In dedicated video/chat apps, a seekbar or playback timestamp (e.g. 00:12 / 05:30) indicates an active player
-        if (!hasVideoPlayer && isMediaApp && hasTimestampText) {
+        // In dedicated video/chat apps, a seekbar or playback duration pair (00:12 / 05:30) indicates an active player
+        if (!hasVideoPlayer && isMediaApp && hasDurationPairText) {
             hasVideoPlayer = true
         }
 
@@ -560,7 +588,6 @@ class RestrictAccessibilityService : AccessibilityService() {
         private const val HOME_FALLBACK_CHECK_MS = 800L
         private const val BLUR_DURATION_MS = 1700L
 
-        private val TIMESTAMP_REGEX = Regex("\\b\\d{1,2}:\\d{2}\\b")
         private val DURATION_PAIR_REGEX = Regex("\\b\\d{1,2}:\\d{2}\\s*/\\s*\\d{1,2}:\\d{2}\\b")
         private val VIDEO_EXT_REGEX = Regex("\\.(mp4|mkv|webm|avi|mov|flv|m3u8)\\b")
         private val DOMAIN_LIKE_REGEX = Regex("^[a-z0-9-]+(\\.[a-z0-9-]+)+(/.*)?$")
@@ -576,12 +603,19 @@ class RestrictAccessibilityService : AccessibilityService() {
             "incognito_mode", "private_browsing_indicator", "secret_mode_indicator"
         )
 
+        // Never match menu-button labels ("New Incognito tab", "New InPrivate tab");
+        // match ONLY active incognito/private tab banners and headers.
         private val INCOGNITO_TEXT_HINTS = listOf(
             "you've gone incognito", "you’ve gone incognito",
-            "new incognito tab", "incognito tab", "close incognito tabs",
-            "inprivate browsing", "new inprivate tab",
-            "private browsing mode", "secret mode turned on",
-            "ইনকগনিটো ট্যাব", "আপনি ইনকগনিটোতে আছেন"
+            "you're browsing privately", "close all incognito tabs", "close incognito tabs",
+            "inprivate browsing", "private browsing mode",
+            "you are in private mode", "secret mode turned on",
+            "আপনি ইনকগনিটোতে আছেন", "ইনকগনিটো মোড চালু"
+        )
+
+        private val BROWSER_MENU_CLUSTER_ITEMS = setOf(
+            "new tab", "bookmarks", "history", "downloads", "desktop site", "settings",
+            "নতুন ট্যাব", "বুকমার্ক", "ইতিহাস", "ডাউনলোড", "সেটিংস"
         )
 
         private val MEDIA_VIDEO_PACKAGE_HINTS = listOf(
@@ -592,24 +626,19 @@ class RestrictAccessibilityService : AccessibilityService() {
 
         private val VIDEO_CLASS_HINTS = listOf(
             ".videoview", "videoplayer", "playerview", "exoplayer", "mediacontroller",
-            "glsurfaceview", "ijk", "txcloud", "photoviewer",
+            "ijk", "txcloud", "photoviewer",
             "videotimeline", "seekbarview", "webvideo"
         )
 
         private val VIDEO_ID_HINTS = listOf(
             "video_player", "player_view", "exoplayer", "exo_", "ijk",
-            "media_controls", "video_container", "player_container",
+            "video_container", "player_container",
             "html5_video", "yt_player", "jwplayer", "jw-", "videojs",
-            "vjs-", "plyr", "fluid_video", "brightcove", "bitmovin", "shaka",
-            "video_view", "play_pause", "fullscreen", "timeline", "seek_bar",
-            "pip_button", "player_control"
+            "vjs-", "plyr", "fluid_video", "brightcove", "bitmovin", "shaka"
         )
 
         private val VIDEO_LABEL_HINTS = listOf(
-            "video player", "play video", "pause video",
-            "exit full screen", "exit fullscreen", "enter full screen",
-            "picture-in-picture", "seek slider", "playback speed", "mute video",
-            "fast forward", "rewind"
+            "video player", "play video", "pause video", "mute video"
         )
 
         private val URL_BAR_ID_HINTS = listOf(

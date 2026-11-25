@@ -25,9 +25,9 @@
             android:id="@+id/tvHeaderSurahArabic"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/amiri"
             android:textColor="@color/secondary"
-            android:textSize="20sp"
-            android:textStyle="bold"
+            android:textSize="22sp"
             tools:text="سورة الفاتحة" />
 
         <TextView
@@ -53,10 +53,10 @@
                 android:id="@+id/tvBismillahText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+                android:fontFamily="@font/amiri"
+                android:text="بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"
                 android:textColor="@color/secondary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textSize="20sp" />
 
             <TextView
                 android:layout_width="wrap_content"

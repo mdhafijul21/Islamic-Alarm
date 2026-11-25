@@ -4,176 +4,450 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
+    android:background="#F3F6F8"
     android:orientation="vertical"
     tools:context="com.hafij.islamicalarm.books.IslamicLibraryActivity">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <!-- Deep Royal Teal Top Header (replaces old green bar & removes Befaq branding) -->
+    <LinearLayout
+        android:id="@+id/layoutLibraryTopBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary"
-        app:elevation="0dp"
-        app:liftOnScroll="false">
+        android:background="#0F4C5C"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:minHeight="60dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="9dp">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbarLibrary"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:navigationIconTint="@color/secondary"
-            app:subtitle="সহিহ হাদিস, সিরাত, তাফসির ও ঘটনাবলী"
-            app:subtitleTextColor="@color/text_secondary"
-            app:title="ইসলামিক কিতাব ও হাদিস লাইব্রেরি"
-            app:titleTextColor="@color/text_primary" />
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <!-- Search Box Card -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="12dp"
-        app:cardBackgroundColor="@color/surface"
-        app:cardCornerRadius="14dp"
-        app:cardElevation="2dp"
-        app:strokeColor="@color/card_border"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="12dp">
+        <!-- Styled Frosted Rounded Back Button -->
+        <FrameLayout
+            android:id="@+id/btnLibraryBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_library_back_btn"
+            android:clickable="true"
+            android:contentDescription="ফিরে যান"
+            android:focusable="true">
 
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:contentDescription="Search Icon"
-                android:src="@android:drawable/ic_menu_search"
-                app:tint="@color/secondary" />
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_chevron_back_24" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tvLibraryHeaderTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="ইসলামিক ও কিতাব লাইব্রেরী"
+            android:textColor="#FFFFFF"
+            android:textSize="16.5sp"
+            android:textStyle="bold" />
+
+        <!-- Rounded Search Box Pill inside Royal Teal Header -->
+        <LinearLayout
+            android:id="@+id/layoutHeaderSearchBox"
+            android:layout_width="148dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_library_back_btn"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp">
 
             <EditText
                 android:id="@+id/etSearchBooks"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:background="@null"
-                android:hint="যেকোনো কিতাব, হাদিস বা ঘটনা খুঁজুন..."
+                android:hint="Search Books"
+                android:imeOptions="actionSearch"
                 android:inputType="text"
-                android:paddingVertical="12dp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_secondary"
-                android:textSize="14sp" />
+                android:maxLines="1"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#CCFFFFFF"
+                android:textSize="12.5sp" />
 
-            <com.google.android.material.button.MaterialButton
+            <ImageButton
                 android:id="@+id/btnOnlineSearchLibrary"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:backgroundTint="@color/surface_container"
-                android:paddingHorizontal="10dp"
-                android:text="🌐 অনলাইন"
-                android:textColor="@color/secondary"
-                android:textSize="12sp"
-                app:cornerRadius="8dp" />
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Search Books"
+                android:src="@android:drawable/ic_menu_search"
+                app:tint="#FCE8B2" />
 
         </LinearLayout>
 
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- Categories Filter Chips -->
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:clipToPadding="false"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="4dp"
-        android:scrollbars="none">
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupBookCategories"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:singleLine="true"
-            app:singleSelection="true" />
-
-    </HorizontalScrollView>
-
-    <!-- Local / Online Tab Toggle -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:orientation="horizontal"
-        android:weightSum="2">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnTabLocalBooks"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="@color/secondary"
-            android:text="লোকাল বই"
-            android:textColor="@color/primary"
-            android:textSize="12sp"
-            app:cornerRadius="10dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnTabOnlineLibrary"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_weight="1"
-            android:backgroundTint="@color/surface_container"
-            android:text="অনলাইন PDF লাইব্রেরি"
-            android:textColor="@color/text_primary"
-            android:textSize="12sp"
-            app:cornerRadius="10dp" />
-
     </LinearLayout>
 
+    <!-- Main Content Frame -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- RecyclerView for Local Books -->
+        <!-- 2-Column Categories Grid (Stories, History, Seerah, Tafsir, Madrasah Kitab) -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvBooks"
+            android:id="@+id/rvJamatCategories"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingTop="6dp"
-            android:paddingBottom="24dp"
-            tools:listitem="@layout/item_islamic_book" />
+            android:padding="8dp"
+            tools:listitem="@layout/item_jamat_category" />
 
-        <!-- RecyclerView for Online Library (PDF) -->
+        <!-- 3-Column Book Cover Shelf Grid -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvRemoteBooks"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingTop="6dp"
-            android:paddingBottom="24dp"
+            android:padding="6dp"
             android:visibility="gone"
-            tools:listitem="@layout/item_remote_library_book" />
+            tools:listitem="@layout/item_library_book_grid" />
+
+        <!-- Info / Multi-Source Free APIs / Built-in Stories & Hadith Notes View -->
+        <ScrollView
+            android:id="@+id/layoutLibraryInfo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#D5E3E7"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📚 ফ্রি ইসলামিক বই, গল্প-কাহিনি ও কিতাব API"
+                            android:textColor="#0F4C5C"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:lineSpacingExtra="4dp"
+                            android:text="এই লাইব্রেরিতে নিচের রিয়েল ফ্রি ওপেন-অ্যাক্সেস API থেকে বিভিন্ন ইসলামিক বই, গল্প-কাহিনি, সাহাবাদের জীবনী, ইতিহাস ও কিতাব লোড করা হয়:\n\n• Bangla Islamic Library Archive (azharmea ও IslamiBoi API): ৫৬০+ বাংলা ইসলামিক বই, শিক্ষণীয় গল্প, হায়াতুস সাহাবা, আসহাবে রাসূলের জীবনকথা, তাফসীর ও ফিকহ।\n• Islamic Stories &amp; Seerah API (AboutHistoryStoryInIslam ও StoriesOfTheProphets): নবী-রাসূল ও সাহাবাদের গল্প-কাহিনি ও ইসলামের ইতিহাস (২২০+ কিতাব)।\n• Madrasah Kitab Archive (archive.org/metadata/kawmi): দাওরা, মেশকাত, জালালাইন, শরহে বেকায়া, শরহে জামি, কাফিয়া, হেদায়াতুন্নাহু, নাহবেমীর, মীযান ও তাইসীরের ১৩৭+ কিতাব।\n• OpenLibrary &amp; Archive Search API (openlibrary.org ও archive.org/advancedsearch): যেকোনো ইসলামিক বই বা গল্প অনলাইন সার্চ করে পড়ুন।\n• Islamic.app Public Library API (api.islamic.app): ক্লাসিক্যাল আরবি ও ইসলামিক কিতাব।"
+                            android:textColor="#213136"
+                            android:textSize="12.5sp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#D5E3E7"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📖 সংকলিত বাংলা হাদিস, গল্প ও সিরাত পাঠ (অফলাইন)"
+                            android:textColor="#0F4C5C"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="অ্যাপের ভেতরে থাকা নির্বাচিত সহিহ বুখারী, সহিহ মুসলিম, নবী ও সাহাবাদের সত্য ঘটনা ও মাসায়েল পড়ুন।"
+                            android:textColor="#54656B"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnOpenBuiltInBooks"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="সংকলিত বাংলা কিতাব ও গল্প পড়ুন"
+                            android:textColor="#FFFFFF"
+                            app:backgroundTint="#0F4C5C"
+                            app:cornerRadius="12dp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+        </ScrollView>
+
+        <TextView
+            android:id="@+id/tvLibraryEmptyState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="24dp"
+            android:text="এখানে এখনো কোনো কিতাব নেই"
+            android:textColor="#556B71"
+            android:textSize="14sp"
+            android:visibility="gone" />
 
         <ProgressBar
             android:id="@+id/pbRemoteBooksLoading"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:indeterminateTint="@color/secondary"
+            android:indeterminateTint="#0F4C5C"
             android:visibility="gone" />
 
     </FrameLayout>
+
+    <!-- Sleek Floating Pill Bottom Navigation Bar (New Uniform Outline Icon System) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/layoutLibraryBottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="6dp"
+        app:strokeColor="#D5E3E7"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="6dp"
+            android:weightSum="5">
+
+            <!-- 1. Home (Categories) -->
+            <LinearLayout
+                android:id="@+id/btnLibNavHome"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:contentDescription="লাইব্রেরি হোম"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <FrameLayout
+                    android:id="@+id/bgLibNavHome"
+                    android:layout_width="46dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_nav_pill">
+
+                    <ImageView
+                        android:id="@+id/ivLibNavHome"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_lib_home"
+                        app:tint="#0F4C5C" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/tvLibNavHome"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="লাইব্রেরী"
+                    android:textColor="#0F4C5C"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 2. Download (Offline Shelf) -->
+            <LinearLayout
+                android:id="@+id/btnLibNavDownload"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <FrameLayout
+                    android:id="@+id/bgLibNavDownload"
+                    android:layout_width="46dp"
+                    android:layout_height="30dp">
+
+                    <ImageView
+                        android:id="@+id/ivLibNavDownload"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_lib_download"
+                        app:tint="#4E6167" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/tvLibNavDownload"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="সংরক্ষিত"
+                    android:textColor="#4E6167"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- 3. Bookmark -->
+            <LinearLayout
+                android:id="@+id/btnLibNavBookmark"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <FrameLayout
+                    android:id="@+id/bgLibNavBookmark"
+                    android:layout_width="46dp"
+                    android:layout_height="30dp">
+
+                    <ImageView
+                        android:id="@+id/ivLibNavBookmark"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_lib_bookmark"
+                        app:tint="#4E6167" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/tvLibNavBookmark"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="বুকমার্ক"
+                    android:textColor="#4E6167"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- 4. Favorite -->
+            <LinearLayout
+                android:id="@+id/btnLibNavFavorite"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <FrameLayout
+                    android:id="@+id/bgLibNavFavorite"
+                    android:layout_width="46dp"
+                    android:layout_height="30dp">
+
+                    <ImageView
+                        android:id="@+id/ivLibNavFavorite"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_lib_favorite"
+                        app:tint="#4E6167" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/tvLibNavFavorite"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="পছন্দ"
+                    android:textColor="#4E6167"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- 5. Info / Built-in Stories & API -->
+            <LinearLayout
+                android:id="@+id/btnLibNavInfo"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <FrameLayout
+                    android:id="@+id/bgLibNavInfo"
+                    android:layout_width="46dp"
+                    android:layout_height="30dp">
+
+                    <ImageView
+                        android:id="@+id/ivLibNavInfo"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_lib_info"
+                        app:tint="#4E6167" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/tvLibNavInfo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="তথ্য/গল্প"
+                    android:textColor="#4E6167"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 
 </LinearLayout>

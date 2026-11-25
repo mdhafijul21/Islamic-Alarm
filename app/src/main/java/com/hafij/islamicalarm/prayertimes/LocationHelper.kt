@@ -6,8 +6,11 @@ import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
+import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -16,14 +19,30 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Locale
 import java.util.TimeZone
 
 object LocationHelper {
+
+    internal data class ResolvedSpot(
+        val spotBn: String,
+        val parentBn: String,
+        val spotEn: String = "",
+        val countryName: String = ""
+    )
+
+    private val PLUS_CODE_REGEX = Regex("^[A-Z0-9]{4,8}\\+[A-Z0-9]{2,4}.*$")
+    private val GENERIC_PLACE_NAMES = setOf(
+        "unnamed road", "unnamed", "bangladesh", "বাংলাদেশ", "road", "street"
+    )
 
     fun hasLocationPermission(context: Context): Boolean {
         val fineGranted = ContextCompat.checkSelfPermission(
@@ -43,7 +62,7 @@ object LocationHelper {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             ?: return false
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+            locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
     /**
@@ -61,7 +80,7 @@ object LocationHelper {
             return
         }
 
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000)
             .build()
         val builder = com.google.android.gms.location.LocationSettingsRequest.Builder()
             .addLocationRequest(locationRequest)
@@ -84,10 +103,10 @@ object LocationHelper {
     }
 
     /**
-     * Gets the current GPS location with high reliability:
-     * 1. FusedLocationProviderClient lastLocation
-     * 2. Single high-accuracy getCurrentLocation request
-     * 3. Fallback to LocationManager GPS / Network providers
+     * Gets the user's exact current GPS position:
+     * 1. High-accuracy fresh current fix via FusedLocationProviderClient.getCurrentLocation
+     * 2. Only reuses cached lastLocation if newer than 2 minutes AND accuracy <= 65 meters
+     * 3. Active high-accuracy LocationRequest / LocationManager single update fallback
      */
     fun fetchCurrentLocation(
         context: Context,
@@ -107,8 +126,34 @@ object LocationHelper {
         val fusedClient: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
 
         try {
+            val cts = CancellationTokenSource()
+            fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
+                .addOnSuccessListener { currentLoc: Location? ->
+                    if (currentLoc != null && (!currentLoc.hasAccuracy() || currentLoc.accuracy <= 150f)) {
+                        resolveLocationToDistrict(context, currentLoc, onSuccess)
+                    } else {
+                        tryCachedOrActiveUpdate(context, fusedClient, onSuccess, onError)
+                    }
+                }
+                .addOnFailureListener {
+                    tryCachedOrActiveUpdate(context, fusedClient, onSuccess, onError)
+                }
+        } catch (e: SecurityException) {
+            onError("পারমিশন নিরাপত্তা ত্রুটি: ${e.localizedMessage}")
+        } catch (_: Exception) {
+            tryCachedOrActiveUpdate(context, fusedClient, onSuccess, onError)
+        }
+    }
+
+    private fun tryCachedOrActiveUpdate(
+        context: Context,
+        fusedClient: FusedLocationProviderClient,
+        onSuccess: (District) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        try {
             fusedClient.lastLocation.addOnSuccessListener { lastLoc: Location? ->
-                if (lastLoc != null && isRecent(lastLoc)) {
+                if (lastLoc != null && isRecentAndPrecise(lastLoc)) {
                     resolveLocationToDistrict(context, lastLoc, onSuccess)
                 } else {
                     requestFreshLocation(context, fusedClient, onSuccess, onError)
@@ -116,19 +161,15 @@ object LocationHelper {
             }.addOnFailureListener {
                 requestFreshLocation(context, fusedClient, onSuccess, onError)
             }
-        } catch (e: SecurityException) {
-            onError("পারমিশন নিরাপত্তা ত্রুটি: ${e.localizedMessage}")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             fallbackToLocationManager(context, onSuccess, onError)
         }
     }
 
-    private fun isRecent(location: Location): Boolean {
-        // within 2 hours AND reasonably precise (under 200m accuracy) — a stale or
-        // low-accuracy cached fix (e.g. WiFi-based) is often off by kilometers, which
-        // only resolves to district level on reverse-geocoding instead of a specific place.
-        val isFresh = (System.currentTimeMillis() - location.time) < 2 * 60 * 60 * 1000
-        val isAccurate = !location.hasAccuracy() || location.accuracy <= 200f
+    internal fun isRecentAndPrecise(location: Location): Boolean {
+        val ageMs = System.currentTimeMillis() - location.time
+        val isFresh = ageMs in 0L..(2 * 60 * 1000L)
+        val isAccurate = location.hasAccuracy() && location.accuracy <= 65f
         return isFresh && isAccurate
     }
 
@@ -139,42 +180,47 @@ object LocationHelper {
         onError: (String) -> Unit
     ) {
         try {
-            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-                .setMaxUpdates(1)
-                .setWaitForAccurateLocation(false)
+            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1500L)
+                .setMinUpdateIntervalMillis(500L)
+                .setMaxUpdates(2)
+                .setWaitForAccurateLocation(true)
                 .build()
 
             var alreadyHandled = false
-            val timeoutHandler = android.os.Handler(Looper.getMainLooper())
+            val timeoutHandler = Handler(Looper.getMainLooper())
+            var bestSeen: Location? = null
 
             val callback = object : LocationCallback() {
                 override fun onLocationResult(result: LocationResult) {
-                    if (alreadyHandled) return
-                    alreadyHandled = true
-                    timeoutHandler.removeCallbacksAndMessages(null)
-                    fusedClient.removeLocationUpdates(this)
-                    val loc = result.lastLocation
-                    if (loc != null) {
+                    val loc = result.lastLocation ?: return
+                    if (bestSeen == null || (loc.hasAccuracy() && (!bestSeen!!.hasAccuracy() || loc.accuracy < bestSeen!!.accuracy))) {
+                        bestSeen = loc
+                    }
+                    // Wait for reasonably tight accuracy if first update was coarse; otherwise finish immediately
+                    if (!alreadyHandled && (!loc.hasAccuracy() || loc.accuracy <= 80f)) {
+                        alreadyHandled = true
+                        timeoutHandler.removeCallbacksAndMessages(null)
+                        fusedClient.removeLocationUpdates(this)
                         resolveLocationToDistrict(context, loc, onSuccess)
-                    } else {
-                        fallbackToLocationManager(context, onSuccess, onError)
                     }
                 }
             }
 
-            // Safety timeout: some devices/providers never call back (GPS weak signal,
-            // Play Services issue, etc). Without this the app would hang indefinitely.
             timeoutHandler.postDelayed({
                 if (!alreadyHandled) {
                     alreadyHandled = true
                     try {
                         fusedClient.removeLocationUpdates(callback)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    } catch (_: Exception) {
                     }
-                    fallbackToLocationManager(context, onSuccess, onError)
+                    val seen = bestSeen
+                    if (seen != null) {
+                        resolveLocationToDistrict(context, seen, onSuccess)
+                    } else {
+                        fallbackToLocationManager(context, onSuccess, onError)
+                    }
                 }
-            }, 10000L)
+            }, 9000L)
 
             fusedClient.requestLocationUpdates(locationRequest, callback, Looper.getMainLooper())
                 .addOnFailureListener {
@@ -184,9 +230,9 @@ object LocationHelper {
                         fallbackToLocationManager(context, onSuccess, onError)
                     }
                 }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             onError("লোকেশন পারমিশন প্রয়োজন")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             fallbackToLocationManager(context, onSuccess, onError)
         }
     }
@@ -203,24 +249,79 @@ object LocationHelper {
                 return
             }
 
-            var bestLocation: Location? = null
-
+            val candidates = mutableListOf<Location>()
             if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                bestLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { candidates.add(it) }
+            }
+            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)?.let { candidates.add(it) }
             }
 
-            if (bestLocation == null && locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                bestLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            val recentBest = candidates
+                .filter { isRecentAndPrecise(it) }
+                .minByOrNull { if (it.hasAccuracy()) it.accuracy else Float.MAX_VALUE }
+
+            if (recentBest != null) {
+                resolveLocationToDistrict(context, recentBest, onSuccess)
+                return
             }
 
-            if (bestLocation != null) {
-                resolveLocationToDistrict(context, bestLocation, onSuccess)
+            // Try an active single LocationManager update when cached fix is stale/missing
+            val activeProvider = when {
+                locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+                else -> null
+            }
+
+            if (activeProvider != null) {
+                var handled = false
+                val handler = Handler(Looper.getMainLooper())
+                val listener = object : LocationListener {
+                    override fun onLocationChanged(loc: Location) {
+                        if (handled) return
+                        handled = true
+                        handler.removeCallbacksAndMessages(null)
+                        try {
+                            locationManager.removeUpdates(this)
+                        } catch (_: Exception) {
+                        }
+                        resolveLocationToDistrict(context, loc, onSuccess)
+                    }
+
+                    @Deprecated("Deprecated in Android API")
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
+                    override fun onProviderEnabled(provider: String) = Unit
+                    override fun onProviderDisabled(provider: String) = Unit
+                }
+
+                handler.postDelayed({
+                    if (!handled) {
+                        handled = true
+                        try {
+                            locationManager.removeUpdates(listener)
+                        } catch (_: Exception) {
+                        }
+                        val fallbackCached = candidates.maxByOrNull { it.time }
+                        if (fallbackCached != null) {
+                            resolveLocationToDistrict(context, fallbackCached, onSuccess)
+                        } else {
+                            onError("জিপিএস লোকেশন শনাক্ত করা যায়নি। খোলা আকাশের নিচে চেষ্টা করুন।")
+                        }
+                    }
+                }, 6000L)
+
+                locationManager.requestLocationUpdates(activeProvider, 0L, 0f, listener, Looper.getMainLooper())
             } else {
-                onError("জিপিএস লোকেশন শনাক্ত করা যায়নি। অনুগ্রহ করে জিপিএস চালু করুন।")
+                val fallbackCached = candidates.maxByOrNull { it.time }
+                if (fallbackCached != null) {
+                    resolveLocationToDistrict(context, fallbackCached, onSuccess)
+                } else {
+                    onError("জিপিএস লোকেশন শনাক্ত করা যায়নি। অনুগ্রহ করে জিপিএস চালু করুন।")
+                }
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             onError("লোকেশন পারমিশন নিরাপত্তা ত্রুটি")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             onError("লোকেশন নির্ধারণে সমস্যা হয়েছে")
         }
     }
@@ -234,64 +335,53 @@ object LocationHelper {
             val lat = location.latitude
             val lng = location.longitude
 
-            var placeNameBn = ""
-            var placeNameEn = ""
-            var parentAreaBn = ""
-            var countryName = ""
+            // 1. Try high-precision street/neighborhood-level Nominatim reverse geocode (zoom=18)
+            var resolved = fetchNominatimSpot(lat, lng)
 
-            try {
-                if (Geocoder.isPresent()) {
-                    val geocoder = Geocoder(context, Locale("bn", "BD"))
-                    val addresses = geocoder.getFromLocation(lat, lng, 1)
+            // 2. Supplement / fallback with Android Geocoder (bn_BD, then device default)
+            val geocoderSpot = fetchAndroidGeocoderSpot(context, lat, lng)
+            resolved = mergeResolvedSpots(primary = resolved, secondary = geocoderSpot)
 
-                    if (!addresses.isNullOrEmpty()) {
-                        val address: Address = addresses[0]
-                        val subLocality = address.subLocality // e.g. Thana or neighborhood
-                        val locality = address.locality // e.g. City
-                        val thoroughfare = address.thoroughfare // e.g. Street/road name
-                        val subAdmin = address.subAdminArea // e.g. District
-                        val admin = address.adminArea // e.g. Division / State
-                        countryName = address.countryName ?: ""
-
-                        placeNameBn = subLocality ?: locality ?: thoroughfare ?: subAdmin ?: admin ?: ""
-                        parentAreaBn = subAdmin ?: admin ?: countryName
-                        placeNameEn = address.featureName ?: ""
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
-            // Detect timezone offset
             val tz = TimeZone.getDefault()
             val timeZoneOffsetHours = tz.getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
 
-            // Select calculation method
-            val isBangladesh = (lat in 20.5..26.8 && lng in 88.0..92.8) || countryName.contains("Bangladesh", ignoreCase = true) || countryName.contains("বাংলাদেশ", ignoreCase = true)
-            val method = if (isBangladesh) {
-                CalculationMethod.KARACHI_BD
-            } else if (countryName.contains("Saudi", ignoreCase = true) || countryName.contains("সৌদি", ignoreCase = true)) {
-                CalculationMethod.UMM_AL_QURA
-            } else if (countryName.contains("Egypt", ignoreCase = true) || countryName.contains("মিশর", ignoreCase = true)) {
-                CalculationMethod.EGYPTIAN
-            } else if (countryName.contains("United States", ignoreCase = true) || countryName.contains("Canada", ignoreCase = true)) {
-                CalculationMethod.ISNA
-            } else {
-                CalculationMethod.MUSLIM_WORLD_LEAGUE
+            val countryName = resolved?.countryName.orEmpty()
+            val isBangladesh = (lat in 20.5..26.8 && lng in 88.0..92.8) ||
+                countryName.contains("Bangladesh", ignoreCase = true) ||
+                countryName.contains("বাংলাদেশ", ignoreCase = true)
+
+            val method = when {
+                isBangladesh -> CalculationMethod.KARACHI_BD
+                countryName.contains("Saudi", ignoreCase = true) || countryName.contains("সৌদি", ignoreCase = true) ->
+                    CalculationMethod.UMM_AL_QURA
+                countryName.contains("Egypt", ignoreCase = true) || countryName.contains("মিশর", ignoreCase = true) ->
+                    CalculationMethod.EGYPTIAN
+                countryName.contains("United States", ignoreCase = true) || countryName.contains("Canada", ignoreCase = true) ->
+                    CalculationMethod.ISNA
+                else -> CalculationMethod.MUSLIM_WORLD_LEAGUE
             }
 
-            // Find closest preset or construct exact location
+            // Use closest local entry ONLY for division/timezone fallback metadata, NEVER to override spot name or exact coords
             val closest = LocationData.findClosestLocation(lat, lng)
-            val finalNameBn = if (placeNameBn.isNotBlank()) placeNameBn else closest.nameBn
-            val finalParentBn = if (parentAreaBn.isNotBlank()) parentAreaBn else closest.parentBn
+            val finalSpotBn = resolved?.spotBn?.takeIf { it.isNotBlank() } ?: closest.nameBn
+            val finalParentBn = resolved?.parentBn?.takeIf { it.isNotBlank() } ?: closest.parentBn
+            val formattedExactName = if (
+                finalParentBn.isNotBlank() &&
+                finalParentBn != "বাংলাদেশ" &&
+                !finalSpotBn.contains(finalParentBn, ignoreCase = true)
+            ) {
+                "$finalSpotBn, $finalParentBn"
+            } else {
+                finalSpotBn
+            }
 
             val resultDistrict = District(
-                nameEn = if (placeNameEn.isNotBlank()) placeNameEn else closest.nameEn,
-                nameBn = finalNameBn,
+                nameEn = resolved?.spotEn?.takeIf { it.isNotBlank() } ?: formattedExactName,
+                nameBn = formattedExactName,
                 divisionBn = closest.divisionBn,
                 lat = lat,
                 lng = lng,
-                offsetMinutes = closest.offsetMinutes,
+                offsetMinutes = 0,
                 timeZone = if (isBangladesh) 6.0 else timeZoneOffsetHours,
                 type = LocationType.CUSTOM_GPS,
                 parentBn = finalParentBn,
@@ -304,6 +394,190 @@ object LocationHelper {
         }
     }
 
+    private fun fetchNominatimSpot(lat: Double, lng: Double): ResolvedSpot? {
+        var conn: HttpURLConnection? = null
+        return try {
+            val urlStr = String.format(
+                Locale.US,
+                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=%.6f&lon=%.6f&zoom=18&addressdetails=1&accept-language=bn,en",
+                lat,
+                lng
+            )
+            conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 4500
+                readTimeout = 4500
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", "IslamicAlarmAndroid/1.0")
+            }
+            if (conn.responseCode !in 200..299) return null
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            extractExactPlaceFromNominatimJson(body)
+        } catch (_: Exception) {
+            null
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    private fun fetchAndroidGeocoderSpot(context: Context, lat: Double, lng: Double): ResolvedSpot? {
+        if (!Geocoder.isPresent()) return null
+        return try {
+            val bnGeocoder = Geocoder(context, Locale("bn", "BD"))
+            @Suppress("DEPRECATION")
+            val bnAddresses = bnGeocoder.getFromLocation(lat, lng, 3).orEmpty()
+            extractExactPlaceFromAddresses(bnAddresses)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    internal fun extractExactPlaceFromNominatimJson(jsonStr: String): ResolvedSpot? {
+        if (jsonStr.isBlank()) return null
+        return try {
+            val root = JSONObject(jsonStr)
+            val addr = root.optJSONObject("address") ?: return null
+
+            val country = cleanToken(addr.optString("country"))
+            val microCandidates = listOf(
+                addr.optString("neighbourhood"),
+                addr.optString("quarter"),
+                addr.optString("residential"),
+                addr.optString("village"),
+                addr.optString("hamlet"),
+                addr.optString("suburb"),
+                addr.optString("road"),
+                root.optString("name"),
+                addr.optString("city_district"),
+                addr.optString("town"),
+                addr.optString("city")
+            ).mapNotNull { cleanToken(it) }.filter { isUsablePlaceToken(it) }
+
+            val parentCandidates = listOf(
+                addr.optString("city"),
+                addr.optString("town"),
+                addr.optString("county"),
+                addr.optString("state_district"),
+                addr.optString("state"),
+                country
+            ).mapNotNull { cleanToken(it) }.filter { isUsablePlaceToken(it) }
+
+            val spot = microCandidates.firstOrNull() ?: return null
+            val parent = parentCandidates.firstOrNull { !it.equals(spot, ignoreCase = true) }
+                ?: parentCandidates.firstOrNull().orEmpty()
+
+            ResolvedSpot(
+                spotBn = spot,
+                parentBn = parent,
+                spotEn = spot,
+                countryName = country.orEmpty()
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    internal fun extractExactPlaceFromAddresses(addresses: List<Address>): ResolvedSpot? {
+        if (addresses.isEmpty()) return null
+
+        val specificTokens = mutableListOf<String>()
+        val parentTokens = mutableListOf<String>()
+        var country = ""
+
+        for (addr in addresses) {
+            if (country.isBlank()) country = cleanToken(addr.countryName).orEmpty()
+
+            // Micro-level candidates first: road/para/village/neighborhood/landmark BEFORE broad subLocality/District
+            val candidates = listOf(
+                addr.subLocality,
+                addr.thoroughfare,
+                addr.featureName,
+                addr.locality,
+                addr.subAdminArea,
+                addr.adminArea
+            )
+            // Prioritize subLocality or thoroughfare when distinct from locality/subAdminArea (district)
+            val districtOrCity = setOfNotNull(
+                cleanToken(addr.subAdminArea)?.lowercase(Locale.ROOT),
+                cleanToken(addr.adminArea)?.lowercase(Locale.ROOT)
+            )
+            val orderedSpecific = listOf(
+                addr.thoroughfare,
+                addr.subLocality,
+                addr.featureName,
+                addr.locality,
+                addr.subAdminArea,
+                addr.adminArea
+            ).mapNotNull { cleanToken(it) }
+                .filter { isUsablePlaceToken(it) && !isPureNumber(it) }
+
+            // Put tokens that are NOT identical to the broad district/division at the front
+            val strictlyLocal = orderedSpecific.filter { it.lowercase(Locale.ROOT) !in districtOrCity }
+            for (tok in strictlyLocal) {
+                if (tok !in specificTokens) specificTokens.add(tok)
+            }
+            for (tok in orderedSpecific) {
+                if (tok !in specificTokens) specificTokens.add(tok)
+            }
+
+            listOf(addr.locality, addr.subAdminArea, addr.adminArea, addr.countryName)
+                .mapNotNull { cleanToken(it) }
+                .filter { isUsablePlaceToken(it) && !isPureNumber(it) }
+                .forEach { tok -> if (tok !in parentTokens) parentTokens.add(tok) }
+
+            // Also parse address lines if thoroughfare/subLocality were blank (common in Bangladesh Google Geocoder)
+            val line0 = cleanToken(addr.getAddressLine(0))
+            if (!line0.isNullOrBlank()) {
+                line0.split(",")
+                    .mapNotNull { cleanToken(it) }
+                    .filter { isUsablePlaceToken(it) && !isPureNumber(it) }
+                    .firstOrNull { it.lowercase(Locale.ROOT) !in districtOrCity }
+                    ?.let { tok ->
+                        if (tok !in specificTokens) specificTokens.add(0, tok)
+                    }
+            }
+        }
+
+        val spot = specificTokens.firstOrNull() ?: return null
+        val parent = parentTokens.firstOrNull { !it.equals(spot, ignoreCase = true) }
+            ?: parentTokens.firstOrNull().orEmpty()
+
+        return ResolvedSpot(
+            spotBn = spot,
+            parentBn = parent,
+            spotEn = spot,
+            countryName = country
+        )
+    }
+
+    internal fun mergeResolvedSpots(primary: ResolvedSpot?, secondary: ResolvedSpot?): ResolvedSpot? {
+        if (primary == null) return secondary
+        if (secondary == null) return primary
+        return ResolvedSpot(
+            spotBn = primary.spotBn.ifBlank { secondary.spotBn },
+            parentBn = primary.parentBn.ifBlank { secondary.parentBn },
+            spotEn = primary.spotEn.ifBlank { secondary.spotEn },
+            countryName = primary.countryName.ifBlank { secondary.countryName }
+        )
+    }
+
+    private fun cleanToken(raw: String?): String? {
+        val t = raw?.trim()?.replace(Regex("\\s+"), " ").orEmpty()
+        return t.takeIf { it.isNotBlank() }
+    }
+
+    private fun isPureNumber(s: String): Boolean {
+        val cleaned = s.replace("-", "").replace(" ", "")
+        return cleaned.isNotEmpty() && cleaned.all { it.isDigit() || it in '০'..'৯' }
+    }
+
+    private fun isUsablePlaceToken(raw: String): Boolean {
+        val s = raw.trim()
+        if (s.length < 2) return false
+        if (PLUS_CODE_REGEX.matches(s)) return false
+        if (s.lowercase(Locale.ROOT) in GENERIC_PLACE_NAMES) return false
+        return true
+    }
+
     /**
      * Search any location globally using Android Geocoder API online
      */
@@ -314,12 +588,13 @@ object LocationHelper {
         try {
             if (Geocoder.isPresent()) {
                 val geocoder = Geocoder(context, Locale.getDefault())
+                @Suppress("DEPRECATION")
                 val addresses = geocoder.getFromLocationName(query, 5)
 
                 if (!addresses.isNullOrEmpty()) {
                     for (addr in addresses) {
-                        val name = addr.locality ?: addr.subLocality ?: addr.subAdminArea ?: addr.featureName ?: query
-                        val parent = addr.adminArea ?: addr.countryName ?: ""
+                        val name = addr.subLocality ?: addr.thoroughfare ?: addr.locality ?: addr.subAdminArea ?: addr.featureName ?: query
+                        val parent = addr.locality ?: addr.subAdminArea ?: addr.adminArea ?: addr.countryName ?: ""
                         val country = addr.countryName ?: ""
                         val lat = addr.latitude
                         val lng = addr.longitude
@@ -330,16 +605,12 @@ object LocationHelper {
                             detectedTz.getOffset(System.currentTimeMillis()) / (1000.0 * 60.0 * 60.0)
                         }
 
-                        val method = if (isBd) {
-                            CalculationMethod.KARACHI_BD
-                        } else if (country.contains("Saudi", ignoreCase = true)) {
-                            CalculationMethod.UMM_AL_QURA
-                        } else if (country.contains("Egypt", ignoreCase = true)) {
-                            CalculationMethod.EGYPTIAN
-                        } else if (country.contains("United States", ignoreCase = true) || country.contains("Canada", ignoreCase = true)) {
-                            CalculationMethod.ISNA
-                        } else {
-                            CalculationMethod.MUSLIM_WORLD_LEAGUE
+                        val method = when {
+                            isBd -> CalculationMethod.KARACHI_BD
+                            country.contains("Saudi", ignoreCase = true) -> CalculationMethod.UMM_AL_QURA
+                            country.contains("Egypt", ignoreCase = true) -> CalculationMethod.EGYPTIAN
+                            country.contains("United States", ignoreCase = true) || country.contains("Canada", ignoreCase = true) -> CalculationMethod.ISNA
+                            else -> CalculationMethod.MUSLIM_WORLD_LEAGUE
                         }
 
                         results.add(

@@ -337,7 +337,7 @@ object QuranRepository {
 
         // 3. Fallback: Fetch from Al-Quran Cloud API (Uthmani Arabic + Bengali Translation)
         try {
-            val alquranCloudUrl = "https://api.alquran.cloud/v1/surah/$surahNumber/editions/quran-uthmani,bn.bengali"
+            val alquranCloudUrl = "https://api.alquran.cloud/v1/surah/$surahNumber/editions/quran-simple,bn.bengali"
             val conn = URL(alquranCloudUrl).openConnection() as HttpURLConnection
             conn.connectTimeout = 7000
             conn.readTimeout = 7000
@@ -564,34 +564,40 @@ object QuranRepository {
     fun ensureOfflineMeaningLoaded(context: Context) {
         if (offlineMeaningSurahsCache != null) return
 
-        ensureOfflineArabicLoaded(context)
-        val arabicMap = offlineSurahsCache ?: return
         val appCtx = context.applicationContext
         val meaningMap = HashMap<Int, List<AyahItem>>(114)
 
         try {
-            appCtx.assets.open("quran_bn_meaning.json").bufferedReader(Charsets.UTF_8).use { reader ->
+            appCtx.assets.open("quran_meaning_complete.json").bufferedReader(Charsets.UTF_8).use { reader ->
                 val jsonStr = reader.readText()
                 val rootArray = JSONArray(jsonStr)
                 for (i in 0 until rootArray.length()) {
                     val surahObj = rootArray.getJSONObject(i)
                     val surahNum = surahObj.getInt("s")
-                    val bnArray = surahObj.getJSONArray("b")
-                    val arabicAyahs = arabicMap[surahNum].orEmpty()
-                    val combined = ArrayList<AyahItem>(arabicAyahs.size)
+                    val ayahsArray = surahObj.getJSONArray("a")
+                    val combined = ArrayList<AyahItem>(ayahsArray.length())
 
-                    for (j in arabicAyahs.indices) {
-                        val base = arabicAyahs[j]
-                        val bnText = if (j < bnArray.length()) bnArray.getString(j).trim() else ""
-                        val formattedArabic = if (base.textArabic.endsWith("﴾") || base.textArabic.endsWith("﴿")) {
-                            base.textArabic
+                    for (j in 0 until ayahsArray.length()) {
+                        val tuple = ayahsArray.getJSONArray(j)
+                        val numInSurah = tuple.getInt(0)
+                        val rawArabic = tuple.getString(1).trim()
+                        val bnText = tuple.getString(2).trim()
+                        val juz = tuple.getInt(3)
+                        val page = tuple.getInt(4).coerceIn(1, 604)
+
+                        val formattedArabic = if (rawArabic.endsWith("﴾") || rawArabic.endsWith("﴿")) {
+                            rawArabic
                         } else {
-                            "${base.textArabic} ﴿${toArabicNumber(base.numberInSurah)}﴾"
+                            "$rawArabic ﴿${toArabicNumber(numInSurah)}﴾"
                         }
                         combined.add(
-                            base.copy(
+                            AyahItem(
+                                surahNumber = surahNum,
+                                numberInSurah = numInSurah,
                                 textArabic = formattedArabic,
-                                textBangla = bnText
+                                textBangla = bnText,
+                                page = page,
+                                juz = juz
                             )
                         )
                     }

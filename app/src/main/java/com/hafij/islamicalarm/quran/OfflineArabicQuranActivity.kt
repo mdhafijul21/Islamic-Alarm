@@ -65,7 +65,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
     private var currentPage = 1
     private var openedDirectlyToReader = false
     private var allPageSummaries: List<QuranRepository.OfflinePageSummary> = emptyList()
-    private var mushafFontScale: Float = 1.0f
+    private val mushafFontScale: Float = 1.0f
     private var quranTypeface: Typeface? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,7 +84,6 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
         }
 
         val prefs = getSharedPreferences(QURAN_PREFS, Context.MODE_PRIVATE)
-        mushafFontScale = prefs.getFloat(KEY_HAFEZI_FONT_SCALE, 1.0f).coerceIn(0.80f, 1.30f)
 
         activeTab = intent.getIntExtra(EXTRA_INITIAL_TAB, TAB_SURAH).coerceIn(TAB_SURAH, TAB_PAGE)
         isSingleCategoryMode = intent.getBooleanExtra(EXTRA_SINGLE_CATEGORY, false)
@@ -133,27 +132,6 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
             openedDirectlyToReader = false
             showIndexMode()
         }
-        binding.btnMushafFontLarger.setOnClickListener {
-            if (mushafFontScale < 1.30f) {
-                mushafFontScale = (mushafFontScale + 0.08f).coerceAtMost(1.30f)
-                saveFontScale()
-                mushafAdapter.updateFontScale(mushafFontScale)
-            }
-        }
-        binding.btnMushafFontSmaller.setOnClickListener {
-            if (mushafFontScale > 0.80f) {
-                mushafFontScale = (mushafFontScale - 0.08f).coerceAtLeast(0.80f)
-                saveFontScale()
-                mushafAdapter.updateFontScale(mushafFontScale)
-            }
-        }
-    }
-
-    private fun saveFontScale() {
-        getSharedPreferences(QURAN_PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putFloat(KEY_HAFEZI_FONT_SCALE, mushafFontScale)
-            .apply()
     }
 
     private fun setupBackNavigation() {
@@ -485,6 +463,8 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
     private fun setupMushafReader() {
         mushafAdapter = MushafPagerAdapter(this, quranTypeface, mushafFontScale)
+        binding.vpMushafPages.layoutDirection = View.LAYOUT_DIRECTION_RTL
+        binding.vpMushafPages.getChildAt(0)?.layoutDirection = View.LAYOUT_DIRECTION_RTL
         binding.vpMushafPages.adapter = mushafAdapter
         binding.vpMushafPages.offscreenPageLimit = 1
         binding.vpMushafPages.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
@@ -547,9 +527,9 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
         binding.toolbarOfflineQuran.title = "${surah.nameBangla} (${surah.nameArabic})"
         binding.toolbarOfflineQuran.subtitle =
-            "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(pageInPara)} / ${toBengaliNumber(paraTotal)}"
+            "পারা ${toBengaliNumber(juz)} • পৃষ্ঠা ${toBengaliNumber(pageInPara)} / ${toBengaliNumber(paraTotal)} • মোট পৃষ্ঠা ${toBengaliNumber(page)}/${toBengaliNumber(TOTAL_PAGES)}"
         binding.tvMushafPageFooter.text =
-            "পারা ${toBengaliNumber(juz)} : পৃষ্ঠা ${toBengaliNumber(pageInPara)}/${toBengaliNumber(paraTotal)} • মোট ${toBengaliNumber(page)}"
+            "পারা ${toBengaliNumber(juz)} : পৃষ্ঠা ${toBengaliNumber(pageInPara)}/${toBengaliNumber(paraTotal)}"
         binding.btnPrevPage.isEnabled = page > 1
         binding.btnNextPage.isEnabled = page < TOTAL_PAGES
     }
@@ -906,10 +886,10 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
 
                 b.tvMushafTopSurah.text = toHafeziHeaderDigits("${pageData.primarySurah.nameArabic} ${QuranRepository.toArabicNumber(pageData.primarySurah.id)}")
                 b.tvMushafTopMeta.text = "( ${toBnNumPadded(pageData.juzNumber)} : ${toBnNumPadded(pageInPara)} )"
+                b.tvMushafTopTotalPage.text = "মোট পৃষ্ঠা ${toBnNum(pageNumber)}/${toBnNum(TOTAL_PAGES)}"
                 b.tvMushafTopJuz.text = toHafeziHeaderDigits("$paraAr ${QuranRepository.toArabicNumber(pageData.juzNumber)}")
                 b.tvMushafBottomManzil.text = toHafeziHeaderDigits("منزل ${QuranRepository.toArabicNumber(pageData.manzilNumber)}")
                 b.tvMushafBottomPage.text = "﴿ ${QuranRepository.toArabicNumber(pageInPara)} / ${QuranRepository.toArabicNumber(paraTotal)} ﴾"
-                b.tvMushafBottomLineHint.text = "মোট পৃষ্ঠা ${toBnNum(pageNumber)}/${toBnNum(TOTAL_PAGES)}"
 
                 quranTypeface?.let {
                     b.tvMushafTopSurah.typeface = it
@@ -936,42 +916,75 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                 val dp = context.resources.displayMetrics.density
                 val isOpeningPage = pageData.pageNumber <= 2
 
-                if (isOpeningPage) {
-                    container.addView(View(context).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.35f
-                        )
-                    })
-                    marginContainer.addView(View(context).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.35f
-                        )
-                    })
-                } else {
-                    container.addView(createRuleView(dp, ruleColor))
-                }
+                container.addView(createRuleView(dp, ruleColor))
 
-                for (line in pageData.lines) {
-                    val rowLayout = LinearLayout(context).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        val rowParams = if (isOpeningPage) {
-                            LinearLayout.LayoutParams(
+                val lines = pageData.lines
+                var idx = 0
+                while (idx < lines.size) {
+                    val line = lines[idx]
+
+                    // Collapse consecutive BlankLine rows (e.g. Page 610 after Surah An-Nas)
+                    // into a single balanced Khatam-ul-Quran closing panel instead of dead space.
+                    if (line is QuranRepository.HafeziLine.BlankLine) {
+                        var blankCount = 1
+                        while (idx + blankCount < lines.size &&
+                            lines[idx + blankCount] is QuranRepository.HafeziLine.BlankLine
+                        ) {
+                            blankCount++
+                        }
+
+                        val closingBox = LinearLayout(context).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                0,
+                                blankCount.toFloat()
+                            )
+                            minimumHeight = (88 * dp).toInt()
+                            setPadding((12 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt(), (8 * dp).toInt())
+                        }
+                        val closingCard = TextView(context).apply {
+                            text = "۞ صَدَقَ اللّٰهُ الْعَظِيمُ ۞\nخَتْمُ الْقُرْآنِ الْكَرِيمِ\nআল-কুরআনুল কারীম সমাপ্ত • সূরা ফালাক ও সূরা নাস"
+                            setTextColor(primaryColor)
+                            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                            setTypeface(quranTypeface, Typeface.BOLD)
+                            gravity = Gravity.CENTER
+                            setBackgroundResource(R.drawable.bg_quran_chip)
+                            setPadding((14 * dp).toInt(), (14 * dp).toInt(), (14 * dp).toInt(), (14 * dp).toInt())
+                            layoutParams = LinearLayout.LayoutParams(
                                 LinearLayout.LayoutParams.MATCH_PARENT,
                                 LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                        } else {
-                            LinearLayout.LayoutParams(
+                        }
+                        closingBox.addView(closingCard)
+                        container.addView(closingBox)
+
+                        marginContainer.addView(View(context).apply {
+                            layoutParams = LinearLayout.LayoutParams(
                                 LinearLayout.LayoutParams.MATCH_PARENT,
                                 0,
-                                1f
+                                blankCount.toFloat()
                             )
-                        }
-                        layoutParams = rowParams
-                        val minRowDp = if (isOpeningPage) 36 else 32
+                        })
+
+                        idx += blankCount
+                        continue
+                    }
+
+                    val rowWeight = if (isOpeningPage && line is QuranRepository.HafeziLine.SurahHeader) 1.35f else 1f
+                    val rowLayout = LinearLayout(context).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            0,
+                            rowWeight
+                        )
+                        val minRowDp = if (isOpeningPage) 36 else 24
                         minimumHeight = (minRowDp * dp).toInt()
                         if (isOpeningPage) {
-                            setPadding((10 * dp).toInt(), (3 * dp).toInt(), (10 * dp).toInt(), (3 * dp).toInt())
+                            setPadding((8 * dp).toInt(), (2 * dp).toInt(), (8 * dp).toInt(), (2 * dp).toInt())
                         } else {
                             setPadding(0, (1 * dp).toInt(), 0, (1 * dp).toInt())
                         }
@@ -981,18 +994,12 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                     val marginSlot = LinearLayout(context).apply {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER
-                        layoutParams = if (isOpeningPage) {
-                            LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                (36 * dp).toInt()
-                            )
-                        } else {
-                            LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                0,
-                                1f
-                            )
-                        }
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            0,
+                            rowWeight
+                        )
+                        minimumHeight = (if (isOpeningPage) 36 else 24).let { (it * dp).toInt() }
                     }
                     if (line is QuranRepository.HafeziLine.VerseLine && line.marginMark != null) {
                         marginSlot.addView(TextView(context).apply {
@@ -1038,7 +1045,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                             val bis = TextView(context).apply {
                                 text = "بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ"
                                 setTextColor(inkColor)
-                                setTextSize(TypedValue.COMPLEX_UNIT_SP, (20f * fontScale).coerceIn(15f, 25f))
+                                setTextSize(TypedValue.COMPLEX_UNIT_SP, (if (isOpeningPage) 22f else 20f * fontScale).coerceIn(15f, 25f))
                                 quranTypeface?.let { typeface = it }
                                 gravity = Gravity.CENTER
                                 textDirection = View.TEXT_DIRECTION_RTL
@@ -1051,13 +1058,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                             rowLayout.addView(bis)
                         }
 
-                        is QuranRepository.HafeziLine.BlankLine -> {
-                            rowLayout.addView(View(context).apply {
-                                layoutParams = LinearLayout.LayoutParams(
-                                    LinearLayout.LayoutParams.MATCH_PARENT, 1
-                                )
-                            })
-                        }
+                        is QuranRepository.HafeziLine.BlankLine -> Unit
 
                         is QuranRepository.HafeziLine.VerseLine -> {
                             val formatted = buildFormattedLine(
@@ -1068,7 +1069,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                                 digitColor = inkColor
                             )
 
-                            val baseSp = if (isOpeningPage) 21.0f * fontScale else 20.0f * fontScale
+                            val baseSp = if (isOpeningPage) 22.0f else 20.0f * fontScale
                             val justifyThisLine = formatted.interWordSpaces.isNotEmpty()
                             val lineTv = TextView(context).apply {
                                 text = formatted.spannable
@@ -1105,19 +1106,7 @@ class OfflineArabicQuranActivity : AppCompatActivity() {
                     if (!isOpeningPage || line is QuranRepository.HafeziLine.VerseLine) {
                         container.addView(createRuleView(dp, ruleColor))
                     }
-                }
-
-                if (isOpeningPage) {
-                    container.addView(View(context).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.35f
-                        )
-                    })
-                    marginContainer.addView(View(context).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT, 0, 0.35f
-                        )
-                    })
+                    idx++
                 }
             }
 

@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/dua_background"
-        app:title="মাসনুন দোয়া ও হাদিস"
+        app:title="মাসনুন আমল ও হাদিস"
         app:titleTextColor="@color/dua_text"
         app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
@@ -79,7 +79,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="5dp"
-                            android:text="দোয়া, জিকির ও হাদিস"
+                            android:text="আমল, দোয়া ও হাদিস"
                             android:textColor="@android:color/white"
                             android:textSize="25sp"
                             android:textStyle="bold" />
@@ -127,7 +127,7 @@
                         android:layout_height="48dp"
                         android:layout_weight="1"
                         android:background="@null"
-                        android:hint="দোয়া, বিষয় বা হাদিস খুঁজুন..."
+                        android:hint="আমল, দোয়া বা হাদিস খুঁজুন..."
                         android:imeOptions="actionSearch"
                         android:inputType="text"
                         android:paddingStart="12dp"
@@ -143,7 +143,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="18dp"
                 android:layout_marginTop="22dp"
-                android:text="বিষয় অনুযায়ী দোয়া"
+                android:text="বিষয় অনুযায়ী আমল"
                 android:textColor="@color/dua_text"
                 android:textSize="19sp"
                 android:textStyle="bold" />
@@ -184,7 +184,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:padding="28dp"
-                android:text="কোনো দোয়া পাওয়া যায়নি"
+                android:text="কোনো আমল পাওয়া যায়নি"
                 android:textColor="@color/dua_muted"
                 android:textSize="14sp"
                 android:visibility="gone" />

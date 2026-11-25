@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardJamatCategory"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeColor="#D5E3E7"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="12dp">
+
+        <ImageView
+            android:id="@+id/ivJamatCrest"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_library_crest" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="9dp"
+            android:layout_marginBottom="7dp"
+            android:background="#E5EFF2" />
+
+        <TextView
+            android:id="@+id/tvJamatTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textColor="#0F4C5C"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="ইসলামিক গল্প ও কাহিনি" />
+
+        <TextView
+            android:id="@+id/tvJamatSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="#5D7076"
+            android:textSize="10sp"
+            tools:text="নবী-রাসূল ও সাহাবাদের গল্প" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

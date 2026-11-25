@@ -35,7 +35,7 @@
                 app:title="১৫ লাইন হাফেজী কুরআন"
                 app:titleTextColor="@color/white" />
 
-            <!-- Reader Controls (Font size & Jump) -->
+            <!-- Reader Controls (Index shortcut only; page zoom removed) -->
             <LinearLayout
                 android:id="@+id/layoutReaderToolbarActions"
                 android:layout_width="wrap_content"
@@ -44,24 +44,6 @@
                 android:orientation="horizontal"
                 android:visibility="gone"
                 tools:visibility="visible">
-
-                <ImageButton
-                    android:id="@+id/btnMushafFontSmaller"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="ফন্ট ছোট করুন"
-                    android:src="@drawable/ic_zoom_out"
-                    app:tint="@color/white" />
-
-                <ImageButton
-                    android:id="@+id/btnMushafFontLarger"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="ফন্ট বড় করুন"
-                    android:src="@drawable/ic_zoom_in"
-                    app:tint="@color/white" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnOpenIndexFromReader"
@@ -375,15 +357,18 @@
             android:id="@+id/vpMushafPages"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1" />
+            android:layout_weight="1"
+            android:layoutDirection="rtl" />
 
-        <!-- Bottom Page Navigation Bar -->
+        <!-- Bottom Page Navigation Bar (RTL: Prev on Right, Next on Left for Arabic Mushaf) -->
         <LinearLayout
+            android:id="@+id/layoutMushafBottomNav"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/surface"
             android:elevation="6dp"
             android:gravity="center_vertical"
+            android:layoutDirection="rtl"
             android:orientation="horizontal"
             android:paddingHorizontal="12dp"
             android:paddingVertical="8dp">

@@ -340,7 +340,8 @@ object DuaData {
                     else -> item
                 }
             }
-        (DuaFortyHadith.items + DuaPuritySalahData.items + legacyMapped)
+        (DuaFortyHadith.items + DuaPuritySalahData.items + DuaExpandedData.items + legacyMapped)
+            .distinctBy { it.id }
             .sortedWith(
                 compareBy(
                     { getCategories.indexOf(it.category).let { idx -> if (idx == -1) Int.MAX_VALUE else idx } },

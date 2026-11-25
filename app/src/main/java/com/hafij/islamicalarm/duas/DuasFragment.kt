@@ -20,7 +20,7 @@ class DuasFragment : Fragment() {
     private lateinit var categoryAdapter: DuaCategoryAdapter
     private var selectedCategory = DuaData.CATEGORY_ALL
     private var searchQuery = ""
-    private val favoritesCategory = "পছন্দের দোয়া"
+    private val favoritesCategory = "পছন্দের আমল"
     private var lastFavoriteSnapshot: Set<String>? = null
 
     override fun onCreateView(
@@ -157,10 +157,10 @@ class DuasFragment : Fragment() {
         binding.rvDuaCategories.visibility = View.VISIBLE
         binding.rvDuas.visibility = View.GONE
         binding.tvDuaEmpty.visibility = View.GONE
-        binding.tvDuaSectionTitle.text = "বিষয় অনুযায়ী দোয়া ও আমল"
+        binding.tvDuaSectionTitle.text = "বিষয় অনুযায়ী আমল ও দোয়া"
         binding.tvDuaSectionSubtitle.text = "আপনার প্রয়োজনীয় বিভাগটি বেছে নিন"
-        binding.toolbarDuas.title = "মাসনুন দোয়া ও আমল"
-        binding.etSearchDua.hint = "দোয়া বা বিষয় খুঁজুন..."
+        binding.toolbarDuas.title = "মাসনুন আমল ও দোয়া"
+        binding.etSearchDua.hint = "আমল, দোয়া বা বিষয় খুঁজুন..."
         binding.duaHomeScroll.smoothScrollTo(0, 0)
     }
 
@@ -173,10 +173,10 @@ class DuasFragment : Fragment() {
         binding.rvDuas.visibility = View.VISIBLE
         binding.tvDuaEmpty.visibility = View.GONE
         binding.tvDuaSectionTitle.text =
-            if (selectedCategory == DuaData.CATEGORY_ALL) "সব দোয়া ও আমল" else selectedCategory
+            if (selectedCategory == DuaData.CATEGORY_ALL) "সব আমল ও দোয়া" else selectedCategory
         binding.tvDuaSectionSubtitle.text = "যেকোনো এন্ট্রিতে চাপ দিয়ে বিস্তারিত পড়ুন"
         binding.toolbarDuas.title =
-            if (selectedCategory == DuaData.CATEGORY_ALL) "সব দোয়া ও আমল" else selectedCategory
+            if (selectedCategory == DuaData.CATEGORY_ALL) "সব আমল ও দোয়া" else selectedCategory
         binding.duaHomeScroll.smoothScrollTo(0, 0)
     }
 
@@ -205,8 +205,8 @@ class DuasFragment : Fragment() {
         binding.tvDuaEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
         binding.tvDuaEmpty.text = when {
             selectedCategory == favoritesCategory && filtered.isEmpty() ->
-                "এখনো কোনো দোয়া পছন্দের তালিকায় যোগ করা হয়নি।"
-            else -> "কোনো দোয়া পাওয়া যায়নি। অন্য শব্দ দিয়ে খুঁজে দেখুন।"
+                "এখনো কোনো আমল পছন্দের তালিকায় যোগ করা হয়নি।"
+            else -> "কোনো আমল পাওয়া যায়নি। অন্য শব্দ দিয়ে খুঁজে দেখুন।"
         }
     }
 }
