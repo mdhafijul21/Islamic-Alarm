@@ -296,32 +296,7 @@ object IslamicOccasionNotifier {
             return null
         }
 
-        val adminHadith = if (allowNetwork && com.hafij.islamicalarm.cloud.CloudAuthManager.currentUserOrNull(context) != null) {
-            try {
-                com.hafij.islamicalarm.cloud.CloudSyncRepository(context)
-                    .fetchAdminDailyHadith(dateKey)
-                    .getOrNull()
-            } catch (_: Throwable) {
-                null
-            }
-        } else {
-            null
-        }
-
-        val hadith = if (adminHadith != null) {
-            com.hafij.islamicalarm.hadith.DailyHadith(
-                id = "admin_$dateKey",
-                bookNameBn = "অ্যাডমিন নির্বাচিত",
-                hadithNumberBn = "",
-                topicBn = adminHadith.topicBn,
-                arabicText = adminHadith.arabicText,
-                bengaliText = adminHadith.bengaliText,
-                referenceBn = adminHadith.referenceBn,
-                gradeBn = adminHadith.gradeBn.ifBlank { "সহিহ" },
-                isFromOnlineApi = true,
-                dateKey = dateKey
-            )
-        } else if (allowNetwork) {
+        val hadith = if (allowNetwork) {
             com.hafij.islamicalarm.hadith.DailyHadithRepository.fetchOrGetDailyHadith(
                 context = context,
                 dateKey = dateKey,
@@ -362,59 +337,6 @@ object IslamicOccasionNotifier {
 
         postSystemNotification(context, record, 8901)
         return record
-    }
-
-    /**
-     * Imports newly published active announcements from Firestore into the notification inbox
-     * and posts a notification alert for unseen items.
-     */
-    fun importAdminAnnouncementsToInbox(
-        context: Context,
-        announcements: List<com.hafij.islamicalarm.cloud.CloudAnnouncement>
-    ): Int {
-        if (announcements.isEmpty()) return 0
-        val prefs = context.getSharedPreferences(PREFS_INBOX, Context.MODE_PRIVATE)
-        val notifiedKeys = prefs.getStringSet(KEY_NOTIFIED_DATE_KEYS, emptySet())?.toMutableSet() ?: mutableSetOf()
-        val existingRecords = getInboxRecords(context).toMutableList()
-        val hijri = HijriCalendarHelper.getHijriDate(Calendar.getInstance())
-        var addedCount = 0
-
-        for (ann in announcements) {
-            if (!ann.active || ann.id.isBlank() || ann.title.isBlank()) continue
-            val recId = "admin_ann_${ann.id}"
-            if (recId in notifiedKeys || existingRecords.any { it.recordId == recId }) continue
-
-            val badge = when (ann.category) {
-                "hadith" -> "অ্যাডমিন হাদিস"
-                "update" -> "অ্যাপ আপডেট"
-                "reminder" -> "রিমাইন্ডার"
-                else -> "অ্যাডমিন নোটিশ"
-            }
-            val record = OccasionNotificationRecord(
-                recordId = recId,
-                occasionId = "admin_announcement",
-                titleBn = "📢 ${ann.title}",
-                occasionBadgeBn = badge,
-                hijriDateBn = hijri.formattedBn,
-                fazilatBn = ann.body,
-                hadithArabic = "",
-                hadithBangla = ann.body,
-                hadithReference = "অ্যাডমিন বার্তা",
-                recommendedAmalBn = "",
-                createdAtMillis = ann.createdAt?.toDate()?.time ?: System.currentTimeMillis(),
-                isRead = false
-            )
-            existingRecords.add(0, record)
-            notifiedKeys.add(recId)
-            postSystemNotification(context, record, 8950 + (ann.id.hashCode() and 0x3FF))
-            addedCount++
-        }
-
-        if (addedCount > 0) {
-            saveRecords(context, existingRecords.take(MAX_STORED_RECORDS))
-            prefs.edit().putStringSet(KEY_NOTIFIED_DATE_KEYS, notifiedKeys).apply()
-        }
-        return addedCount
     }
 
     fun getInboxRecords(context: Context): List<OccasionNotificationRecord> {

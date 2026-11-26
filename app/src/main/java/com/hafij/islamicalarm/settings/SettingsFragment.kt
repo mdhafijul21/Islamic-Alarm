@@ -15,44 +15,30 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
-import androidx.credentials.CredentialManager
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.firebase.auth.FirebaseUser
 import com.hafij.islamicalarm.MainActivity
 import com.hafij.islamicalarm.R
-import com.hafij.islamicalarm.auto.AutoAlarmManager
-import com.hafij.islamicalarm.cloud.CloudAuthManager
-import com.hafij.islamicalarm.cloud.CloudSyncRepository
-import com.hafij.islamicalarm.cloud.CloudSyncViewModel
-import com.hafij.islamicalarm.cloud.CloudUiState
 import com.hafij.islamicalarm.databinding.ActivitySettingsBinding
 import com.hafij.islamicalarm.permissions.PermStep
 import com.hafij.islamicalarm.permissions.PermissionHelper
 import com.hafij.islamicalarm.report.ReportItem
 import com.hafij.islamicalarm.report.ReportStore
 import com.hafij.islamicalarm.widget.IslamicAlarmWidget
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Settings tab: cloud account sync, permission checklist, usage guide and report form. */
+/** Settings tab: permission checklist, usage guide and local report form. */
 class SettingsFragment : Fragment() {
 
     private var _binding: ActivitySettingsBinding? = null
     private val binding get() = _binding!!
     private var reportStore: ReportStore? = null
     private var lastPermSignature: String? = null
-    private var activeCloudObserverJob: Job? = null
-    private var activeSignedInUid: String? = null
 
     private val notificationLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -141,163 +127,9 @@ class SettingsFragment : Fragment() {
         b.cardSettingsShareApp.setOnClickListener {
             shareAppLink()
         }
-        setupCloudAccountCard()
         refreshShareUi()
         syncAdminShareLinkInBackground()
         renderCategoryScreen()
-    }
-
-    private fun setupCloudAccountCard() {
-        val b = _binding ?: return
-        val ctx = context ?: return
-        val credentialManager = CredentialManager.create(ctx)
-
-        b.btnCloudSignIn.setOnClickListener {
-            val hostCtx = activity ?: return@setOnClickListener
-            b.btnCloudSignIn.isEnabled = false
-            b.btnCloudSignIn.text = "সাইন ইন হচ্ছে..."
-            CloudAuthManager.onGoogleSignInClicked(
-                context = hostCtx,
-                credentialManager = credentialManager,
-                onAuthSuccess = {
-                    if (_binding != null) {
-                        b.btnCloudSignIn.isEnabled = true
-                        b.btnCloudSignIn.text = "Google দিয়ে সাইন ইন করুন"
-                        Toast.makeText(hostCtx, "✅ ক্লাউড অ্যাকাউন্ট সংযুক্ত হয়েছে", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                onAuthError = { msg ->
-                    if (_binding != null) {
-                        b.btnCloudSignIn.isEnabled = true
-                        b.btnCloudSignIn.text = "Google দিয়ে সাইন ইন করুন"
-                        Toast.makeText(hostCtx, msg, Toast.LENGTH_LONG).show()
-                    }
-                },
-                scope = viewLifecycleOwner.lifecycleScope,
-                onAuthCancelled = {
-                    if (_binding != null) {
-                        b.btnCloudSignIn.isEnabled = true
-                        b.btnCloudSignIn.text = "Google দিয়ে সাইন ইন করুন"
-                    }
-                }
-            )
-        }
-
-        b.btnCloudSyncNow.setOnClickListener {
-            val currentCtx = context ?: return@setOnClickListener
-            val uid = CloudAuthManager.currentUserOrNull(currentCtx)?.uid
-            if (uid.isNullOrBlank()) {
-                Toast.makeText(currentCtx, "আগে Google দিয়ে সাইন ইন করুন", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            val vm = ViewModelProvider(
-                viewModelStore,
-                CloudSyncViewModel.provideFactory(uid)
-            )[uid, CloudSyncViewModel::class.java]
-            val districtBn = AutoAlarmManager.loadSavedDistrict(currentCtx).nameBn
-            vm.syncUserSession(currentCtx, districtBn, appVersion())
-            Toast.makeText(currentCtx, "ক্লাউড সিঙ্ক চলছে...", Toast.LENGTH_SHORT).show()
-        }
-
-        b.btnCloudSignOut.setOnClickListener {
-            val currentCtx = context ?: return@setOnClickListener
-            activeCloudObserverJob?.cancel()
-            activeCloudObserverJob = null
-            activeSignedInUid = null
-            CloudAuthManager.signOut(currentCtx, credentialManager, viewLifecycleOwner.lifecycleScope) {
-                if (_binding != null) {
-                    renderCloudUserState(null)
-                    Toast.makeText(currentCtx, "সাইন আউট সম্পন্ন", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                CloudAuthManager.authStateFlow(ctx).collectLatest { user ->
-                    renderCloudUserState(user)
-                }
-            }
-        }
-    }
-
-    private fun renderCloudUserState(user: FirebaseUser?) {
-        val b = _binding ?: return
-        val ctx = context ?: return
-        if (user == null || user.uid.isBlank()) {
-            activeCloudObserverJob?.cancel()
-            activeCloudObserverJob = null
-            activeSignedInUid = null
-            b.btnCloudSignIn.visibility = View.VISIBLE
-            b.layoutCloudSignedInActions.visibility = View.GONE
-            b.cardSettingsAdminNotice.visibility = View.GONE
-            b.tvCloudAccountStatus.text = "ক্লাউড সিঙ্ক, নোটিশ ও রিপোর্ট পাঠাতে Google দিয়ে সাইন ইন করুন"
-            return
-        }
-
-        b.btnCloudSignIn.visibility = View.GONE
-        b.layoutCloudSignedInActions.visibility = View.VISIBLE
-        val label = user.email?.takeIf { it.isNotBlank() }
-            ?: user.displayName?.takeIf { it.isNotBlank() }
-            ?: user.uid.take(10)
-        b.tvCloudAccountStatus.text = "সংযুক্ত ✅ • $label"
-
-        val uid = user.uid
-        if (activeSignedInUid == uid && activeCloudObserverJob?.isActive == true) return
-        activeSignedInUid = uid
-        activeCloudObserverJob?.cancel()
-
-        val vm = ViewModelProvider(
-            viewModelStore,
-            CloudSyncViewModel.provideFactory(uid)
-        )[uid, CloudSyncViewModel::class.java]
-        val districtBn = AutoAlarmManager.loadSavedDistrict(ctx).nameBn
-        vm.syncUserSession(ctx, districtBn, appVersion())
-
-        activeCloudObserverJob = viewLifecycleOwner.lifecycleScope.launch {
-            launch {
-                vm.announcementsState.collectLatest { state ->
-                    val bindingNow = _binding ?: return@collectLatest
-                    when (state) {
-                        is CloudUiState.Success -> {
-                            val latest = state.data.firstOrNull()
-                            if (latest != null) {
-                                bindingNow.cardSettingsAdminNotice.visibility = View.VISIBLE
-                                bindingNow.tvSettingsAdminNotice.text = "📢 ${latest.title}\n${latest.body}"
-                            } else {
-                                bindingNow.cardSettingsAdminNotice.visibility = View.GONE
-                            }
-                        }
-                        is CloudUiState.Error -> {
-                            bindingNow.cardSettingsAdminNotice.visibility = View.GONE
-                        }
-                        CloudUiState.Loading -> Unit
-                    }
-                }
-            }
-            launch {
-                vm.syncMessage.collectLatest { msg ->
-                    val bindingNow = _binding ?: return@collectLatest
-                    if (!msg.isNullOrBlank()) {
-                        bindingNow.tvCloudAccountStatus.text = "$msg • $label"
-                        refreshReports()
-                    }
-                }
-            }
-            launch {
-                vm.globalConfig.collectLatest { cfg ->
-                    if (cfg != null && _binding != null) {
-                        refreshShareUi()
-                        if (cfg.noticeBanner.isNotBlank() &&
-                            _binding?.cardSettingsAdminNotice?.visibility != View.VISIBLE
-                        ) {
-                            _binding?.cardSettingsAdminNotice?.visibility = View.VISIBLE
-                            _binding?.tvSettingsAdminNotice?.text = "📢 ${cfg.noticeBanner}"
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private fun shareAppLink() {
@@ -422,9 +254,6 @@ class SettingsFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        activeCloudObserverJob?.cancel()
-        activeCloudObserverJob = null
-        activeSignedInUid = null
         lastPermSignature = null
         _binding = null
     }
@@ -626,34 +455,9 @@ class SettingsFragment : Fragment() {
             } else {
                 ReportStore.TYPE_PROBLEM
             }
-            val savedItem = store.add(type, message, deviceInfo(), appVersion())
+            store.add(type, message, deviceInfo(), appVersion())
             b.etReportMessage.setText("")
-            val currentCtx = requireContext()
-            val user = CloudAuthManager.currentUserOrNull(currentCtx)
-            if (user != null) {
-                Toast.makeText(currentCtx, "রিপোর্ট ক্লাউডে পাঠানো হচ্ছে...", Toast.LENGTH_SHORT).show()
-                viewLifecycleOwner.lifecycleScope.launch {
-                    val result = CloudSyncRepository(currentCtx).submitReport(
-                        reportId = savedItem.id,
-                        type = savedItem.type,
-                        message = savedItem.message,
-                        device = savedItem.device,
-                        appVersion = savedItem.appVersion
-                    )
-                    if (result.isSuccess) {
-                        store.markSynced(savedItem.id)
-                        if (_binding != null) {
-                            refreshReports()
-                            Toast.makeText(currentCtx, "রিপোর্ট ক্লাউড ডাটাবেসে পাঠানো হয়েছে ✅", Toast.LENGTH_SHORT).show()
-                        }
-                    } else if (_binding != null) {
-                        refreshReports()
-                        Toast.makeText(currentCtx, "ফোনে সংরক্ষিত (ইন্টারনেট পেলে পাঠানো হবে)", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                Toast.makeText(currentCtx, "রিপোর্ট সংরক্ষণ করা হয়েছে (ক্লাউডে পাঠাতে Google সাইন ইন করুন)", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(requireContext(), "রিপোর্ট সংরক্ষণ করা হয়েছে ✅", Toast.LENGTH_SHORT).show()
             refreshReports()
         }
     }
