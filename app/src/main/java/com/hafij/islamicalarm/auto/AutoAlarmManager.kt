@@ -99,7 +99,7 @@ object AutoAlarmManager {
     }
 
     /**
-     * Returns an active Azan-listening window ONLY for Asr and Isha (`[start - 15m, start + 45m]`).
+     * Returns an active Azan-listening window ONLY for Asr and Isha (`[start - 5m, start + 45m]`).
      * Fajr, Dhuhr/Jumuah, and Maghrib never use microphone listening.
      */
     fun findListeningWaqtWindow(
@@ -113,7 +113,7 @@ object AutoAlarmManager {
             Triple("isha", "ইশা সালাত (আজান শনাক্ত)", schedule.ishaCal.timeInMillis)
         )
         for ((key, label, baseMs) in candidates) {
-            val start = baseMs - 15L * 60_000L
+            val start = baseMs - 5L * 60_000L
             val end = baseMs + 45L * 60_000L
             if (nowMs in start..end) {
                 return ActiveAzanWindow(

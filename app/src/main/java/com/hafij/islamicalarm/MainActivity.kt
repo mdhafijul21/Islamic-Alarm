@@ -61,15 +61,10 @@ class MainActivity : AppCompatActivity() {
     private var pendingPermissionChainNext: (() -> Unit)? = null
 
     // Start-up (in-app) permission wizard & Alarm (settings) permission wizard
-    private lateinit var restrictController: com.hafij.islamicalarm.restrict.RestrictModeController
     private val skippedHomePermSteps = mutableSetOf<String>()
     private val skippedAlarmPermSteps = mutableSetOf<String>()
     private var permDialog: androidx.appcompat.app.AlertDialog? = null
     private var autoDetectTried = false
-    private var currentDailyHadith: com.hafij.islamicalarm.hadith.DailyHadith? = null
-    private var dailyHadithOffset: Int = 0
-    private var dailyHadithExpanded: Boolean = false
-    private var lastLoadedHadithDateKey: String? = null
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -107,14 +102,6 @@ class MainActivity : AppCompatActivity() {
             ).show()
         }
         refreshAutoAlarmUi()
-    }
-
-    private val vpnConsentLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        if (::restrictController.isInitialized) {
-            restrictController.onVpnConsentResult()
-        }
     }
 
     private val enableGpsLauncher = registerForActivityResult(
@@ -207,12 +194,6 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupPrayerTimesHub()
         setupBottomNavigation()
-        restrictController = com.hafij.islamicalarm.restrict.RestrictModeController(
-            activity = this,
-            binding = binding,
-            onRequestVpnConsent = { vpnIntent -> vpnConsentLauncher.launch(vpnIntent) }
-        )
-        restrictController.setup()
         handleOpenTabIntent(intent)
 
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
@@ -279,35 +260,11 @@ class MainActivity : AppCompatActivity() {
             runHomePermissionWizard()
         }
         updatePrayerTimes(force = true)
-        val todayKey = com.hafij.islamicalarm.hadith.DailyHadithRepository.todayDateKey()
-        if (lastLoadedHadithDateKey != todayKey) {
-            dailyHadithOffset = 0
-            dailyHadithExpanded = false
-            loadDailyHadith(forceNetwork = false)
-        }
         loadAlarms()
         refreshOccasionNotificationsAndBadge()
         if (com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(this)) {
             com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this, fromForeground = true)
         }
-        val safeStore = com.hafij.islamicalarm.restrict.SafeModeStore(this)
-        val privateDns = com.hafij.islamicalarm.restrict.SafeDnsHelper.getPrivateDnsStatus(this)
-        val externalVpnActive = com.hafij.islamicalarm.restrict.SafeDnsHelper.isExternalVpnActive(this)
-        if (safeStore.isEnabled && safeStore.isDnsVpnEnabled &&
-            !com.hafij.islamicalarm.restrict.SafeDnsVpnService.isVpnRunning &&
-            !privateDns.isFamilySafe &&
-            !externalVpnActive
-        ) {
-            val prep = try {
-                android.net.VpnService.prepare(this)
-            } catch (_: Exception) {
-                null
-            }
-            if (prep == null) {
-                com.hafij.islamicalarm.restrict.SafeDnsVpnService.start(this)
-            }
-        }
-        if (::restrictController.isInitialized) restrictController.onScreenShown()
     }
 
     override fun onDestroy() {
@@ -554,7 +511,6 @@ class MainActivity : AppCompatActivity() {
             if (binding.layoutAlarmContainer.visibility != View.VISIBLE) return@post
             updatePrayerTimes()
             loadAlarms()
-            if (::restrictController.isInitialized) restrictController.onScreenShown()
             runAlarmPermissionWizard()
         }
     }
@@ -657,9 +613,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, com.hafij.islamicalarm.ramadan.RamadanActivity::class.java))
         }
 
-        // Daily Authentic Hadith Card
-        setupDailyHadithCard()
-
         // Waqt Alarm toggle switches
         syncWaqtAlarmSwitches()
     }
@@ -745,6 +698,18 @@ class MainActivity : AppCompatActivity() {
         if (!::binding.isInitialized) return
         com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.scheduleDailyCheck(this)
         com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.evaluateAndNotifyToday(this)
+        updateHomeNotificationBadgeUi()
+        lifecycleScope.launch {
+            val inserted = com.hafij.islamicalarm.notifications.IslamicOccasionNotifier
+                .evaluateAndNotifyDailyHadith(this@MainActivity, allowNetwork = true)
+            if (inserted != null && !isFinishing && !isDestroyed) {
+                updateHomeNotificationBadgeUi()
+            }
+        }
+    }
+
+    private fun updateHomeNotificationBadgeUi() {
+        if (!::binding.isInitialized) return
         val unreadCount = com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.getUnreadCount(this)
         if (unreadCount > 0) {
             binding.tvHomeNotificationBadge.visibility = View.VISIBLE
@@ -1697,115 +1662,6 @@ class MainActivity : AppCompatActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             phoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
-        }
-    }
-
-    private fun setupDailyHadithCard() {
-        val toggleExpand = {
-            dailyHadithExpanded = !dailyHadithExpanded
-            applyHadithExpansionUi()
-        }
-        binding.cardDailyHadith.setOnClickListener { toggleExpand() }
-        binding.tvDailyHadithExpandHint.setOnClickListener { toggleExpand() }
-
-        binding.btnDailyHadithCopy.setOnClickListener {
-            val hadith = currentDailyHadith ?: return@setOnClickListener
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            clipboard.setPrimaryClip(
-                android.content.ClipData.newPlainText(
-                    "Daily Hadith",
-                    com.hafij.islamicalarm.hadith.DailyHadithRepository.formatShareText(hadith)
-                )
-            )
-            Toast.makeText(this, "সহিহ হাদিস কপি করা হয়েছে", Toast.LENGTH_SHORT).show()
-        }
-
-        binding.btnDailyHadithShare.setOnClickListener {
-            val hadith = currentDailyHadith ?: return@setOnClickListener
-            val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(
-                    Intent.EXTRA_TEXT,
-                    com.hafij.islamicalarm.hadith.DailyHadithRepository.formatShareText(hadith)
-                )
-            }
-            startActivity(Intent.createChooser(sendIntent, "সহিহ হাদিস শেয়ার করুন"))
-        }
-
-        binding.btnDailyHadithNext.setOnClickListener {
-            dailyHadithOffset += 1
-            dailyHadithExpanded = false
-            loadDailyHadith(forceNetwork = true)
-        }
-
-        loadDailyHadith(forceNetwork = false)
-    }
-
-    private fun loadDailyHadith(forceNetwork: Boolean) {
-        val dateKey = com.hafij.islamicalarm.hadith.DailyHadithRepository.todayDateKey()
-        val requestOffset = dailyHadithOffset
-        lastLoadedHadithDateKey = dateKey
-
-        val instant = com.hafij.islamicalarm.hadith.DailyHadithRepository.getInstantHadithForDate(
-            this,
-            dateKey = dateKey,
-            offset = requestOffset
-        )
-        renderDailyHadith(instant)
-
-        val needsRemoteFetch = forceNetwork || !instant.isFromOnlineApi
-        if (!needsRemoteFetch) {
-            binding.pbDailyHadithLoading.visibility = View.GONE
-            return
-        }
-
-        binding.pbDailyHadithLoading.visibility = View.VISIBLE
-        lifecycleScope.launch {
-            val fetched = com.hafij.islamicalarm.hadith.DailyHadithRepository.fetchOrGetDailyHadith(
-                context = this@MainActivity,
-                dateKey = dateKey,
-                offset = requestOffset,
-                forceNetwork = forceNetwork
-            )
-            if (isFinishing || isDestroyed) return@launch
-            if (requestOffset == dailyHadithOffset && lastLoadedHadithDateKey == dateKey) {
-                binding.pbDailyHadithLoading.visibility = View.GONE
-                renderDailyHadith(fetched)
-            }
-        }
-    }
-
-    private fun renderDailyHadith(hadith: com.hafij.islamicalarm.hadith.DailyHadith) {
-        currentDailyHadith = hadith
-        binding.tvDailyHadithTopic.text = hadith.topicBn
-        binding.tvDailyHadithReference.text = hadith.referenceBn
-        binding.tvDailyHadithGrade.text = hadith.gradeBn.ifBlank { "সহিহ" }
-        binding.tvDailyHadithSourceBadge.text = if (hadith.isFromOnlineApi) "অনলাইন সহিহ" else "দৈনিক বাণী"
-
-        if (hadith.arabicText.isNotBlank()) {
-            binding.tvDailyHadithArabic.text = hadith.arabicText
-            binding.tvDailyHadithArabic.visibility = View.VISIBLE
-        } else {
-            binding.tvDailyHadithArabic.visibility = View.GONE
-        }
-
-        binding.tvDailyHadithTranslation.text = hadith.bengaliText
-        applyHadithExpansionUi()
-    }
-
-    private fun applyHadithExpansionUi() {
-        val tv = binding.tvDailyHadithTranslation
-        if (dailyHadithExpanded) {
-            tv.maxLines = Int.MAX_VALUE
-            tv.ellipsize = null
-            binding.tvDailyHadithExpandHint.text = "সংক্ষিপ্ত করুন ▴"
-            binding.tvDailyHadithExpandHint.visibility = View.VISIBLE
-        } else {
-            tv.maxLines = 6
-            tv.ellipsize = android.text.TextUtils.TruncateAt.END
-            val isLong = (currentDailyHadith?.bengaliText?.length ?: 0) > 220
-            binding.tvDailyHadithExpandHint.text = "সম্পূর্ণ পড়ুন ▾"
-            binding.tvDailyHadithExpandHint.visibility = if (isLong) View.VISIBLE else View.GONE
         }
     }
 

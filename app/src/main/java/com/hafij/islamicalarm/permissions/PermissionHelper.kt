@@ -15,7 +15,6 @@ import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.hafij.islamicalarm.R
-import com.hafij.islamicalarm.restrict.RestrictAccessibilityService
 import java.util.Locale
 
 data class PermStep(
@@ -40,7 +39,6 @@ object PermissionHelper {
     const val ID_BATTERY = "battery"
     const val ID_DND = "dnd"
     const val ID_PHONE = "phone"
-    const val ID_ACCESSIBILITY = "accessibility"
     const val ID_AUTOSTART = "autostart"
     const val ID_SCREEN_PIN = "screen_pin"
     const val ID_MICROPHONE = "microphone"
@@ -69,7 +67,7 @@ object PermissionHelper {
         PermStep(
             ID_OVERLAY,
             "অন্য অ্যাপের উপরে দেখানো (Overlay)",
-            "কী কাজ করবে: ফোনে অন্য যেকোনো অ্যাপ, গেম বা ব্রাউজার খোলা থাকলেও নামাজের সময় সাথে সাথে লক স্ক্রিন সামনে দেখাবে এবং সেফ মোডে ভিডিও ব্লার করবে।",
+            "কী কাজ করবে: ফোনে অন্য যেকোনো অ্যাপ, গেম বা ব্রাউজার খোলা থাকলেও নামাজের সময় সাথে সাথে লক স্ক্রিন সামনে দেখাবে।",
             "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে ফোনের সেটিংস খুলবে -> তালিকায় Islamic Alarm খুঁজে 'Allow display over other apps' সুইচ চালু করুন -> ব্যাক বাটনে অ্যাপে ফিরুন।"
         ),
         PermStep(
@@ -95,12 +93,6 @@ object PermissionHelper {
             "ডু নট ডিস্টার্ব (DND) অ্যাক্সেস",
             "কী কাজ করবে: নামাজের সময় ফোন পুরোপুরি সাইলেন্ট করবে এবং নামাজ শেষে আবার আগের রিংগার মোডে ফিরিয়ে আনবে (অটো সাইলেন্ট)।",
             "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে Do Not Disturb access পেজ খুলবে -> তালিকায় Islamic Alarm খুঁজে চাপুন ও 'Allow Do Not Disturb' সুইচ চালু করুন -> ব্যাক করুন।"
-        ),
-        PermStep(
-            ID_ACCESSIBILITY,
-            "অ্যাক্সেসিবিলিটি সার্ভিস (রেস্ট্রিক্ট ও সেফ মোড)",
-            "কী কাজ করবে: রেস্ট্রিক্ট মোডে বাছাই করা অ্যাপ/ব্রাউজার লক করবে এবং সেফ মোডে নিষিদ্ধ ভিডিও শনাক্ত হলে স্ক্রিন ব্লার করে অটো ব্যাক করাবে। পাসওয়ার্ড বা ব্যক্তিগত লেখা সংগ্রহ করে না।",
-            "কীভাবে দেবেন: 'অনুমতি দিন' চাপলে Accessibility পেজ খুলবে -> Downloaded apps থেকে 'Islamic Alarm' বেছে সুইচ চালু করুন। যদি সুইচ ধূসর বা বন্ধ থাকে: ফোনের Settings > Apps > Islamic Alarm > উপরের ⋮ মেনু > 'Allow restricted settings' দিয়ে আবার সুইচটি চালু করুন।"
         ),
         PermStep(
             ID_PHONE,
@@ -131,8 +123,6 @@ object PermissionHelper {
     )
 
     val autostartStep: PermStep by lazy { allSteps.first { it.id == ID_AUTOSTART } }
-
-    val accessibilityStep: PermStep by lazy { allSteps.first { it.id == ID_ACCESSIBILITY } }
 
     fun applicableSteps(ctx: Context): List<PermStep> = allSteps.filter { isApplicable(it.id) }
 
@@ -179,7 +169,6 @@ object PermissionHelper {
     /** Visual settings-screen guide drawable matching each Android permission, if available. */
     fun guideImageResFor(id: String): Int? = when (id) {
         ID_SCREEN_PIN -> R.drawable.guide_perm_screen_pin
-        ID_ACCESSIBILITY -> R.drawable.guide_perm_accessibility
         ID_OVERLAY -> R.drawable.guide_perm_overlay
         ID_BATTERY -> R.drawable.guide_perm_battery
         ID_AUTOSTART -> R.drawable.guide_perm_autostart
@@ -189,7 +178,6 @@ object PermissionHelper {
     /** Short Bangla caption explaining what to look for inside the screenshot guide. */
     fun guideHintFor(id: String): String? = when (id) {
         ID_SCREEN_PIN -> "ছবিতে দেখানো মতো Security > Screen pinning এবং পরের অপশনটি চালু রাখুন।"
-        ID_ACCESSIBILITY -> "ছবিতে দেখানো মতো Accessibility > Downloaded apps থেকে 'Islamic Alarm - রেস্ট্রিক্ট মোড' চালু করুন।"
         ID_OVERLAY -> "ছবিতে সবুজ বক্সে দেখানো App info পেজের 'Display over other apps' সুইচটি চালু করুন।"
         ID_BATTERY -> "ছবিতে সবুজ বক্সে দেখানো Foreground activity ও Background activity সুইচ চালু রাখুন।"
         ID_AUTOSTART -> "ছবিতে দেখানো মতো App info > Battery usage (✅) থেকে 'Allow auto launch' সুইচটি চালু করুন।"
@@ -222,25 +210,10 @@ object PermissionHelper {
                 .isNotificationPolicyAccessGranted
         ID_PHONE -> hasPerm(ctx, Manifest.permission.READ_PHONE_STATE)
         ID_MICROPHONE -> hasPerm(ctx, Manifest.permission.RECORD_AUDIO)
-        ID_ACCESSIBILITY -> isAccessibilityEnabled(ctx)
         // Cannot be detected: treated as "done" once the user was shown the screen.
         ID_AUTOSTART ->
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_AUTOSTART_DONE, false)
         else -> true
-    }
-
-    /** True when the restrict-mode accessibility service is switched on in system settings. */
-    fun isAccessibilityEnabled(ctx: Context): Boolean {
-        return try {
-            val enabled = Settings.Secure.getString(
-                ctx.contentResolver,
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ) ?: return false
-            val me = ComponentName(ctx, RestrictAccessibilityService::class.java)
-            enabled.split(':').any { ComponentName.unflattenFromString(it) == me }
-        } catch (e: Exception) {
-            false
-        }
     }
 
     fun markAutostartDone(ctx: Context) {
@@ -293,7 +266,6 @@ object PermissionHelper {
                 intents.add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             }
             ID_DND -> intents.add(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-            ID_ACCESSIBILITY -> intents.add(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             ID_AUTOSTART -> intents.addAll(autostartIntents())
             ID_SCREEN_PIN -> intents.add(Intent(Settings.ACTION_SECURITY_SETTINGS))
             else -> {}

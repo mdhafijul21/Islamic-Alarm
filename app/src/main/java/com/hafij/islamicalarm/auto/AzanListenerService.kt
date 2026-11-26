@@ -140,29 +140,38 @@ class AzanListenerService : Service() {
                         quietStreak = 0
                     } else {
                         quietStreak++
-                        if (quietStreak >= 6) {
-                            vocalHits = (vocalHits - 2).coerceAtLeast(0)
+                        if (quietStreak >= 5) {
+                            // Reset if non-Azan silence/noise persists >1.25s so fragmented speech never accumulates
+                            vocalHits = 0
+                        } else if (quietStreak >= 3) {
+                            vocalHits = (vocalHits - 4).coerceAtLeast(0)
                         }
                     }
 
-                    // ~5 seconds of sustained Azan-cadence singing/calling (20 frames x 250ms)
+                    // ~8 seconds of sustained harmonic Azan chanting/calling (32 frames x 250ms)
                     if (vocalHits >= REQUIRED_VOCAL_HITS) {
                         val triggerTime = Calendar.getInstance()
-                        AutoAlarmManager.markWaqtTriggeredOnDate(
-                            this,
-                            window.waqtKey,
-                            triggerTime
-                        )
-                        val alarmId = "auto_azan_${window.waqtKey}_${System.currentTimeMillis() / 60000L}"
-                        mainHandler.post {
-                            if (AutoAlarmManager.isAutoModeEnabled(applicationContext)) {
-                                AlarmReceiver.triggerLockSession(
-                                    context = applicationContext,
-                                    alarmId = alarmId,
-                                    lockDurationMinutes = AutoAlarmManager.AZAN_DURATION_MINUTES,
-                                    label = window.waqtLabelBn,
-                                    fromAlarm = true
-                                )
+                        val stillInWindow = AutoAlarmManager.findListeningWaqtWindow(triggerTime, district)
+                        if (stillInWindow != null &&
+                            stillInWindow.waqtKey == window.waqtKey &&
+                            !AutoAlarmManager.hasTriggeredWaqtOnDate(this, window.waqtKey, triggerTime)
+                        ) {
+                            AutoAlarmManager.markWaqtTriggeredOnDate(
+                                this,
+                                window.waqtKey,
+                                triggerTime
+                            )
+                            val alarmId = "auto_azan_${window.waqtKey}_${System.currentTimeMillis() / 60000L}"
+                            mainHandler.post {
+                                if (AutoAlarmManager.isAutoModeEnabled(applicationContext)) {
+                                    AlarmReceiver.triggerLockSession(
+                                        context = applicationContext,
+                                        alarmId = alarmId,
+                                        lockDurationMinutes = AutoAlarmManager.AZAN_DURATION_MINUTES,
+                                        label = window.waqtLabelBn,
+                                        fromAlarm = true
+                                    )
+                                }
                             }
                         }
                         break
@@ -251,36 +260,79 @@ class AzanListenerService : Service() {
         const val ACTION_STOP = "com.hafij.islamicalarm.ACTION_STOP_AZAN_LISTENER"
         private const val CHANNEL_ID = "azan_listener_channel"
         private const val NOTIFICATION_ID = 44225
-        private const val REQUIRED_VOCAL_HITS = 20
+        private const val REQUIRED_VOCAL_HITS = 32
+        private const val MIN_AZAN_RMS = 1850.0
+        private const val MIN_HARMONIC_CORR = 0.62
 
         @Volatile
         var isServiceRunning: Boolean = false
             private set
 
         /**
-         * Classifies a 16kHz PCM frame as likely carrying melodic Azan vocal energy
-         * using RMS loudness and zero-crossing vocal band rate.
+         * Classifies a 16kHz PCM frame as likely carrying sustained melodic Azan vocal energy
+         * using DC-removed RMS loudness, voiced vocal-band zero-crossing rate, and normalized
+         * lag autocorrelation periodicity (rejects fan hum, traffic, clatter, and casual noise).
          */
         internal fun isAzanFrameLikelyVocal(
             samples: ShortArray,
             count: Int,
-            @Suppress("UNUSED_PARAMETER") sampleRate: Int = 16000
+            sampleRate: Int = 16000
         ): Boolean {
-            if (count <= 1) return false
+            if (count <= 32 || sampleRate <= 0) return false
+
+            var sum = 0.0
+            for (i in 0 until count) {
+                sum += samples[i].toDouble()
+            }
+            val mean = sum / count
+
             var sumSq = 0.0
             var zeroCrossings = 0
-            var prev = samples[0].toInt()
+            var prev = samples[0].toDouble() - mean
             for (i in 0 until count) {
-                val cur = samples[i].toInt()
-                sumSq += cur.toDouble() * cur.toDouble()
-                if ((prev >= 0 && cur < 0) || (prev < 0 && cur >= 0)) {
+                val centered = samples[i].toDouble() - mean
+                sumSq += centered * centered
+                if ((prev >= 0.0 && centered < 0.0) || (prev < 0.0 && centered >= 0.0)) {
                     zeroCrossings++
                 }
-                prev = cur
+                prev = centered
             }
+
             val rms = sqrt(sumSq / count)
+            if (rms < MIN_AZAN_RMS) return false
+
             val zcr = zeroCrossings.toDouble() / count
-            return rms >= 900.0 && zcr in 0.02..0.24
+            if (zcr !in 0.025..0.18) return false
+
+            // Check harmonic pitch periodicity across 100 Hz .. 500 Hz fundamental voice range
+            val analyzeCount = minOf(count, (sampleRate / 8).coerceAtLeast(512))
+            val minLag = (sampleRate / 500).coerceAtLeast(8)
+            val maxLag = (sampleRate / 100).coerceAtMost(analyzeCount / 2)
+            if (maxLag <= minLag) return false
+
+            var bestCorr = 0.0
+            for (lag in minLag..maxLag) {
+                val windowLen = analyzeCount - lag
+                var dot = 0.0
+                var e0 = 0.0
+                var e1 = 0.0
+                for (i in 0 until windowLen) {
+                    val a = samples[i].toDouble() - mean
+                    val b = samples[i + lag].toDouble() - mean
+                    dot += a * b
+                    e0 += a * a
+                    e1 += b * b
+                }
+                if (e0 > 0.0 && e1 > 0.0) {
+                    val corr = dot / sqrt(e0 * e1)
+                    if (corr > bestCorr) {
+                        bestCorr = corr
+                        if (bestCorr >= 0.85) break
+                    }
+                }
+            }
+
+            return bestCorr >= MIN_HARMONIC_CORR
         }
 
         fun start(context: Context): Boolean {

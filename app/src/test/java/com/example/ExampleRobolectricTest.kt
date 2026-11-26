@@ -212,7 +212,6 @@ class ExampleRobolectricTest {
         assertTrue(alarmIds.contains(com.hafij.islamicalarm.permissions.PermissionHelper.ID_FULL_SCREEN))
         assertTrue(alarmIds.contains(com.hafij.islamicalarm.permissions.PermissionHelper.ID_BATTERY))
         assertTrue(alarmIds.contains(com.hafij.islamicalarm.permissions.PermissionHelper.ID_DND))
-        assertTrue(alarmIds.contains(com.hafij.islamicalarm.permissions.PermissionHelper.ID_ACCESSIBILITY))
         assertTrue(homeIds.intersect(alarmIds.toSet()).isEmpty())
 
         // Entering Alarm tab with missing permissions shows banner and blocks setting quick alarm
@@ -235,14 +234,8 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun testSingleRestrictSlotSafeVideoAndTasbihButton() {
-        val ctx = ApplicationProvider.getApplicationContext<Context>()
-
-        // 1. Only 1 Restrict slot exists
-        val slots = com.hafij.islamicalarm.restrict.RestrictStore(ctx).getSlots()
-        assertEquals(1, slots.size)
-
-        // 2. All permissions clearly state what they do & how to grant
+    fun testPermissionDescriptionsAndTasbihButton() {
+        // 1. All permissions clearly state what they do & how to grant
         val allPerms = com.hafij.islamicalarm.permissions.PermissionHelper.allSteps +
             com.hafij.islamicalarm.permissions.PermissionHelper.screenPinStep
         for (step in allPerms) {
@@ -250,32 +243,7 @@ class ExampleRobolectricTest {
             assertTrue("Missing how-to-grant in ${step.id}", step.howTo.contains("কীভাবে দেবেন:"))
         }
 
-        // 3. SafeWords does not treat search engine queries as direct adult sites
-        assertTrue(
-            !com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl(
-                "https://www.google.com/search?q=nsfw+adult"
-            )
-        )
-        assertTrue(
-            com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl(
-                "https://www.pornhub.com/view_video.php"
-            )
-        )
-
-        // 4. Safe Mode does not trigger on text/search alone without a video player node
-        val serviceController = Robolectric.buildService(
-            com.hafij.islamicalarm.restrict.RestrictAccessibilityService::class.java
-        )
-        val service = serviceController.create().get()
-        val searchNode = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            className = "android.widget.TextView"
-            text = "nsfw adult search results"
-        }
-        assertTrue(!service.shouldTriggerSafeVideoBlock(searchNode))
-        searchNode.recycle()
-        serviceController.destroy()
-
-        // 5. Tasbih tab has the visible change-tasbih button
+        // 2. Tasbih tab has the visible change-tasbih button
         val mainController = Robolectric.buildActivity(MainActivity::class.java)
         val mainActivity = mainController.create().start().resume().get()
         mainActivity.findViewById<com.hafij.islamicalarm.MainBottomBar>(
@@ -340,29 +308,7 @@ class ExampleRobolectricTest {
             java.util.Calendar.getInstance().apply { timeInMillis = maghribTomorrow.triggerAtMillis }.get(java.util.Calendar.DAY_OF_WEEK)
         )
 
-        // 4. Expanded adult sites & adult TLDs trigger immediately, while search URLs do not
-        assertTrue(com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://www.xvideos.com/video123"))
-        assertTrue(com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://example.xxx/watch"))
-        assertTrue(com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://www.reddit.com/r/nsfw/"))
-        assertTrue(!com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://bangladesh.gov.bd/"))
-        assertTrue(!com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://campus.example.edu/video"))
-
-        // Unfocused browser URL bar pointing to adult domain triggers Safe Mode
-        val serviceCtrl = Robolectric.buildService(
-            com.hafij.islamicalarm.restrict.RestrictAccessibilityService::class.java
-        )
-        val service = serviceCtrl.create().get()
-        val urlNode = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            className = "android.widget.EditText"
-            viewIdResourceName = "com.android.chrome:id/url_bar"
-            isFocused = false
-            text = "missav.ws/en/video"
-        }
-        assertTrue(service.shouldTriggerSafeVideoBlock(urlNode))
-        urlNode.recycle()
-        serviceCtrl.destroy()
-
-        // 5. Bottom tab renamed to "সেফ মোড", Waqt & Auto Mode use SwitchCompat controls
+        // 4. Bottom tab displays "এলার্ম", Restrict/Safe tabs removed, Waqt & Auto Mode use SwitchCompat controls
         val mainController = Robolectric.buildActivity(MainActivity::class.java)
         val mainActivity = mainController.create().start().resume().get()
         val navBar = mainActivity.findViewById<com.hafij.islamicalarm.MainBottomBar>(
@@ -374,8 +320,13 @@ class ExampleRobolectricTest {
             else -> emptyList()
         }
         val navLabels = collectNavLabels(navBar)
-        assertTrue(navLabels.contains("সেফ মোড"))
-        assertTrue(!navLabels.contains("এলার্ম"))
+        assertTrue(navLabels.contains("এলার্ম"))
+        assertTrue(!navLabels.contains("সেফ মোড"))
+
+        assertEquals(0, mainActivity.resources.getIdentifier("tabRestrictMode", "id", mainActivity.packageName))
+        assertEquals(0, mainActivity.resources.getIdentifier("tabSafeMode", "id", mainActivity.packageName))
+        assertEquals(0, mainActivity.resources.getIdentifier("layoutRestrictModeContent", "id", mainActivity.packageName))
+        assertEquals(0, mainActivity.resources.getIdentifier("layoutSafeModeContent", "id", mainActivity.packageName))
 
         val autoSwitch = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
             com.hafij.islamicalarm.R.id.switchAutoAlarm
@@ -390,7 +341,7 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun testVidmateTelegramSafeModeAndQuranAudioMove() {
+    fun testHomepageLocationAndQuranAudioMove() {
         val mainController = Robolectric.buildActivity(MainActivity::class.java)
         val mainActivity = mainController.create().start().resume().get()
 
@@ -419,62 +370,13 @@ class ExampleRobolectricTest {
         )
         assertNotNull(quranAudioCard)
         assertEquals(android.view.View.VISIBLE, quranAudioCard.visibility)
-
-        // 3. Safe Mode catches VidMate & Telegram adult videos while ignoring benign chats
-        val serviceCtrl = Robolectric.buildService(
-            com.hafij.islamicalarm.restrict.RestrictAccessibilityService::class.java
-        )
-        val service = serviceCtrl.create().get()
-
-        // Telegram PhotoViewer video node with NSFW caption triggers
-        val tgPlayer = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "org.telegram.messenger"
-            className = "org.telegram.ui.Components.VideoPlayer"
-            text = "00:12 / 02:30 viral leak 18+ clip nsfw video"
-        }
-        assertTrue(service.shouldTriggerSafeVideoBlock(tgPlayer))
-
-        val tgBenignRoot = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "org.telegram.messenger"
-            className = "android.widget.FrameLayout"
-            text = "Assalamu Alaikum brother"
-        }
-        assertTrue(!service.shouldTriggerSafeVideoBlock(tgBenignRoot))
-
-        // Verify VidMate adult WebView URL triggers immediately
-        val vidmateNode = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.nemo.vidmate"
-            className = "android.widget.EditText"
-            viewIdResourceName = "com.nemo.vidmate:id/web_url"
-            isFocused = false
-            text = "https://www.xnxx.com/video-abc/test"
-        }
-        assertTrue(service.shouldTriggerSafeVideoBlock(vidmateNode))
-
-        // Cleanup accessibility nodes
-        tgPlayer.recycle()
-        tgBenignRoot.recycle()
-        vidmateNode.recycle()
-        serviceCtrl.destroy()
     }
 
     @Test
-    fun testBanglaLinksTahajjudSettingsThreeCategoriesLocationAndSilent() {
+    fun testTahajjudSettingsThreeCategoriesLocationAndSilent() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
 
-        // 1. Safe Mode Bangla/Banglish adult links & encoded URLs trigger, while search & news do not
-        assertTrue(com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://banglachoti.example.com/video"))
-        assertTrue(com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://example.org/bangla-sex-video/12"))
-        assertTrue(
-            com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl(
-                "https://example.org/%E0%A6%B8%E0%A7%87%E0%A6%95%E0%A7%8D%E0%A6%B8-%E0%A6%AD%E0%A6%BF%E0%A6%A1%E0%A6%BF%E0%A6%93/watch"
-            )
-        )
-        assertTrue(com.hafij.islamicalarm.restrict.SafeWords.matches("bangla hot video boudi sex"))
-        assertTrue(!com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://www.google.com/search?q=bangla+sex"))
-        assertTrue(!com.hafij.islamicalarm.restrict.SafeWords.matchesSiteUrl("https://www.prothomalo.com/bangladesh"))
-
-        // 2. Tahajjud Calculator alarm option is removed
+        // 1. Tahajjud Calculator alarm option is removed
         val tahajjudActivity = Robolectric.buildActivity(
             com.hafij.islamicalarm.tahajjud.TahajjudCalculatorActivity::class.java
         ).create().start().resume().get()
@@ -1044,160 +946,17 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun testDnsVpnIncognitoSafeSearchSearchClickThroughAndNotices() {
+    fun testAutoModeAzanFilterAndCleanQuranAndLibrary() {
+        runBlocking {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
 
-        fun buildIpv4UdpDnsQuery(domain: String): ByteArray {
-            val labels = domain.split('.')
-            val qname = java.io.ByteArrayOutputStream()
-            for (lbl in labels) {
-                val b = lbl.toByteArray(Charsets.US_ASCII)
-                qname.write(b.size)
-                qname.write(b)
-            }
-            qname.write(0)
-            val dnsLen = 12 + qname.size() + 4
-            val udpLen = 8 + dnsLen
-            val totalLen = 20 + udpLen
-            val pkt = ByteArray(totalLen)
-            pkt[0] = 0x45.toByte() // IPv4, IHL=5
-            pkt[2] = ((totalLen ushr 8) and 0xFF).toByte()
-            pkt[3] = (totalLen and 0xFF).toByte()
-            pkt[9] = 17 // UDP
-            // Src 10.120.0.1 -> Dst 10.120.0.2
-            pkt[12] = 10; pkt[13] = 120; pkt[14] = 0; pkt[15] = 1
-            pkt[16] = 10; pkt[17] = 120; pkt[18] = 0; pkt[19] = 2
-            // UDP ports 54321 -> 53
-            pkt[20] = 0xD4.toByte(); pkt[21] = 0x31
-            pkt[22] = 0; pkt[23] = 53
-            pkt[24] = ((udpLen ushr 8) and 0xFF).toByte()
-            pkt[25] = (udpLen and 0xFF).toByte()
-            // DNS Header: id=0x1234, QR=0, QDCOUNT=1
-            pkt[28] = 0x12; pkt[29] = 0x34
-            pkt[30] = 0x01; pkt[31] = 0x00
-            pkt[32] = 0x00; pkt[33] = 0x01
-            val qBytes = qname.toByteArray()
-            System.arraycopy(qBytes, 0, pkt, 40, qBytes.size)
-            val tail = 40 + qBytes.size
-            pkt[tail + 1] = 1 // QTYPE A
-            pkt[tail + 3] = 1 // QCLASS IN
-            return pkt
-        }
-
-        // 1. System-wide DNS filter blocks adult domains (NXDOMAIN) and allows search engines
-        val adultQueryPkt = buildIpv4UdpDnsQuery("www.pornhub.com")
-        val parsedAdult = com.hafij.islamicalarm.restrict.SafeDnsFilter.parseDnsQueryPacket(
-            adultQueryPkt,
-            adultQueryPkt.size
-        )
-        assertNotNull(parsedAdult)
-        assertEquals("www.pornhub.com", parsedAdult!!.queryDomain)
-        assertTrue(com.hafij.islamicalarm.restrict.SafeDnsFilter.isDomainBlocked(parsedAdult.queryDomain))
-        val nxPacket = com.hafij.islamicalarm.restrict.SafeDnsFilter.buildBlockedDnsResponsePacket(
-            adultQueryPkt,
-            parsedAdult
-        )
-        assertTrue((nxPacket[30].toInt() and 0x80) != 0) // QR = 1 (Response)
-        assertEquals(3, nxPacket[31].toInt() and 0x0F)   // RCODE = 3 (NXDOMAIN)
-
-        val googleQueryPkt = buildIpv4UdpDnsQuery("www.google.com")
-        val parsedGoogle = com.hafij.islamicalarm.restrict.SafeDnsFilter.parseDnsQueryPacket(
-            googleQueryPkt,
-            googleQueryPkt.size
-        )
-        assertNotNull(parsedGoogle)
-        assertTrue(!com.hafij.islamicalarm.restrict.SafeDnsFilter.isDomainBlocked(parsedGoogle!!.queryDomain))
-
-        // 2. Search-safe click-through & Incognito block in RestrictAccessibilityService
-        val serviceCtrl = Robolectric.buildService(
-            com.hafij.islamicalarm.restrict.RestrictAccessibilityService::class.java
-        )
-        val service = serviceCtrl.create().get()
-
-        // Search results page with adult snippet URL must NOT block before clicking
-        val searchRoot = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.FrameLayout"
-        }
-        val searchUrlBar = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.EditText"
-            viewIdResourceName = "com.android.chrome:id/url_bar"
-            isFocused = false
-            text = "https://www.google.com/search?q=adult+video&safe=active"
-        }
-        val snippetUrl = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.TextView"
-            text = "https://www.pornhub.com"
-        }
-        org.robolectric.Shadows.shadowOf(searchRoot).addChild(searchUrlBar)
-        org.robolectric.Shadows.shadowOf(searchRoot).addChild(snippetUrl)
-        assertTrue(!service.shouldTriggerSafeVideoBlock(searchRoot))
-
-        // Clicking through onto the adult website itself MUST trigger Safe Mode
-        val clickedSiteNode = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.EditText"
-            viewIdResourceName = "com.android.chrome:id/url_bar"
-            isFocused = false
-            text = "https://www.pornhub.com/watch"
-        }
-        assertTrue(service.shouldTriggerSafeVideoBlock(clickedSiteNode))
-
-        // Opening Incognito tab in Chrome MUST trigger Incognito block
-        val incognitoNode = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.TextView"
-            text = "You've gone incognito"
-        }
-        assertTrue(service.shouldTriggerSafeVideoBlock(incognitoNode))
-
-        searchUrlBar.recycle()
-        snippetUrl.recycle()
-        searchRoot.recycle()
-        clickedSiteNode.recycle()
-        incognitoNode.recycle()
-        serviceCtrl.destroy()
-
-        // 3. Safe Mode UI, DNS VPN + Incognito switches, and Turn-Off Notice Dialog ("ওকে")
+        // 1. Auto Mode Notice Dialog on switch click + "ওকে" button + cancel behavior
         val mainActivity = Robolectric.buildActivity(MainActivity::class.java)
             .create().start().resume().get()
         mainActivity.findViewById<com.hafij.islamicalarm.MainBottomBar>(
             com.hafij.islamicalarm.R.id.bottomNavigation
         ).selectedItemId = com.hafij.islamicalarm.R.id.nav_alarm
 
-        mainActivity.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tabSafeMode).performClick()
-        val switchSafe = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
-            com.hafij.islamicalarm.R.id.switchSafeMode
-        )
-        val switchDns = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
-            com.hafij.islamicalarm.R.id.switchSafeDnsVpn
-        )
-        val switchIncognito = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
-            com.hafij.islamicalarm.R.id.switchIncognitoBlock
-        )
-        assertNotNull(switchDns)
-        assertNotNull(switchIncognito)
-        assertTrue(switchIncognito.isChecked)
-
-        // Turn Safe Mode ON then click to turn OFF -> Notice Dialog appears and "ওকে" turns it OFF
-        switchSafe.performClick()
-        val safeStore = com.hafij.islamicalarm.restrict.SafeModeStore(ctx)
-        assertTrue(safeStore.isEnabled)
-        switchSafe.performClick()
-        val safeOffDialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
-        assertTrue(safeOffDialog.isShowing)
-        val okSafeBtn = safeOffDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
-        assertEquals("ওকে", okSafeBtn.text.toString())
-        assertTrue(safeStore.isEnabled) // still ON until "ওকে" clicked
-        okSafeBtn.performClick()
-        org.robolectric.shadows.ShadowLooper.idleMainLooper()
-        assertTrue(!safeStore.isEnabled)
-        assertTrue(!safeStore.isDnsVpnEnabled)
-
-        // 4. Auto Mode Notice Dialog on switch click + "ওকে" button + cancel behavior
-        mainActivity.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tabAlarmMode).performClick()
         val switchAuto = mainActivity.findViewById<androidx.appcompat.widget.SwitchCompat>(
             com.hafij.islamicalarm.R.id.switchAutoAlarm
         )
@@ -1209,7 +968,7 @@ class ExampleRobolectricTest {
         org.robolectric.shadows.ShadowLooper.idleMainLooper()
         assertTrue(!com.hafij.islamicalarm.auto.AutoAlarmManager.isAutoModeEnabled(ctx))
 
-        // 5. Asr & Isha 15-minute Azan listening windows + vocal detection
+        // 2. Asr & Isha 15-minute Azan listening windows (tightened 5m pre-start) + harmonic Azan vocal filter
         assertEquals(15, com.hafij.islamicalarm.auto.AutoAlarmManager.AZAN_DURATION_MINUTES)
         val district = com.hafij.islamicalarm.prayertimes.LocationData.getDefaultDistrict()
         val nowCal = java.util.Calendar.getInstance()
@@ -1222,6 +981,13 @@ class ExampleRobolectricTest {
                 calAt(sch.asrCal.timeInMillis + 60_000L),
                 district
             )?.waqtKey
+        )
+        assertEquals(
+            null,
+            com.hafij.islamicalarm.auto.AutoAlarmManager.findListeningWaqtWindow(
+                calAt(sch.asrCal.timeInMillis - 10L * 60_000L),
+                district
+            )
         )
         assertEquals(
             "isha",
@@ -1245,20 +1011,24 @@ class ExampleRobolectricTest {
             )
         )
 
+        // Sustained melodic Azan wave passes, whereas low room hum, uncorrelated loud noise, and silence fail
         val vocalWave = ShortArray(4000) { i ->
             (3000.0 * kotlin.math.sin(2.0 * kotlin.math.PI * 350.0 * i / 16000.0)).toInt().toShort()
         }
+        val lowAmbientHum = ShortArray(4000) { i ->
+            (1000.0 * kotlin.math.sin(2.0 * kotlin.math.PI * 220.0 * i / 16000.0)).toInt().toShort()
+        }
+        val rng = java.util.Random(42L)
+        val loudRandomNoise = ShortArray(4000) {
+            (rng.nextGaussian() * 3500.0).toInt().coerceIn(-32000, 32000).toShort()
+        }
         val silenceWave = ShortArray(4000) { 0 }
         assertTrue(com.hafij.islamicalarm.auto.AzanListenerService.isAzanFrameLikelyVocal(vocalWave, vocalWave.size))
+        assertTrue(!com.hafij.islamicalarm.auto.AzanListenerService.isAzanFrameLikelyVocal(lowAmbientHum, lowAmbientHum.size))
+        assertTrue(!com.hafij.islamicalarm.auto.AzanListenerService.isAzanFrameLikelyVocal(loudRandomNoise, loudRandomNoise.size))
         assertTrue(!com.hafij.islamicalarm.auto.AzanListenerService.isAzanFrameLikelyVocal(silenceWave, silenceWave.size))
-    }
 
-    @Test
-    fun testCompactBannerLibraryApisSafeModeFixesSilentVpnAndCleanQuran(): Unit = runBlocking {
-        val ctx = ApplicationProvider.getApplicationContext<Context>()
-
-        // 1. Compact Home banner (~30% reduced)
-        val mainActivity = Robolectric.buildActivity(MainActivity::class.java).create().start().resume().get()
+        // 3. Compact Home banner (~30% reduced)
         val headerTitle = mainActivity.findViewById<android.widget.TextView>(
             com.hafij.islamicalarm.R.id.tvHeaderTitle
         )
@@ -1268,7 +1038,7 @@ class ExampleRobolectricTest {
         assertTrue(headerTitle.textSize <= 18f * ctx.resources.displayMetrics.scaledDensity + 1f)
         assertTrue(headerContainer.paddingTop <= (10 * ctx.resources.displayMetrics.density).toInt() + 1)
 
-        // 2. Clean Quran "অর্থ সহ" (quran-simple without Uthmani ٱ/۟/ۭ marks + clean Unicode Bengali + @font/amiri)
+        // 4. Clean Quran "অর্থ সহ"
         val surah1 = QuranRepository.fetchSurahAyahs(ctx, 1)
         assertEquals(7, surah1.size)
         for (ayah in surah1) {
@@ -1277,102 +1047,6 @@ class ExampleRobolectricTest {
             assertTrue("Must not contain Uthmani small low meem", !ayah.textArabic.contains('\u06ED'))
             assertTrue("Must not contain broken Bijoy glyph", !ayah.textBangla.contains("ো"))
         }
-
-        // 3. Safe Mode: Chrome normal page (aistudio.google.com) with SurfaceView & stray text MUST NOT trigger,
-        //    and Chrome 3-dot overflow menu MUST NOT trigger Incognito Block, while real Incognito tab DOES.
-        val serviceCtrl = Robolectric.buildService(
-            com.hafij.islamicalarm.restrict.RestrictAccessibilityService::class.java
-        )
-        val service = serviceCtrl.create().get()
-
-        val chromeRoot = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.FrameLayout"
-        }
-        val aiStudioUrlBar = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.EditText"
-            viewIdResourceName = "com.android.chrome:id/url_bar"
-            isFocused = false
-            text = "aistudio.google.com/apps/drive/123"
-        }
-        val chromeSurface = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.view.SurfaceView"
-        }
-        val pageBodyMention = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.TextView"
-            text = "Safe Mode fixes adult blocking and fullscreen video player false positives"
-        }
-        org.robolectric.Shadows.shadowOf(chromeRoot).addChild(aiStudioUrlBar)
-        org.robolectric.Shadows.shadowOf(chromeRoot).addChild(chromeSurface)
-        org.robolectric.Shadows.shadowOf(chromeRoot).addChild(pageBodyMention)
-        assertTrue(!service.shouldTriggerSafeVideoBlock(chromeRoot))
-
-        // Chrome 3-dot overflow menu popup MUST NOT trigger Incognito Block
-        val menuRoot = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.ListView"
-        }
-        val menuNewTab = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.TextView"
-            viewIdResourceName = "com.android.chrome:id/menu_item_text"
-            text = "New tab"
-        }
-        val menuNewIncognito = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.TextView"
-            viewIdResourceName = "com.android.chrome:id/menu_item_text"
-            text = "New Incognito tab"
-        }
-        val menuBookmarks = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.TextView"
-            viewIdResourceName = "com.android.chrome:id/menu_item_text"
-            text = "Bookmarks"
-        }
-        org.robolectric.Shadows.shadowOf(menuRoot).addChild(menuNewTab)
-        org.robolectric.Shadows.shadowOf(menuRoot).addChild(menuNewIncognito)
-        org.robolectric.Shadows.shadowOf(menuRoot).addChild(menuBookmarks)
-        assertTrue(!service.shouldTriggerSafeVideoBlock(menuRoot))
-
-        // Real Incognito tab view MUST still trigger Incognito Block
-        val realIncognito = android.view.accessibility.AccessibilityNodeInfo.obtain().apply {
-            packageName = "com.android.chrome"
-            className = "android.widget.TextView"
-            text = "You've gone incognito"
-        }
-        assertTrue(service.shouldTriggerSafeVideoBlock(realIncognito))
-
-        aiStudioUrlBar.recycle()
-        chromeSurface.recycle()
-        pageBodyMention.recycle()
-        chromeRoot.recycle()
-        menuNewTab.recycle()
-        menuNewIncognito.recycle()
-        menuBookmarks.recycle()
-        menuRoot.recycle()
-        realIncognito.recycle()
-        serviceCtrl.destroy()
-
-        // 4. SafeDnsVpnService silent start posts NO app foreground notification
-        val safeStore = com.hafij.islamicalarm.restrict.SafeModeStore(ctx)
-        safeStore.isEnabled = true
-        safeStore.isDnsVpnEnabled = true
-        val silentVpnIntent = Intent(ctx, com.hafij.islamicalarm.restrict.SafeDnsVpnService::class.java).apply {
-            action = com.hafij.islamicalarm.restrict.SafeDnsVpnService.ACTION_START
-            putExtra(com.hafij.islamicalarm.restrict.SafeDnsVpnService.EXTRA_FOREGROUND_REQUIRED, false)
-        }
-        val vpnSvcCtrl = Robolectric.buildService(
-            com.hafij.islamicalarm.restrict.SafeDnsVpnService::class.java,
-            silentVpnIntent
-        ).create().startCommand(0, 1)
-        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-        val postedNotifs = org.robolectric.Shadows.shadowOf(nm).allNotifications
-        assertTrue(postedNotifs.none { it.extras.getString(android.app.Notification.EXTRA_TITLE)?.contains("সেফ DNS") == true })
-        vpnSvcCtrl.destroy()
 
         // 5. Kitab & Library multi-source APIs (Stories, Sahaba/History, Seerah/Tafsir, Qawmi, OpenLibrary, Islamic.app) & UI
         val azharmeaSample = """
@@ -1498,6 +1172,7 @@ class ExampleRobolectricTest {
         assertEquals(1, rvBooks.adapter?.itemCount)
 
         libCtrl.pause().stop().destroy()
+        }
     }
 
     @Test
@@ -1651,40 +1326,6 @@ class ExampleRobolectricTest {
             assertTrue("Category '$cat' should have multiple items, found $count", count >= 2)
         }
 
-        val safeDnsNote = mainAct.findViewById<android.widget.TextView>(
-            com.hafij.islamicalarm.R.id.tvSafeDnsPrivacyNote
-        )
-        assertTrue(safeDnsNote.text.toString().contains("DNS-only টানেল (10.120.0.2)"))
-        assertTrue(safeDnsNote.text.toString().contains("IP Address বা লোকেশন বদলায় না"))
-
-        // 6. Private DNS helper, direct-apply boundary check & external VPN co-existence
-        assertTrue(com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("family.adguard-dns.com"))
-        assertTrue(com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("family.cloudflare-dns.com"))
-        assertTrue(!com.hafij.islamicalarm.restrict.SafeDnsHelper.isKnownFamilyHostname("dns.google"))
-        assertEquals(
-            com.hafij.islamicalarm.restrict.SafeDnsHelper.DirectApplyResult.REQUIRES_SYSTEM_SETTINGS,
-            com.hafij.islamicalarm.restrict.SafeDnsHelper.applyPrivateDnsDirectly(ctx)
-        )
-
-        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_alarm
-        mainAct.supportFragmentManager.executePendingTransactions()
-        mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tabSafeMode).performClick()
-        val tvPrivateDns = mainAct.findViewById<android.widget.TextView>(
-            com.hafij.islamicalarm.R.id.tvPrivateDnsStatus
-        )
-        assertTrue(tvPrivateDns.text.toString().isNotBlank())
-
-        mainAct.findViewById<android.view.View>(
-            com.hafij.islamicalarm.R.id.btnSetupPrivateDns
-        ).performClick()
-        val privateDnsDialog = org.robolectric.shadows.ShadowAlertDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
-        assertTrue(privateDnsDialog.isShowing)
-        assertTrue(
-            privateDnsDialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).text.toString()
-                .contains("সেফ DNS চালু করুন")
-        )
-        privateDnsDialog.dismiss()
-
         mainCtrl.pause().stop().destroy()
     }
 
@@ -1692,12 +1333,9 @@ class ExampleRobolectricTest {
     fun testPermissionGuideImagesHomeHeaderLocationPrecisionMapSearchAndAudioQuran() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
 
-        // 1. Permission Helper guide image mappings (distinct, permission-specific drawables)
+        // 1. Permission Helper guide image mappings (distinct, permission-specific drawables; accessibility removed)
         val screenPinRes = com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
             com.hafij.islamicalarm.permissions.PermissionHelper.ID_SCREEN_PIN
-        )
-        val accessRes = com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
-            com.hafij.islamicalarm.permissions.PermissionHelper.ID_ACCESSIBILITY
         )
         val overlayRes = com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
             com.hafij.islamicalarm.permissions.PermissionHelper.ID_OVERLAY
@@ -1709,11 +1347,10 @@ class ExampleRobolectricTest {
             com.hafij.islamicalarm.permissions.PermissionHelper.ID_AUTOSTART
         )
         assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_screen_pin, screenPinRes)
-        assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_accessibility, accessRes)
         assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_overlay, overlayRes)
         assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_battery, batteryRes)
         assertEquals(com.hafij.islamicalarm.R.drawable.guide_perm_autostart, autostartRes)
-        assertEquals(5, setOf(screenPinRes, accessRes, overlayRes, batteryRes, autostartRes).size)
+        assertEquals(4, setOf(screenPinRes, overlayRes, batteryRes, autostartRes).size)
         assertEquals(
             null,
             com.hafij.islamicalarm.permissions.PermissionHelper.guideImageResFor(
@@ -1761,7 +1398,7 @@ class ExampleRobolectricTest {
         val permRows = mainAct.findViewById<android.widget.LinearLayout>(
             com.hafij.islamicalarm.R.id.layoutPermRows
         )
-        assertTrue(permRows.childCount >= 10)
+        assertTrue(permRows.childCount >= 9)
 
         var visibleGuideCount = 0
         val rowTitles = mutableListOf<String>()
@@ -1784,24 +1421,10 @@ class ExampleRobolectricTest {
                 }
             }
         }
-        assertEquals(5, visibleGuideCount)
-        assertTrue(rowTitles.any { it.contains("অ্যাক্সেসিবিলিটি") })
+        assertEquals(4, visibleGuideCount)
+        assertTrue(rowTitles.none { it.contains("অ্যাক্সেসিবিলিটি") })
         assertTrue(rowTitles.any { it.contains("অটোস্টার্ট") })
         assertTrue(rowTitles.any { it.contains("স্ক্রিন পিনিং") })
-
-        // Verify Restrict Mode tab also shows the zoomable Accessibility guide image
-        navBar.selectedItemId = com.hafij.islamicalarm.R.id.nav_alarm
-        mainAct.supportFragmentManager.executePendingTransactions()
-        mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.tabRestrictMode).performClick()
-        val restrictGuideCard = mainAct.findViewById<android.view.View>(
-            com.hafij.islamicalarm.R.id.cardRestrictPermGuide
-        )
-        assertEquals(android.view.View.VISIBLE, restrictGuideCard.visibility)
-        restrictGuideCard.performClick()
-        val restrictZoomDialog = org.robolectric.shadows.ShadowDialog.getLatestDialog()
-        assertNotNull(restrictZoomDialog)
-        assertTrue(restrictZoomDialog.isShowing)
-        restrictZoomDialog.dismiss()
 
         mainCtrl.pause().stop().destroy()
 
@@ -1942,34 +1565,46 @@ class ExampleRobolectricTest {
         val apiDay2 = com.hafij.islamicalarm.hadith.DailyHadithRepository.selectTargetForDate("2026-11-26", 0)
         assertTrue(apiDay1 != apiDay2)
 
-        // 3. Home Page displays Daily Hadith card, Arabic + Bengali text, Reference, Copy & Share & Next buttons
+        // 3. Daily Hadith is NOT shown in the middle of the Home Page, and instead delivered to Notifications Inbox
         val mainCtrl = Robolectric.buildActivity(MainActivity::class.java).create().start().resume()
         val mainAct = mainCtrl.get()
-        val cardDailyHadith = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.cardDailyHadith)
-        val tvRef = mainAct.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvDailyHadithReference)
-        val tvBn = mainAct.findViewById<android.widget.TextView>(com.hafij.islamicalarm.R.id.tvDailyHadithTranslation)
-        val btnCopy = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnDailyHadithCopy)
-        val btnShare = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnDailyHadithShare)
-        val btnNext = mainAct.findViewById<android.view.View>(com.hafij.islamicalarm.R.id.btnDailyHadithNext)
-
-        assertEquals(android.view.View.VISIBLE, cardDailyHadith.visibility)
-        assertTrue(tvRef.text.toString().isNotBlank())
-        assertTrue(tvBn.text.toString().isNotBlank())
-        assertNotNull(btnCopy)
-        assertNotNull(btnShare)
-        assertNotNull(btnNext)
-
-        val initialText = tvBn.text.toString()
-        btnNext.performClick()
-        org.robolectric.shadows.ShadowLooper.idleMainLooper()
-        val rotatedText = tvBn.text.toString()
-        assertTrue(rotatedText.isNotBlank())
-        assertTrue(initialText != rotatedText)
-
-        btnCopy.performClick()
-        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        assertTrue(clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.contains(rotatedText) == true)
-
+        assertEquals(0, ctx.resources.getIdentifier("cardDailyHadith", "id", ctx.packageName))
         mainCtrl.pause().stop().destroy()
+
+        val deliveredRecord = runBlocking {
+            com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.evaluateAndNotifyDailyHadith(
+                context = ctx,
+                allowNetwork = false
+            )
+        }
+        assertNotNull(deliveredRecord)
+        assertEquals("daily_hadith", deliveredRecord!!.occasionId)
+        assertTrue(deliveredRecord.hadithBangla.isNotBlank())
+        assertTrue(deliveredRecord.hadithReference.isNotBlank())
+
+        // Duplicate call on the same day must NOT create a second notification
+        val duplicateRecord = runBlocking {
+            com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.evaluateAndNotifyDailyHadith(
+                context = ctx,
+                allowNetwork = false
+            )
+        }
+        assertEquals(null, duplicateRecord)
+
+        val notif = com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.buildSystemNotification(
+            ctx,
+            deliveredRecord
+        )
+        assertNotNull(notif)
+
+        val notifActCtrl = Robolectric.buildActivity(
+            com.hafij.islamicalarm.notifications.IslamicNotificationsActivity::class.java
+        ).create().start().resume()
+        val notifAct = notifActCtrl.get()
+        val inboxLayout = notifAct.findViewById<android.view.ViewGroup>(
+            com.hafij.islamicalarm.R.id.layoutInboxNotifications
+        )
+        assertTrue(inboxLayout.childCount >= 1)
+        notifActCtrl.pause().stop().destroy()
     }
 }

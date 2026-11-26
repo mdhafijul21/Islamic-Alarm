@@ -34,7 +34,7 @@ object AppShareConfigStore {
 
     private const val DEFAULT_TITLE = "ইসলামিক এলার্ম ও কুরআন"
     private const val DEFAULT_MESSAGE =
-        "সঠিক নামাজের সময়সূচী, অটো এলার্ম, সেফ মোড, হাফেজি কুরআন, তাসবিহ ও দৈনন্দিন আমল পেতে এই অ্যাপটি ব্যবহার করুন:"
+        "সঠিক নামাজের সময়সূচী, অটো এলার্ম, হাফেজি কুরআন, তাসবিহ ও দৈনন্দিন আমল পেতে এই অ্যাপটি ব্যবহার করুন:"
 
     fun defaultPlayStoreUrl(context: Context): String =
         "https://play.google.com/store/apps/details?id=${context.packageName}"

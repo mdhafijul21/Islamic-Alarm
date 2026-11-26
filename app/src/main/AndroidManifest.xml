@@ -23,18 +23,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <category android:name="android.intent.category.BROWSABLE" />
-            <data android:scheme="http" />
-        </intent>
-    </queries>
-
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -240,36 +228,6 @@
         </receiver>
 
     
-        <!-- Restrict mode: break screen and the service that detects blocked apps -->
-        <activity
-            android:name="com.hafij.islamicalarm.restrict.RestrictBlockActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:taskAffinity=""
-            android:theme="@style/Theme.IslamicAlarm" />
-
-        <activity
-            android:name="com.hafij.islamicalarm.restrict.SafeBlockActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:taskAffinity=""
-            android:theme="@style/Theme.IslamicAlarm" />
-
-        <service
-            android:name="com.hafij.islamicalarm.restrict.RestrictAccessibilityService"
-            android:exported="false"
-            android:label="Islamic Alarm - রেস্ট্রিক্ট মোড"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/restrict_accessibility_config" />
-        </service>
-
         <service
             android:name="com.hafij.islamicalarm.PrayerLockOverlayService"
             android:enabled="true"
@@ -285,20 +243,6 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
-
-        <service
-            android:name="com.hafij.islamicalarm.restrict.SafeDnsVpnService"
-            android:enabled="true"
-            android:exported="false"
-            android:permission="android.permission.BIND_VPN_SERVICE"
-            android:foregroundServiceType="specialUse">
-            <intent-filter>
-                <action android:name="android.net.VpnService" />
-            </intent-filter>
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Local DNS-only filter VPN blocking adult websites and enforcing Family-Safe DNS when Safe Mode is enabled." />
-        </service>
 
         <service
             android:name="com.hafij.islamicalarm.auto.AzanListenerService"

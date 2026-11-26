@@ -6,9 +6,11 @@ import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.hafij.islamicalarm.R
 import com.hafij.islamicalarm.databinding.ActivityIslamicNotificationsBinding
+import kotlinx.coroutines.launch
 
 class IslamicNotificationsActivity : AppCompatActivity() {
 
@@ -29,6 +31,16 @@ class IslamicNotificationsActivity : AppCompatActivity() {
         }
 
         renderScreen()
+
+        lifecycleScope.launch {
+            val inserted = IslamicOccasionNotifier.evaluateAndNotifyDailyHadith(
+                this@IslamicNotificationsActivity,
+                allowNetwork = true
+            )
+            if (inserted != null && !isFinishing && !isDestroyed) {
+                renderScreen()
+            }
+        }
     }
 
     override fun onStop() {

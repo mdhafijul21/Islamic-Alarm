@@ -277,6 +277,68 @@ object IslamicOccasionNotifier {
         return newlyCreated
     }
 
+    /**
+     * Delivers one verified daily Sahih Hadith per calendar day via the system notification shade
+     * and saves it into the notification inbox so it appears in notifications instead of the homepage.
+     */
+    suspend fun evaluateAndNotifyDailyHadith(
+        context: Context,
+        now: Calendar = Calendar.getInstance(),
+        allowNetwork: Boolean = true
+    ): OccasionNotificationRecord? {
+        val dateKey = com.hafij.islamicalarm.hadith.DailyHadithRepository.todayDateKey(now.timeInMillis)
+        val notifiedKey = "${dateKey}_daily_hadith"
+        val prefs = context.getSharedPreferences(PREFS_INBOX, Context.MODE_PRIVATE)
+        val notifiedKeys = prefs.getStringSet(KEY_NOTIFIED_DATE_KEYS, emptySet())?.toMutableSet() ?: mutableSetOf()
+        val existingRecords = getInboxRecords(context).toMutableList()
+
+        if (notifiedKey in notifiedKeys || existingRecords.any { it.recordId == notifiedKey }) {
+            return null
+        }
+
+        val hadith = if (allowNetwork) {
+            com.hafij.islamicalarm.hadith.DailyHadithRepository.fetchOrGetDailyHadith(
+                context = context,
+                dateKey = dateKey,
+                offset = 0,
+                forceNetwork = false
+            )
+        } else {
+            com.hafij.islamicalarm.hadith.DailyHadithRepository.getInstantHadithForDate(
+                context = context,
+                dateKey = dateKey,
+                offset = 0
+            )
+        }
+
+        val hijri = HijriCalendarHelper.getHijriDate(now)
+        val gradeText = hadith.gradeBn.ifBlank { "সহিহ" }
+        val record = OccasionNotificationRecord(
+            recordId = notifiedKey,
+            occasionId = "daily_hadith",
+            titleBn = "📜 আজকের সহিহ হাদিস: ${hadith.topicBn}",
+            occasionBadgeBn = if (hadith.isFromOnlineApi) "দৈনিক বাণী • অনলাইন সহিহ" else "দৈনিক সহিহ হাদিস",
+            hijriDateBn = hijri.formattedBn,
+            fazilatBn = "বিষয়: ${hadith.topicBn} ($gradeText)",
+            hadithArabic = hadith.arabicText,
+            hadithBangla = hadith.bengaliText,
+            hadithReference = hadith.referenceBn,
+            recommendedAmalBn = "আজকের হাদিসটি অনুধাবন ও আমল করুন এবং অন্যদের সাথে শেয়ার করুন।",
+            createdAtMillis = now.timeInMillis,
+            isRead = false
+        )
+
+        existingRecords.add(0, record)
+        saveRecords(context, existingRecords.take(MAX_STORED_RECORDS))
+        notifiedKeys.add(notifiedKey)
+        val yearPrefix = "${now.get(Calendar.YEAR)}-"
+        val trimmedKeys = notifiedKeys.filter { it.startsWith(yearPrefix) }.toSet()
+        prefs.edit().putStringSet(KEY_NOTIFIED_DATE_KEYS, trimmedKeys).apply()
+
+        postSystemNotification(context, record, 8901)
+        return record
+    }
+
     fun getInboxRecords(context: Context): List<OccasionNotificationRecord> {
         val prefs = context.getSharedPreferences(PREFS_INBOX, Context.MODE_PRIVATE)
         val raw = prefs.getString(KEY_RECORDS_JSON, null) ?: return emptyList()
@@ -381,21 +443,33 @@ object IslamicOccasionNotifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val isDailyHadith = record.occasionId == "daily_hadith"
         val fullBody = buildString {
             append("📅 হিজরি: ").append(record.hijriDateBn).append("\n\n")
-            append("✨ ফজিলত: ").append(record.fazilatBn).append("\n\n")
+            if (!isDailyHadith && record.fazilatBn.isNotBlank()) {
+                append("✨ ফজিলত: ").append(record.fazilatBn).append("\n\n")
+            }
             if (record.hadithArabic.isNotBlank()) {
-                append(record.hadithArabic).append("\n")
+                append(record.hadithArabic).append("\n\n")
             }
             append("📖 হাদিস: ").append(record.hadithBangla).append("\n")
-            append("📚 সূত্র: ").append(record.hadithReference).append("\n\n")
-            append("🤲 আমল: ").append(record.recommendedAmalBn)
+            append("📚 সূত্র: ").append(record.hadithReference)
+            if (!isDailyHadith && record.recommendedAmalBn.isNotBlank()) {
+                append("\n\n🤲 আমল: ").append(record.recommendedAmalBn)
+            }
         }
+
+        val notifTitle = if (isDailyHadith) {
+            "${record.titleBn} (${record.hijriDateBn})"
+        } else {
+            "${record.titleBn} (${record.hijriDateBn})"
+        }
+        val notifPreview = if (isDailyHadith) record.hadithBangla else record.fazilatBn
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notifications_24)
-            .setContentTitle("${record.titleBn} (${record.hijriDateBn})")
-            .setContentText(record.fazilatBn)
+            .setContentTitle(notifTitle)
+            .setContentText(notifPreview)
             .setStyle(NotificationCompat.BigTextStyle().bigText(fullBody))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pending)
