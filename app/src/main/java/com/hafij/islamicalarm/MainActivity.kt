@@ -20,9 +20,18 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.credentials.CredentialManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.firebase.auth.FirebaseUser
+import com.hafij.islamicalarm.cloud.CloudAuthManager
+import com.hafij.islamicalarm.cloud.CloudSyncRepository
+import com.hafij.islamicalarm.cloud.CloudSyncViewModel
+import com.hafij.islamicalarm.cloud.CloudUiState
 import com.hafij.islamicalarm.permissions.PermissionHelper
 import com.hafij.islamicalarm.amal.AmalTrackerActivity
 import com.hafij.islamicalarm.data.AlarmItem
@@ -43,6 +52,8 @@ import com.hafij.islamicalarm.prayertimes.LocationType
 import com.hafij.islamicalarm.prayertimes.PrayerSchedule
 import com.hafij.islamicalarm.prayertimes.PrayerTimeCalculator
 import com.hafij.islamicalarm.tahajjud.TahajjudCalculatorActivity
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
@@ -65,6 +76,8 @@ class MainActivity : AppCompatActivity() {
     private val skippedAlarmPermSteps = mutableSetOf<String>()
     private var permDialog: androidx.appcompat.app.AlertDialog? = null
     private var autoDetectTried = false
+    private var activeCloudSessionJob: Job? = null
+    private var activeCloudUid: String? = null
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -227,8 +240,65 @@ class MainActivity : AppCompatActivity() {
 
         loadAlarms()
         refreshOccasionNotificationsAndBadge()
+        setupCloudSync()
 
         // Check & request runtime permissions on launch (Location, Overlay, Exact Alarm, Battery, Autostart, Phone)
+    }
+
+    private fun appVersionName(): String {
+        return try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+        } catch (_: Exception) {
+            "1.0"
+        }
+    }
+
+    private fun setupCloudSync() {
+        val credentialManager = CredentialManager.create(this)
+        CloudAuthManager.attemptAutoSignIn(
+            context = this,
+            credentialManager = credentialManager,
+            onAuthSuccess = { /* authStateFlow below handles sync */ },
+            onUnauthenticated = { /* stay offline/local until user signs in */ },
+            scope = lifecycleScope
+        )
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                CloudAuthManager.authStateFlow(this@MainActivity).collectLatest { user: FirebaseUser? ->
+                    val uid = user?.uid?.takeIf { it.isNotBlank() }
+                    if (uid == null) {
+                        activeCloudSessionJob?.cancel()
+                        activeCloudSessionJob = null
+                        activeCloudUid = null
+                        return@collectLatest
+                    }
+                    if (activeCloudUid == uid && activeCloudSessionJob?.isActive == true) {
+                        return@collectLatest
+                    }
+                    activeCloudUid = uid
+                    activeCloudSessionJob?.cancel()
+
+                    val vm = ViewModelProvider(
+                        viewModelStore,
+                        CloudSyncViewModel.provideFactory(uid)
+                    )[uid, CloudSyncViewModel::class.java]
+                    vm.syncUserSession(this@MainActivity, selectedDistrict.nameBn, appVersionName())
+
+                    activeCloudSessionJob = lifecycleScope.launch {
+                        vm.announcementsState.collectLatest { state ->
+                            if (state is CloudUiState.Success) {
+                                val imported = com.hafij.islamicalarm.notifications.IslamicOccasionNotifier
+                                    .importAdminAnnouncementsToInbox(this@MainActivity, state.data)
+                                if (imported > 0 && !isFinishing && !isDestroyed) {
+                                    updateHomeNotificationBadgeUi()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -269,6 +339,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        activeCloudSessionJob?.cancel()
         countdownTimer?.cancel()
     }
 
@@ -337,6 +408,16 @@ class MainActivity : AppCompatActivity() {
             com.hafij.islamicalarm.auto.AutoAlarmManager.syncAutoMode(this)
         }
         refreshAutoAlarmUi()
+        if (CloudAuthManager.currentUserOrNull(this) != null) {
+            val deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
+            lifecycleScope.launch {
+                CloudSyncRepository(this@MainActivity).upsertUserProfile(
+                    districtNameBn = district.nameBn,
+                    deviceModel = deviceModel,
+                    appVersion = appVersionName()
+                )
+            }
+        }
     }
 
     private fun autoDetectLocationAndSetPrayerTimes(showToast: Boolean = true) {

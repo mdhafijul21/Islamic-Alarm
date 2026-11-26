@@ -1,0 +1,319 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Registered user profile synced on sign-in so the Admin app can count total users and view active district/device metrics.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID matching the document ID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name from Google Sign-In."
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address (PII, accessible only to owner and admins)."
+        },
+        "districtNameBn": {
+          "type": "string",
+          "description": "Currently selected prayer location name in Bengali."
+        },
+        "deviceModel": {
+          "type": "string",
+          "description": "Android manufacturer and model summary."
+        },
+        "appVersion": {
+          "type": "string",
+          "description": "Installed app version name."
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["android"],
+          "description": "Client platform identifier."
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest activity sync."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Latest server update timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "platform",
+        "lastActiveAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserReport": {
+      "title": "UserReport",
+      "description": "User-submitted bug report or feature suggestion synced from the app settings page to the Admin inbox.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated author UID."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Optional author email for follow-up."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["problem", "suggestion"],
+          "description": "Report category."
+        },
+        "message": {
+          "type": "string",
+          "description": "Report body text."
+        },
+        "device": {
+          "type": "string",
+          "description": "Device and Android OS description."
+        },
+        "appVersion": {
+          "type": "string",
+          "description": "App version string."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "reviewed", "resolved"],
+          "description": "Moderation status controlled by admins."
+        },
+        "adminReply": {
+          "type": "string",
+          "description": "Optional admin response note."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Latest server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "type",
+        "message",
+        "device",
+        "appVersion",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminAnnouncement": {
+      "title": "AdminAnnouncement",
+      "description": "Notices, Hadith reminders, or update alerts published by the Admin app and observed by signed-in users.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Announcement headline in Bengali."
+        },
+        "body": {
+          "type": "string",
+          "description": "Full announcement message."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["notice", "hadith", "update", "reminder"],
+          "description": "Announcement category."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the announcement is currently active for users."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "Admin UID who created the announcement."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Latest server update timestamp."
+        }
+      },
+      "required": [
+        "title",
+        "body",
+        "category",
+        "active",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AppGlobalConfig": {
+      "title": "AppGlobalConfig",
+      "description": "Global remote configuration managed from the Admin app (share link/message, banner notice, version control).",
+      "type": "object",
+      "properties": {
+        "shareTitle": {
+          "type": "string",
+          "description": "Share dialog subject title."
+        },
+        "shareMessage": {
+          "type": "string",
+          "description": "Share text message."
+        },
+        "shareUrl": {
+          "type": "string",
+          "description": "HTTPS app download or Play Store URL."
+        },
+        "noticeBanner": {
+          "type": "string",
+          "description": "Optional short banner text."
+        },
+        "minVersionCode": {
+          "type": "integer",
+          "description": "Minimum recommended version code."
+        },
+        "maintenanceMode": {
+          "type": "boolean",
+          "description": "Optional maintenance mode toggle."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Admin UID who updated the config."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Latest server update timestamp."
+        }
+      },
+      "required": [
+        "shareTitle",
+        "shareMessage",
+        "shareUrl",
+        "updatedBy",
+        "updatedAt"
+      ]
+    },
+    "AdminDailyHadith": {
+      "title": "AdminDailyHadith",
+      "description": "Optional Admin-published daily Hadith keyed by YYYY-MM-DD date string.",
+      "type": "object",
+      "properties": {
+        "topicBn": {
+          "type": "string",
+          "description": "Topic title in Bengali."
+        },
+        "arabicText": {
+          "type": "string",
+          "description": "Optional Arabic matn."
+        },
+        "bengaliText": {
+          "type": "string",
+          "description": "Bengali translation text."
+        },
+        "referenceBn": {
+          "type": "string",
+          "description": "Hadith source reference."
+        },
+        "gradeBn": {
+          "type": "string",
+          "description": "Authenticity grade."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Admin UID."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Latest server update timestamp."
+        }
+      },
+      "required": [
+        "topicBn",
+        "bengaliText",
+        "referenceBn",
+        "updatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Trusted admin allowlist entry keyed by Firebase UID.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Admin email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "super_admin"],
+          "description": "Admin privilege tier."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        }
+      },
+      "required": [
+        "email",
+        "role",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Registered user profiles synced on sign-in; readable/writable by owner and listable/countable by Admin app."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/UserReport" },
+      "description": "User-submitted reports and suggestions synced to the cloud Admin inbox."
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/AdminAnnouncement" },
+      "description": "Admin announcements and push-style notices synced to signed-in app users."
+    },
+    "/app_config/{configId}": {
+      "schema": { "$ref": "#/entities/AppGlobalConfig" },
+      "description": "Remote global app settings (share link, banner notice) managed by Admin."
+    },
+    "/daily_hadiths/{dateKey}": {
+      "schema": { "$ref": "#/entities/AdminDailyHadith" },
+      "description": "Admin-curated daily Hadith overrides by calendar date key."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRole" },
+      "description": "Allowlist of Firebase UIDs with Admin app privileges."
+    }
+  }
+}

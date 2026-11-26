@@ -1607,4 +1607,63 @@ class ExampleRobolectricTest {
         assertTrue(inboxLayout.childCount >= 1)
         notifActCtrl.pause().stop().destroy()
     }
+
+    @Test
+    fun testCloudSyncCardModelsAndAdminAnnouncements() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+
+        // 1. Firestore database ID resource is provisioned & matches single named database
+        val dbId = ctx.getString(com.hafij.islamicalarm.R.string.firestore_database_id)
+        assertTrue(dbId.isNotBlank() && dbId != "(default)")
+
+        // 2. Cloud models have no-arg constructors with clean defaults
+        val profile = com.hafij.islamicalarm.cloud.CloudUserProfile()
+        assertEquals("android", profile.platform)
+        val report = com.hafij.islamicalarm.cloud.CloudUserReport()
+        assertEquals("pending", report.status)
+        val cfg = com.hafij.islamicalarm.cloud.CloudAppConfig()
+        assertEquals("", cfg.shareUrl)
+
+        // 3. Admin announcement import adds active unseen announcements & deduplicates
+        val activeAnn = com.hafij.islamicalarm.cloud.CloudAnnouncement(
+            id = "ann_test_1",
+            title = "জরুরি নোটিশ",
+            body = "নতুন সংস্করণ ও আমলের নির্দেশিকা যোগ হয়েছে।",
+            category = "notice",
+            active = true
+        )
+        val inactiveAnn = com.hafij.islamicalarm.cloud.CloudAnnouncement(
+            id = "ann_test_2",
+            title = "খসড়া",
+            body = "গোপন খসড়া",
+            category = "notice",
+            active = false
+        )
+        val added1 = com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.importAdminAnnouncementsToInbox(
+            ctx,
+            listOf(activeAnn, inactiveAnn)
+        )
+        assertEquals(1, added1)
+        val addedDup = com.hafij.islamicalarm.notifications.IslamicOccasionNotifier.importAdminAnnouncementsToInbox(
+            ctx,
+            listOf(activeAnn)
+        )
+        assertEquals(0, addedDup)
+
+        // 4. Settings tab renders Cloud Database Sync card with Google Sign-In button when signed out
+        val mainCtrl = Robolectric.buildActivity(MainActivity::class.java).create().start().resume()
+        val mainAct = mainCtrl.get()
+        mainAct.findViewById<com.hafij.islamicalarm.MainBottomBar>(
+            com.hafij.islamicalarm.R.id.bottomNavigation
+        ).selectedItemId = com.hafij.islamicalarm.R.id.nav_settings
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+
+        val btnSignIn = mainAct.findViewById<android.widget.Button>(
+            com.hafij.islamicalarm.R.id.btnCloudSignIn
+        )
+        assertNotNull(btnSignIn)
+        assertEquals(android.view.View.VISIBLE, btnSignIn.visibility)
+        assertEquals("Google দিয়ে সাইন ইন করুন", btnSignIn.text.toString())
+        mainCtrl.pause().stop().destroy()
+    }
 }

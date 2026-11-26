@@ -1,0 +1,306 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: deny everything unless explicitly matched and authorized
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Shared Hardened Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string &&
+        id.size() >= 1 &&
+        id.size() <= 128 &&
+        id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.email == 'md4hafijulislam@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() ||
+        (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // 3. Schema Validators
+    function isValidUserProfile(data) {
+      return data.userId is string &&
+        data.userId.size() >= 1 &&
+        data.userId.size() <= 128 &&
+        data.displayName is string &&
+        data.displayName.size() >= 1 &&
+        data.displayName.size() <= 100 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 160)) &&
+        (!('districtNameBn' in data) || (data.districtNameBn is string && data.districtNameBn.size() <= 120)) &&
+        (!('deviceModel' in data) || (data.deviceModel is string && data.deviceModel.size() <= 120)) &&
+        (!('appVersion' in data) || (data.appVersion is string && data.appVersion.size() <= 40)) &&
+        data.platform == 'android' &&
+        isValidTimestamp(data.lastActiveAt) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidUserReport(data) {
+      return data.userId is string &&
+        data.userId.size() >= 1 &&
+        data.userId.size() <= 128 &&
+        (!('userEmail' in data) || (data.userEmail is string && data.userEmail.size() <= 160)) &&
+        (data.type == 'problem' || data.type == 'suggestion') &&
+        data.message is string &&
+        data.message.size() >= 5 &&
+        data.message.size() <= 2000 &&
+        data.device is string &&
+        data.device.size() >= 1 &&
+        data.device.size() <= 140 &&
+        data.appVersion is string &&
+        data.appVersion.size() >= 1 &&
+        data.appVersion.size() <= 40 &&
+        (data.status == 'pending' || data.status == 'reviewed' || data.status == 'resolved') &&
+        (!('adminReply' in data) || (data.adminReply is string && data.adminReply.size() <= 1000)) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAnnouncement(data) {
+      return data.title is string &&
+        data.title.size() >= 2 &&
+        data.title.size() <= 140 &&
+        data.body is string &&
+        data.body.size() >= 2 &&
+        data.body.size() <= 2000 &&
+        (data.category == 'notice' || data.category == 'hadith' || data.category == 'update' || data.category == 'reminder') &&
+        data.active is bool &&
+        data.createdBy is string &&
+        data.createdBy.size() >= 1 &&
+        data.createdBy.size() <= 128 &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAppConfig(data) {
+      return data.shareTitle is string &&
+        data.shareTitle.size() >= 1 &&
+        data.shareTitle.size() <= 120 &&
+        data.shareMessage is string &&
+        data.shareMessage.size() >= 1 &&
+        data.shareMessage.size() <= 500 &&
+        data.shareUrl is string &&
+        data.shareUrl.size() >= 8 &&
+        data.shareUrl.size() <= 500 &&
+        data.shareUrl.matches('^https?://.*$') &&
+        (!('noticeBanner' in data) || (data.noticeBanner is string && data.noticeBanner.size() <= 300)) &&
+        (!('minVersionCode' in data) || (data.minVersionCode is int && data.minVersionCode >= 1 && data.minVersionCode <= 1000000)) &&
+        (!('maintenanceMode' in data) || data.maintenanceMode is bool) &&
+        data.updatedBy is string &&
+        data.updatedBy.size() >= 1 &&
+        data.updatedBy.size() <= 128 &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidDailyHadith(data) {
+      return data.topicBn is string &&
+        data.topicBn.size() >= 2 &&
+        data.topicBn.size() <= 120 &&
+        (!('arabicText' in data) || (data.arabicText is string && data.arabicText.size() <= 2000)) &&
+        data.bengaliText is string &&
+        data.bengaliText.size() >= 5 &&
+        data.bengaliText.size() <= 2500 &&
+        data.referenceBn is string &&
+        data.referenceBn.size() >= 2 &&
+        data.referenceBn.size() <= 200 &&
+        (!('gradeBn' in data) || (data.gradeBn is string && data.gradeBn.size() <= 60)) &&
+        data.updatedBy is string &&
+        data.updatedBy.size() >= 1 &&
+        data.updatedBy.size() <= 128 &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAdminRole(data) {
+      return data.email is string &&
+        data.email.size() >= 5 &&
+        data.email.size() <= 160 &&
+        (data.role == 'admin' || data.role == 'super_admin') &&
+        isValidTimestamp(data.createdAt);
+    }
+
+    // 4. Collection Rules
+
+    // /users/{userId}: PII protected; owner can read/write own profile; Admin app can list & count all users
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+
+      allow create: if isSignedIn() &&
+        isValidId(userId) &&
+        request.auth.uid == userId &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll(['userId', 'displayName', 'platform', 'lastActiveAt', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['userId', 'displayName', 'email', 'districtNameBn', 'deviceModel', 'appVersion', 'platform', 'lastActiveAt', 'createdAt', 'updatedAt']) &&
+        isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().platform == existing().platform &&
+        (
+          (
+            request.auth.uid == userId &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'districtNameBn', 'deviceModel', 'appVersion', 'lastActiveAt', 'updatedAt'])
+          ) || isAdmin()
+        );
+
+      allow delete: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+    }
+
+    // /reports/{reportId}: User problem/suggestion reports synced to Admin inbox
+    match /reports/{reportId} {
+      allow get: if isSignedIn() && isValidId(reportId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+        isValidId(reportId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        !('adminReply' in incoming()) &&
+        incoming().keys().hasAll(['userId', 'type', 'message', 'device', 'appVersion', 'status', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['userId', 'userEmail', 'type', 'message', 'device', 'appVersion', 'status', 'createdAt', 'updatedAt']) &&
+        isValidUserReport(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(reportId) &&
+        isValidUserReport(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().status == 'pending' &&
+            incoming().status == 'pending' &&
+            !('adminReply' in incoming()) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['type', 'message', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isSignedIn() &&
+        isValidId(reportId) &&
+        (
+          isAdmin() ||
+          (existing().userId == request.auth.uid && existing().status == 'pending')
+        );
+    }
+
+    // /announcements/{announcementId}: Admin notices & push-style alerts
+    match /announcements/{announcementId} {
+      allow get: if isSignedIn() && isValidId(announcementId) && (existing().active == true || isAdmin());
+      allow list: if isSignedIn() && (resource.data.active == true || isAdmin());
+
+      allow create: if isSignedIn() &&
+        isValidId(announcementId) &&
+        isAdmin() &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().keys().hasAll(['title', 'body', 'category', 'active', 'createdBy', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['title', 'body', 'category', 'active', 'createdBy', 'createdAt', 'updatedAt']) &&
+        isValidAnnouncement(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(announcementId) &&
+        isAdmin() &&
+        isValidAnnouncement(incoming()) &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'body', 'category', 'active', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(announcementId) && isAdmin();
+    }
+
+    // /app_config/{configId}: Remote config managed by Admin (share link, banner, min version)
+    match /app_config/{configId} {
+      allow get: if isSignedIn() && isValidId(configId);
+      allow list: if isAdmin();
+
+      allow create: if isSignedIn() &&
+        isValidId(configId) &&
+        isAdmin() &&
+        incoming().updatedBy == request.auth.uid &&
+        incoming().keys().hasAll(['shareTitle', 'shareMessage', 'shareUrl', 'updatedBy', 'updatedAt']) &&
+        incoming().keys().hasOnly(['shareTitle', 'shareMessage', 'shareUrl', 'noticeBanner', 'minVersionCode', 'maintenanceMode', 'updatedBy', 'updatedAt']) &&
+        isValidAppConfig(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(configId) &&
+        isAdmin() &&
+        isValidAppConfig(incoming()) &&
+        incoming().updatedBy == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['shareTitle', 'shareMessage', 'shareUrl', 'noticeBanner', 'minVersionCode', 'maintenanceMode', 'updatedBy', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(configId) && isAdmin();
+    }
+
+    // /daily_hadiths/{dateKey}: Optional Admin-curated daily Hadith overrides
+    match /daily_hadiths/{dateKey} {
+      allow get: if isSignedIn() && isValidId(dateKey);
+      allow list: if isAdmin();
+
+      allow create: if isSignedIn() &&
+        isValidId(dateKey) &&
+        isAdmin() &&
+        incoming().updatedBy == request.auth.uid &&
+        incoming().keys().hasAll(['topicBn', 'bengaliText', 'referenceBn', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        incoming().keys().hasOnly(['topicBn', 'arabicText', 'bengaliText', 'referenceBn', 'gradeBn', 'updatedBy', 'createdAt', 'updatedAt']) &&
+        isValidDailyHadith(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(dateKey) &&
+        isAdmin() &&
+        isValidDailyHadith(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedBy == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['topicBn', 'arabicText', 'bengaliText', 'referenceBn', 'gradeBn', 'updatedBy', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(dateKey) && isAdmin();
+    }
+
+    // /admins/{adminId}: Admin privilege allowlist
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isBootstrappedAdmin());
+      allow list: if isBootstrappedAdmin();
+
+      allow create: if isBootstrappedAdmin() &&
+        isValidId(adminId) &&
+        incoming().keys().hasAll(['email', 'role', 'createdAt']) &&
+        incoming().keys().hasOnly(['email', 'role', 'createdAt']) &&
+        isValidAdminRole(incoming());
+
+      allow update: if isBootstrappedAdmin() &&
+        isValidId(adminId) &&
+        isValidAdminRole(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['email', 'role']);
+
+      allow delete: if isBootstrappedAdmin() && isValidId(adminId);
+    }
+  }
+}
